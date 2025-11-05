@@ -12,6 +12,7 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentIndex = 0;
+  String _selectedLanguage = 'vi'; // 'vi' for Vietnamese, 'en' for English
 
   final List<Map<String, dynamic>> _pages = [
     {
@@ -50,71 +51,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header
-            Padding(
-              padding: EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Color(0xFF4ECDC4),
-                        ),
-                        child: Icon(
-                          Icons.account_balance_wallet_rounded,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'MONEY FLOW',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF2C3E50),
-                            ),
-                          ),
-                          Text(
-                            'Smart spend, Bright future',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Color(0xFF7F8C8D),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => LoginScreen()),
-                      );
-                    },
-                    child: Text(
-                      'ĐĂNG NHẬP',
-                      style: TextStyle(
-                        color: Color(0xFF4ECDC4),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // PageView
+            _buildHeader(),
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
@@ -124,214 +61,305 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     _currentIndex = index;
                   });
                 },
-                itemBuilder: (context, index) {
-                  final page = _pages[index];
-                  return Container(
-                    padding: EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Illustration
-                        Container(
-                          width: 280,
-                          height: 280,
-                          decoration: BoxDecoration(
-                            color: page['color'].withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Container(
-                                width: 200,
-                                height: 200,
-                                decoration: BoxDecoration(
-                                  color: page['color'].withOpacity(0.15),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              Container(
-                                width: 140,
-                                height: 140,
-                                decoration: BoxDecoration(
-                                  color: page['color'].withOpacity(0.2),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              Container(
-                                width: 80,
-                                height: 80,
-                                decoration: BoxDecoration(
-                                  color: page['color'],
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: page['color'].withOpacity(0.3),
-                                      blurRadius: 20,
-                                      offset: Offset(0, 8),
-                                    ),
-                                  ],
-                                ),
-                                child: Icon(
-                                  page['icon'],
-                                  size: 40,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        SizedBox(height: 48),
-
-                        Text(
-                          page['title'],
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF2C3E50),
-                            height: 1.3,
-                          ),
-                        ),
-
-                        SizedBox(height: 16),
-
-                        Text(
-                          page['subtitle'],
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Color(0xFF7F8C8D),
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                itemBuilder: (context, index) => _buildPage(_pages[index]),
               ),
             ),
+            _buildBottomSection(),
+          ],
+        ),
+      ),
+    );
+  }
 
-            // Bottom Section
-            Container(
-              padding: EdgeInsets.all(24),
-              child: Column(
+  Widget _buildHeader() {
+    return Padding(
+      padding: EdgeInsets.all(16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Logo Section
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0xFF4ECDC4),
+                ),
+                child: Icon(
+                  Icons.account_balance_wallet_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Page Indicators
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(_pages.length, (index) {
-                      return Container(
-                        margin: EdgeInsets.symmetric(horizontal: 4),
-                        width: _currentIndex == index ? 24 : 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: _currentIndex == index
-                              ? _pages[_currentIndex]['color']
-                              : Color(0xFF7F8C8D).withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      );
-                    }),
-                  ),
-
-                  SizedBox(height: 32),
-
-                  // Navigation Buttons
-                  Row(
-                    children: [
-                      if (_currentIndex > 0)
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () {
-                              _pageController.previousPage(
-                                duration: Duration(milliseconds: 300),
-                                curve: Curves.easeInOut,
-                              );
-                            },
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(
-                                color: _pages[_currentIndex]['color'],
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: EdgeInsets.symmetric(vertical: 16),
-                            ),
-                            child: Text(
-                              'QUAY LẠI',
-                              style: TextStyle(
-                                color: _pages[_currentIndex]['color'],
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-
-                      if (_currentIndex > 0) SizedBox(width: 16),
-
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            if (_currentIndex == _pages.length - 1) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => RegisterScreen(),
-                                ),
-                              );
-                            } else {
-                              _pageController.nextPage(
-                                duration: Duration(milliseconds: 300),
-                                curve: Curves.easeInOut,
-                              );
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _pages[_currentIndex]['color'],
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                          ),
-                          child: Text(
-                            _currentIndex == _pages.length - 1
-                                ? 'ĐĂNG KÝ MIỄN PHÍ'
-                                : 'TIẾP THEO',
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  SizedBox(height: 16),
-
-                  if (_currentIndex == 0)
-                    TextButton(
-                      onPressed: () {
-                        _pageController.animateToPage(
-                          _pages.length - 1,
-                          duration: Duration(milliseconds: 400),
-                          curve: Curves.easeInOut,
-                        );
-                      },
-                      child: Text(
-                        'Bỏ qua',
-                        style: TextStyle(
-                          color: Color(0xFF7F8C8D),
-                          fontSize: 14,
-                        ),
-                      ),
+                  Text(
+                    'MONEY FLOW',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2C3E50),
                     ),
+                  ),
+                  Text(
+                    'Smart spend, Bright future',
+                    style: TextStyle(fontSize: 10, color: Color(0xFF7F8C8D)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          // Language Selector
+          PopupMenuButton<String>(
+            offset: Offset(0, 40),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            onSelected: (String value) {
+              setState(() {
+                _selectedLanguage = value;
+              });
+            },
+            itemBuilder: (BuildContext context) => [
+              PopupMenuItem(
+                value: 'vi',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.check,
+                      size: 16,
+                      color: _selectedLanguage == 'vi'
+                          ? Color(0xFF4ECDC4)
+                          : Colors.transparent,
+                    ),
+                    SizedBox(width: 8),
+                    Text('Tiếng Việt'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'en',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.check,
+                      size: 16,
+                      color: _selectedLanguage == 'en'
+                          ? Color(0xFF4ECDC4)
+                          : Colors.transparent,
+                    ),
+                    SizedBox(width: 8),
+                    Text('English'),
+                  ],
+                ),
+              ),
+            ],
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                border: Border.all(color: Color(0xFF4ECDC4), width: 1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.language, size: 16, color: Color(0xFF4ECDC4)),
+                  SizedBox(width: 4),
+                  Text(
+                    _selectedLanguage == 'vi' ? 'Tiếng Việt' : 'English',
+                    style: TextStyle(
+                      color: Color(0xFF4ECDC4),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  SizedBox(width: 4),
+                  Icon(
+                    Icons.keyboard_arrow_down,
+                    size: 16,
+                    color: Color(0xFF4ECDC4),
+                  ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPage(Map<String, dynamic> page) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Illustration
+          Container(
+            width: 280,
+            height: 280,
+            decoration: BoxDecoration(
+              color: page['color'].withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: 200,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    color: page['color'].withOpacity(0.15),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    color: page['color'].withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: page['color'],
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: page['color'].withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Icon(page['icon'], size: 40, color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+
+          SizedBox(height: 48),
+
+          Text(
+            page['title'],
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2C3E50),
+              height: 1.3,
+            ),
+          ),
+
+          SizedBox(height: 16),
+
+          Text(
+            page['subtitle'],
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 16,
+              color: Color(0xFF7F8C8D),
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomSection() {
+    return Container(
+      padding: EdgeInsets.all(24),
+      child: Column(
+        children: [
+          // Page Indicators
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(_pages.length, (index) {
+              return Container(
+                margin: EdgeInsets.symmetric(horizontal: 4),
+                width: _currentIndex == index ? 24 : 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: _currentIndex == index
+                      ? _pages[_currentIndex]['color']
+                      : Color(0xFF7F8C8D).withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              );
+            }),
+          ),
+
+          SizedBox(height: 32),
+
+          // Single Register Button
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) {
+                      return RegisterScreen();
+                    },
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF4ECDC4),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                'ĐĂNG KÝ MIỄN PHÍ',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+
+          SizedBox(height: 4),
+
+          // Login Link
+          TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) {
+                    return LoginScreen();
+                  },
+                ),
+              );
+            },
+            child: Text(
+              'ĐĂNG NHẬP',
+              style: TextStyle(
+                color: Color(0xFF4ECDC4),
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          SizedBox(height: 8),
+          // Version Text
+          Text(
+            'Phiên bản 1.1',
+            style: TextStyle(color: Colors.grey, fontSize: 12),
+          ),
+        ],
       ),
     );
   }
