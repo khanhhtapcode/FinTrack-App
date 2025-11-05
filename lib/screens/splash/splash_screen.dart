@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../config/theme.dart';
 import '../../config/constants.dart';
-import '../onboarding/onboarding_screen.dart';
+import '../onboarding/onboarding_screen.dart'; // Import đúng onboarding
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -27,9 +27,8 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _initializeAnimations() {
-    // Scale animation cho logo
     _scaleController = AnimationController(
-      duration: AppConstants.animationDuration,
+      duration: Duration(milliseconds: 1500),
       vsync: this,
     );
 
@@ -37,7 +36,6 @@ class _SplashScreenState extends State<SplashScreen>
       CurvedAnimation(parent: _scaleController, curve: Curves.elasticOut),
     );
 
-    // Fade animation cho slogan
     _fadeController = AnimationController(
       duration: Duration(milliseconds: 800),
       vsync: this,
@@ -60,13 +58,13 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _navigateToOnboarding() {
-    Future.delayed(AppConstants.splashDuration, () {
+    Future.delayed(Duration(seconds: 3), () {
       if (mounted) {
         Navigator.pushReplacement(
           context,
           PageRouteBuilder(
             pageBuilder: (context, animation, secondaryAnimation) =>
-                OnboardingScreen(),
+                OnboardingScreen(), // Navigate to NEW onboarding screen
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
                   return FadeTransition(opacity: animation, child: child);
@@ -86,7 +84,6 @@ class _SplashScreenState extends State<SplashScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Animated Logo Container
             AnimatedBuilder(
               animation: _scaleAnimation,
               builder: (context, child) {
@@ -126,13 +123,18 @@ class _SplashScreenState extends State<SplashScreen>
                           SizedBox(height: 8),
                           Text(
                             'MONEY',
-                            style: AppTheme.logoText.copyWith(fontSize: 16),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
                           Text(
                             'FLOW',
-                            style: AppTheme.logoText.copyWith(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w400,
+                              color: Colors.white,
                             ),
                           ),
                         ],
@@ -145,19 +147,21 @@ class _SplashScreenState extends State<SplashScreen>
 
             SizedBox(height: 40),
 
-            // Animated Slogan
             FadeTransition(
               opacity: _fadeAnimation,
               child: Text(
-                AppConstants.appSlogan,
-                style: AppTheme.sloganText,
+                'Smart spend, Bright future',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: AppTheme.textSecondary,
+                  fontStyle: FontStyle.italic,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
 
             SizedBox(height: 60),
 
-            // Loading indicator
             FadeTransition(
               opacity: _fadeAnimation,
               child: SizedBox(

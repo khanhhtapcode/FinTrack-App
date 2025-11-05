@@ -14,7 +14,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Money Flow',
       theme: AppTheme.lightTheme,
-      home: SplashScreen(),
+      home: SplashScreen(), // Bắt đầu từ splash
       debugShowCheckedModeBanner: false,
     );
   }
