@@ -98,7 +98,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'MONEY FLOW',
+                    'FINTRAKCER',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
