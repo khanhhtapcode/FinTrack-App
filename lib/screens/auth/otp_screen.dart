@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../../config/theme.dart';
+import '../../services/auth_service.dart';
 import 'favorites_screen.dart';
 
 class OTPScreen extends StatefulWidget {
   final String email;
-
+  
   const OTPScreen({Key? key, required this.email}) : super(key: key);
 
   @override
@@ -15,6 +17,71 @@ class OTPScreen extends StatefulWidget {
 class _OTPScreenState extends State<OTPScreen> {
   final List<TextEditingController> _controllers = List.generate(4, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
+  bool _isVerifying = false;
+
+  Future<void> _handleVerifyOTP() async {
+    String otp = _controllers.map((c) => c.text).join();
+    
+    if (otp.length != 4) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Vui lòng nhập đầy đủ 4 số OTP'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isVerifying = true;
+    });
+
+    final authService = context.read<AuthService>();
+    final result = await authService.verifyOTP(otp);
+
+    setState(() {
+      _isVerifying = false;
+    });
+
+    if (result['success']) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message']),
+          backgroundColor: AppTheme.accentGreen,
+        ),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => FavoritesScreen()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message']),
+          backgroundColor: Colors.red,
+        ),
+      );
+      
+      // Clear OTP fields
+      for (var controller in _controllers) {
+        controller.clear();
+      }
+      _focusNodes[0].requestFocus();
+    }
+  }
+
+  Future<void> _handleResendOTP() async {
+    final authService = context.read<AuthService>();
+    final result = await authService.resendOTP();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(result['message']),
+        backgroundColor: result['success'] ? AppTheme.accentGreen : Colors.red,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,13 +94,12 @@ class _OTPScreenState extends State<OTPScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               SizedBox(height: 40),
-
-              // Logo
+              
+              // Logo (reuse from previous screens)
               _buildLogo(),
-
+              
               SizedBox(height: 40),
-
-              // Title
+              
               Text(
                 'OTP',
                 textAlign: TextAlign.center,
@@ -43,12 +109,11 @@ class _OTPScreenState extends State<OTPScreen> {
                   color: AppTheme.textPrimary,
                 ),
               ),
-
+              
               SizedBox(height: 16),
-
-              // Description
+              
               Text(
-                'Mật mã OTP đã được gửi đến địa chỉ email của bạn.\nVui lòng kiểm tra và nhập vào hộp dưới đây.',
+                'Mật mã OTP đã được gửi đến ${widget.email}.\nVui lòng kiểm tra và nhập vào hộp dưới đây.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
@@ -56,31 +121,22 @@ class _OTPScreenState extends State<OTPScreen> {
                   height: 1.5,
                 ),
               ),
-
+              
               SizedBox(height: 40),
-
+              
               // OTP Input Boxes
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: List.generate(4, (index) => _buildOTPBox(index)),
               ),
-
+              
               SizedBox(height: 40),
-
-              // Confirm Button
+              
+              // Verify Button
               SizedBox(
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () {
-                    String otp = _controllers.map((c) => c.text).join();
-                    if (otp.length == 4) {
-                      // Navigate to Favorites
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => FavoritesScreen()),
-                      );
-                    }
-                  },
+                  onPressed: _isVerifying ? null : _handleVerifyOTP,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryTeal,
                     foregroundColor: Colors.white,
@@ -89,33 +145,40 @@ class _OTPScreenState extends State<OTPScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: Text(
-                    'XÁC THỰC',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  child: _isVerifying
+                      ? SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : Text(
+                          'XÁC THỰC',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                 ),
               ),
-
+              
               SizedBox(height: 24),
-
+              
               // Resend Link
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Mã có thể hết hạn? ',
+                    'Chưa nhận được mã? ',
                     style: TextStyle(
                       color: AppTheme.textSecondary,
                       fontSize: 14,
                     ),
                   ),
                   TextButton(
-                    onPressed: () {
-                      print('Resend OTP');
-                    },
+                    onPressed: _handleResendOTP,
                     child: Text(
                       'Gửi lại',
                       style: TextStyle(

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../config/theme.dart';
-import '../../config/constants.dart';
 import '../onboarding/onboarding_screen.dart'; // Import đúng onboarding
 
 class SplashScreen extends StatefulWidget {

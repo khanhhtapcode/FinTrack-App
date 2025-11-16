@@ -40,7 +40,14 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   smooth_page_indicator: ^1.2.1
-  
+
+  # Email Service
+  mailer: ^6.0.1
+  crypto: ^3.0.3            # Mã hóa dữ liệu
+  # Firebase
+  firebase_core: ^3.6.0
+  cloud_functions: ^5.1.3
+
 
 dev_dependencies:
   flutter_test:
