@@ -1,14 +1,62 @@
 import 'package:flutter/material.dart';
-import '../../../config/theme.dart';
+import '../config/theme.dart';
 
 class ChartWidget extends StatelessWidget {
-  const ChartWidget({super.key});
+  final Map<int, double> monthlyData;
+
+  const ChartWidget({super.key, required this.monthlyData});
+
+  String _getMonthName(int month) {
+    const monthNames = [
+      '',
+      'T1',
+      'T2',
+      'T3',
+      'T4',
+      'T5',
+      'T6',
+      'T7',
+      'T8',
+      'T9',
+      'T10',
+      'T11',
+      'T12',
+    ];
+    return monthNames[month];
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Sample data for 6 days
-    final List<double> data = [50, 70, 60, 100, 65, 55];
-    final double maxValue = data.reduce((a, b) => a > b ? a : b);
+    // Get last 6 months data
+    final now = DateTime.now();
+    final List<Map<String, dynamic>> chartData = [];
+
+    for (int i = 5; i >= 0; i--) {
+      final month = now.month - i;
+      final year = now.year;
+
+      // Handle previous year months
+      final adjustedMonth = month <= 0 ? month + 12 : month;
+      final adjustedYear = month <= 0 ? year - 1 : year;
+
+      final monthName = _getMonthName(adjustedMonth);
+      final amount = monthlyData[adjustedMonth] ?? 0;
+
+      chartData.add({
+        'month': monthName,
+        'amount': amount,
+        'isCurrentMonth':
+            adjustedMonth == now.month && adjustedYear == now.year,
+      });
+    }
+
+    // Find max value for scaling
+    final maxValue = chartData
+        .map((e) => e['amount'] as double)
+        .reduce((a, b) => a > b ? a : b);
+    final effectiveMaxValue = maxValue > 0
+        ? maxValue
+        : 1000000; // Default scale if no data
 
     return Container(
       height: 200,
@@ -27,35 +75,73 @@ class ChartWidget extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         crossAxisAlignment: CrossAxisAlignment.end,
-        children: List.generate(6, (index) {
-          final barHeight = (data[index] / maxValue) * 120;
-          final isHighlighted = index == 3; // T4 is highlighted
+        children: chartData.map((data) {
+          final amount = data['amount'] as double;
+          final barHeight = amount > 0
+              ? (amount / effectiveMaxValue) * 120
+              : 5; // Minimum height for empty bars
+          final isCurrentMonth = data['isCurrentMonth'] as bool;
 
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              // Bar
-              Container(
-                width: 40,
-                height: barHeight,
-                decoration: BoxDecoration(
-                  color: isHighlighted
-                      ? AppTheme.primaryTeal
-                      : AppTheme.textSecondary,
-                  borderRadius: BorderRadius.circular(8),
-                ),
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  // Amount label (show if > 0)
+                  if (amount > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        '${(amount / 1000).toStringAsFixed(0)}K',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.textSecondary,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+
+                  // Bar
+                  Container(
+                    width: double.infinity,
+                    height: barHeight.toDouble(),
+                    decoration: BoxDecoration(
+                      gradient: isCurrentMonth
+                          ? LinearGradient(
+                              colors: [
+                                AppTheme.primaryTeal,
+                                AppTheme.primaryTeal.withOpacity(0.6),
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            )
+                          : null,
+                      color: isCurrentMonth
+                          ? null
+                          : AppTheme.textSecondary.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Month label
+                  Text(
+                    data['month'] as String,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: isCurrentMonth
+                          ? AppTheme.primaryTeal
+                          : AppTheme.textSecondary,
+                      fontWeight: isCurrentMonth
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              // Day label
-              Text(
-                'T${index + 1}',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
-              ),
-            ],
+            ),
           );
-        }),
+        }).toList(),
       ),
     );
   }

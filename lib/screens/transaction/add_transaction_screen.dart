@@ -15,11 +15,22 @@ class AddTransactionScreen extends StatefulWidget {
 class _AddTransactionScreenState extends State<AddTransactionScreen> {
   int _selectedTab = 0; // 0: Khoản chi, 1: Khoản thu, 2: Vay/Nợ
   String _selectedCategory = 'Ăn uống';
+  String _selectedPaymentMethod = 'Tiền mặt';
   String _amount = '0';
   DateTime _selectedDate = DateTime.now();
   final TextEditingController _noteController = TextEditingController();
   final TransactionService _transactionService = TransactionService();
   final OCRService _ocrService = OCRService();
+
+  // Payment methods
+  final List<Map<String, dynamic>> _paymentMethods = [
+    {'name': 'Tiền mặt', 'icon': Icons.money},
+    {'name': 'Thẻ tín dụng', 'icon': Icons.credit_card},
+    {'name': 'Thẻ ghi nợ', 'icon': Icons.payment},
+    {'name': 'Chuyển khoản', 'icon': Icons.account_balance},
+    {'name': 'Ví điện tử', 'icon': Icons.wallet},
+    {'name': 'Khác', 'icon': Icons.more_horiz},
+  ];
 
   // Categories for each tab
   final Map<int, List<Map<String, dynamic>>> _categories = {
@@ -122,6 +133,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
                   // Amount display
                   _buildAmountDisplay(),
+
+                  SizedBox(height: 16),
+
+                  // Payment Method Selector
+                  _buildPaymentMethodSelector(),
 
                   SizedBox(height: 16),
 
@@ -246,6 +262,135 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             ),
             SizedBox(width: 4),
             Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentMethodSelector() {
+    // Get icon for selected payment method
+    IconData methodIcon = Icons.payment;
+    final selectedMethod = _paymentMethods.firstWhere(
+      (method) => method['name'] == _selectedPaymentMethod,
+      orElse: () => {'name': _selectedPaymentMethod, 'icon': Icons.payment},
+    );
+    methodIcon = selectedMethod['icon'] as IconData;
+
+    return GestureDetector(
+      onTap: _showPaymentMethodPicker,
+      child: Row(
+        children: [
+          Icon(methodIcon, color: Colors.grey[400]),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              _selectedPaymentMethod,
+              style: TextStyle(color: AppTheme.textPrimary, fontSize: 16),
+            ),
+          ),
+          Icon(Icons.chevron_right, color: Colors.grey[400]),
+        ],
+      ),
+    );
+  }
+
+  void _showPaymentMethodPicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: EdgeInsets.all(20),
+        height: 400,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              width: 40,
+              height: 4,
+              margin: EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text(
+              'Chọn phương thức thanh toán',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+            SizedBox(height: 20),
+            Expanded(
+              child: GridView.builder(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  childAspectRatio: 1,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                ),
+                itemCount: _paymentMethods.length,
+                itemBuilder: (context, index) {
+                  final method = _paymentMethods[index];
+                  final isSelected = method['name'] == _selectedPaymentMethod;
+
+                  return InkWell(
+                    onTap: () {
+                      setState(() {
+                        _selectedPaymentMethod = method['name'] as String;
+                      });
+                      Navigator.pop(context);
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppTheme.primaryTeal.withOpacity(0.1)
+                            : Colors.grey[100],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected
+                              ? AppTheme.primaryTeal
+                              : Colors.transparent,
+                          width: 2,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            method['icon'] as IconData,
+                            size: 32,
+                            color: isSelected
+                                ? AppTheme.primaryTeal
+                                : Colors.grey[600],
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            method['name'] as String,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: isSelected
+                                  ? AppTheme.primaryTeal
+                                  : AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),
@@ -530,7 +675,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         note: _noteController.text.isEmpty ? null : _noteController.text,
         date: _selectedDate,
         type: type,
-        paymentMethod: _selectedCategory,
+        paymentMethod: _selectedPaymentMethod,
         createdAt: DateTime.now(),
       );
 

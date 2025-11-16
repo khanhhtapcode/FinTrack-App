@@ -101,13 +101,20 @@ class _TransactionListWidgetState extends State<TransactionListWidget> {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (transaction.note != null && transaction.note!.isNotEmpty)
-              Text(
-                transaction.note!,
-                style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+            Text(
+              transaction.note?.isNotEmpty == true
+                  ? transaction.note!
+                  : 'Không có ghi chú',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+                fontStyle: transaction.note?.isNotEmpty == true
+                    ? FontStyle.normal
+                    : FontStyle.italic,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
             SizedBox(height: 4),
             Text(
               DateFormat('dd/MM/yyyy HH:mm').format(transaction.date),
@@ -119,7 +126,7 @@ class _TransactionListWidgetState extends State<TransactionListWidget> {
           '$prefix${_currencyFormat.format(transaction.amount)} ₫',
           style: TextStyle(
             color: amountColor,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.bold,  
             fontSize: 16,
           ),
         ),
