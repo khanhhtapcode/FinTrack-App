@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../config/theme.dart';
+import '../home/home_screen.dart';
 
 class CongratsScreen extends StatelessWidget {
   const CongratsScreen({Key? key}) : super(key: key);
@@ -69,8 +70,11 @@ class CongratsScreen extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: () {
                     // Navigate to Home/Dashboard
-                    print('Navigate to Home');
-                    // TODO: Navigator.pushAndRemoveUntil to Home
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (context) => HomeScreen()),
+                      (route) => false, // Remove all previous routes
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryTeal,
@@ -82,10 +86,7 @@ class CongratsScreen extends StatelessWidget {
                   ),
                   child: Text(
                     'HOÀN THÀNH',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),

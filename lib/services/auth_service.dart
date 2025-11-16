@@ -14,8 +14,13 @@ class AuthService extends ChangeNotifier {
   String? _currentOTP;
   String? _pendingEmail; // Email waiting for OTP verification
 
+  // Admin credentials (hardcoded)
+  static const String ADMIN_EMAIL = 'admin@fintracker.com';
+  static const String ADMIN_PASSWORD = 'Admin@123'; // Mật khẩu admin
+
   User? get currentUser => _currentUser;
   bool get isLoggedIn => _currentUser != null;
+  bool get isAdmin => _currentUser?.email == ADMIN_EMAIL;
 
   // Hash password using SHA256
   String _hashPassword(String password) {
@@ -138,6 +143,35 @@ class AuthService extends ChangeNotifier {
     required String password,
   }) async {
     try {
+      // Check if admin login
+      if (email == ADMIN_EMAIL) {
+        if (password == ADMIN_PASSWORD) {
+          // Create admin user object
+          _currentUser = User(
+            id: 'admin',
+            email: ADMIN_EMAIL,
+            firstName: 'Admin',
+            lastName: 'System',
+            passwordHash: _hashPassword(ADMIN_PASSWORD),
+            createdAt: DateTime.now(),
+            isVerified: true,
+          );
+
+          await _saveSession(_currentUser!);
+          notifyListeners();
+
+          return {
+            'success': true,
+            'message': 'Đăng nhập Admin thành công!',
+            'user': _currentUser,
+            'isAdmin': true,
+          };
+        } else {
+          return {'success': false, 'message': 'Mật khẩu Admin không đúng'};
+        }
+      }
+
+      // Normal user login
       final box = await Hive.openBox<User>(_userBoxName);
       final user = box.get(email);
 
@@ -165,6 +199,7 @@ class AuthService extends ChangeNotifier {
         'success': true,
         'message': 'Đăng nhập thành công!',
         'user': user,
+        'isAdmin': false,
       };
     } catch (e) {
       return {'success': false, 'message': 'Lỗi: ${e.toString()}'};

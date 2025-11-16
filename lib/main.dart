@@ -1,4 +1,3 @@
-import 'package:expense_tracker_app/screens/home/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +6,7 @@ import 'config/theme.dart';
 import 'screens/splash/splash_screen.dart';
 import 'services/auth_service.dart';
 import 'models/user.dart';
+import 'models/transaction.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,8 +17,10 @@ void main() async {
   // Initialize Hive
   await Hive.initFlutter();
 
-  // Register Adapter
+  // Register Adapters
   Hive.registerAdapter(UserAdapter());
+  Hive.registerAdapter(TransactionAdapter());
+  Hive.registerAdapter(TransactionTypeAdapter());
 
   // Clean up old boxes (only for development)
   if (Hive.isBoxOpen('users')) {

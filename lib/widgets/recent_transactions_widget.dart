@@ -64,7 +64,6 @@ class RecentTransactionsWidget extends StatelessWidget {
     Map<String, dynamic> transaction,
   ) {
     final amount = transaction['amount'].toDouble();
-    final isIncome = amount > 0;
 
     return Container(
       margin: EdgeInsets.only(bottom: AppConstants.paddingSmall),

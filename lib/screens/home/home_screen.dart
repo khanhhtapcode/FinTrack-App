@@ -2,8 +2,12 @@ import 'package:expense_tracker_app/widgets/balance_card_widget.dart';
 import 'package:expense_tracker_app/widgets/chart_widget.dart';
 import 'package:expense_tracker_app/widgets/recent_transactions_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../config/constants.dart';
 import '../../config/theme.dart';
+import '../../services/auth_service.dart';
+import '../transaction/add_transaction_screen.dart';
+import '../auth/login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -124,11 +128,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // Floating Action Button (Add button)
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Navigate to Add Transaction screen
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => AddTransactionScreen()),
+          );
+
+          // Refresh screen if transaction was saved
+          if (result == true && mounted) {
+            setState(() {
+              // This will rebuild the widget and show updated data
+            });
+          }
         },
         backgroundColor: AppTheme.primaryTeal,
-        child: const Icon(Icons.add, size: 32),
+        child: Icon(Icons.add, size: 32),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
@@ -162,7 +176,46 @@ class _HomeScreenState extends State<HomeScreen> {
             // Open notifications
           },
         ),
+
+        // Logout Icon (Temporary)
+        IconButton(
+          icon: const Icon(Icons.logout),
+          color: Colors.red,
+          onPressed: () => _showLogoutDialog(context),
+        ),
       ],
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Đăng xuất'),
+        content: Text('Bạn có chắc muốn đăng xuất?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final authService = Provider.of<AuthService>(
+                context,
+                listen: false,
+              );
+              await authService.logout();
+              if (context.mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => LoginScreen()),
+                  (route) => false,
+                );
+              }
+            },
+            child: Text('Đăng xuất', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
     );
   }
 
