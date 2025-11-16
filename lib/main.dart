@@ -1,3 +1,4 @@
+import 'package:expense_tracker_app/screens/home/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'config/theme.dart';
 import 'screens/splash/splash_screen.dart';
@@ -14,7 +15,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Money Flow',
       theme: AppTheme.lightTheme,
-      home: SplashScreen(), // Bắt đầu từ splash
+      home: HomeScreen(), // Bắt đầu từ splash
       debugShowCheckedModeBanner: false,
     );
   }
