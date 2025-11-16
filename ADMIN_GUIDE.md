@@ -42,7 +42,7 @@ Mở file: `lib/services/auth_service.dart` (dòng 18-19)
 
 ```dart
 static const String ADMIN_EMAIL = 'admin@fintracker.com';
-static const String ADMIN_PASSWORD = 'Admin@123'; // 👈 Đổi ở đây
+static const String ADMIN_PASSWORD = ''; // 👈 Đổi ở đây
 ```
 
 **Khuyến nghị**: Dùng mật khẩu mạnh hơn cho production!
