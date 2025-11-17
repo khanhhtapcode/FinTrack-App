@@ -974,10 +974,24 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
       if (result != null) {
         _processOCRResult(result);
+      } else {
+        _showErrorDialog(
+          'Không thể mở camera.\n\n'
+          'Vui lòng kiểm tra:\n'
+          '• Quyền truy cập camera\n'
+          '• Camera có hoạt động không',
+        );
       }
     } catch (e) {
       if (mounted) Navigator.pop(context); // Close loading
-      _showErrorDialog('Lỗi khi quét hóa đơn: $e');
+      print('Camera scan error: $e');
+      _showErrorDialog(
+        'Lỗi khi quét hóa đơn\n\n'
+        'Chi tiết: ${e.toString()}\n\n'
+        'Thử:\n'
+        '• Cấp quyền camera trong Settings\n'
+        '• Khởi động lại ứng dụng',
+      );
     }
   }
 
@@ -1013,10 +1027,25 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
       if (result != null) {
         _processOCRResult(result);
+      } else {
+        _showErrorDialog(
+          'Không thể chọn ảnh.\n\n'
+          'Vui lòng kiểm tra:\n'
+          '• Quyền truy cập thư viện ảnh\n'
+          '• Có ảnh trong thư viện không',
+        );
       }
     } catch (e) {
       if (mounted) Navigator.pop(context); // Close loading
-      _showErrorDialog('Lỗi khi xử lý ảnh: $e');
+      print('Gallery pick error: $e');
+      _showErrorDialog(
+        'Lỗi khi xử lý ảnh\n\n'
+        'Chi tiết: ${e.toString()}\n\n'
+        'Thử:\n'
+        '• Cấp quyền thư viện ảnh trong Settings\n'
+        '• Chọn ảnh khác\n'
+        '• Khởi động lại ứng dụng',
+      );
     }
   }
 
