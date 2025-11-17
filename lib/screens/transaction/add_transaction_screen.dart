@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import '../../config/theme.dart';
 import '../../models/transaction.dart' as model;
 import '../../services/transaction_service.dart';
-import '../../services/ocr_service.dart';
+import '../../services/custom_ocr_service.dart';
 import 'package:uuid/uuid.dart';
+import 'package:image_picker/image_picker.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   const AddTransactionScreen({Key? key}) : super(key: key);
@@ -20,7 +21,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   DateTime _selectedDate = DateTime.now();
   final TextEditingController _noteController = TextEditingController();
   final TransactionService _transactionService = TransactionService();
-  final OCRService _ocrService = OCRService();
+  final CustomOCRService _ocrService = CustomOCRService();
+  final ImagePicker _imagePicker = ImagePicker();
 
   // Payment methods
   final List<Map<String, dynamic>> _paymentMethods = [
@@ -81,8 +83,24 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _initializeOCR();
+  }
+
+  Future<void> _initializeOCR() async {
+    try {
+      await _ocrService.initialize();
+      print('✅ OCR service initialized successfully');
+    } catch (e) {
+      print('⚠️ Failed to initialize OCR service: $e');
+    }
+  }
+
+  @override
   void dispose() {
     _noteController.dispose();
+    _ocrService.dispose();
     super.dispose();
   }
 
@@ -912,11 +930,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 child: Icon(Icons.camera_alt, color: AppTheme.primaryTeal),
               ),
               title: Text('Chụp ảnh'),
-              subtitle: Text('Sử dụng camera để quét hóa đơn'),
-              onTap: () {
-                Navigator.pop(context);
-                _scanFromCamera();
-              },
+              subtitle: Text(
+                'Quét hóa đơn với camera',
+                style: TextStyle(fontSize: 11),
+              ),
+              onTap: _scanFromCamera,
             ),
             SizedBox(height: 10),
             ListTile(
@@ -929,11 +947,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 child: Icon(Icons.photo_library, color: AppTheme.primaryTeal),
               ),
               title: Text('Chọn từ thư viện'),
-              subtitle: Text('Chọn ảnh hóa đơn có sẵn'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickFromGallery();
-              },
+              subtitle: Text(
+                'Chọn ảnh hóa đơn từ thư viện',
+                style: TextStyle(fontSize: 11),
+              ),
+              onTap: _pickFromGallery,
             ),
             SizedBox(height: 10),
           ],
@@ -942,168 +960,113 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
-  /// Scan receipt from camera
+  // ========== OCR METHODS ==========
+
   Future<void> _scanFromCamera() async {
-    // Show loading
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Center(
-        child: Container(
-          padding: EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(color: AppTheme.primaryTeal),
-              SizedBox(height: 16),
-              Text('Đang xử lý hóa đơn...'),
-            ],
-          ),
-        ),
-      ),
-    );
-
     try {
-      final result = await _ocrService.scanFromCamera();
+      Navigator.pop(context); // Close the scan options dialog
 
-      if (mounted) Navigator.pop(context); // Close loading
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 80,
+      );
 
-      if (result != null) {
-        _processOCRResult(result);
-      } else {
-        _showErrorDialog(
-          'Không thể mở camera.\n\n'
-          'Vui lòng kiểm tra:\n'
-          '• Quyền truy cập camera\n'
-          '• Camera có hoạt động không',
-        );
+      if (image != null) {
+        _showLoadingDialog('Đang xử lý hóa đơn...');
+
+        final result = await _ocrService.processImage(image.path);
+
+        Navigator.pop(context); // Close loading dialog
+
+        if (result != null) {
+          _processOCRResult(result);
+        } else {
+          _showErrorDialog('Không thể nhận diện hóa đơn');
+        }
       }
     } catch (e) {
-      if (mounted) Navigator.pop(context); // Close loading
-      print('Camera scan error: $e');
-      _showErrorDialog(
-        'Lỗi khi quét hóa đơn\n\n'
-        'Chi tiết: ${e.toString()}\n\n'
-        'Thử:\n'
-        '• Cấp quyền camera trong Settings\n'
-        '• Khởi động lại ứng dụng',
-      );
+      Navigator.pop(context); // Close loading dialog if open
+      _showErrorDialog('Lỗi khi chụp ảnh: $e');
     }
   }
 
-  /// Pick receipt from gallery
   Future<void> _pickFromGallery() async {
-    // Show loading
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Center(
-        child: Container(
-          padding: EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(color: AppTheme.primaryTeal),
-              SizedBox(height: 16),
-              Text('Đang xử lý hóa đơn...'),
-            ],
-          ),
-        ),
-      ),
-    );
-
     try {
-      final result = await _ocrService.pickFromGallery();
+      Navigator.pop(context); // Close the scan options dialog
 
-      if (mounted) Navigator.pop(context); // Close loading
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
 
-      if (result != null) {
-        _processOCRResult(result);
-      } else {
-        _showErrorDialog(
-          'Không thể chọn ảnh.\n\n'
-          'Vui lòng kiểm tra:\n'
-          '• Quyền truy cập thư viện ảnh\n'
-          '• Có ảnh trong thư viện không',
-        );
+      if (image != null) {
+        _showLoadingDialog('Đang xử lý hóa đơn...');
+
+        final result = await _ocrService.processImage(image.path);
+
+        Navigator.pop(context); // Close loading dialog
+
+        if (result != null) {
+          _processOCRResult(result);
+        } else {
+          _showErrorDialog('Không thể nhận diện hóa đơn');
+        }
       }
     } catch (e) {
-      if (mounted) Navigator.pop(context); // Close loading
-      print('Gallery pick error: $e');
-      _showErrorDialog(
-        'Lỗi khi xử lý ảnh\n\n'
-        'Chi tiết: ${e.toString()}\n\n'
-        'Thử:\n'
-        '• Cấp quyền thư viện ảnh trong Settings\n'
-        '• Chọn ảnh khác\n'
-        '• Khởi động lại ứng dụng',
-      );
+      Navigator.pop(context); // Close loading dialog if open
+      _showErrorDialog('Lỗi khi chọn ảnh: $e');
     }
   }
 
-  /// Process OCR result and fill in the form
   void _processOCRResult(OCRResult result) {
     setState(() {
-      // Fill in amount if detected
+      // Update amount if detected
       if (result.amount != null && result.amount! > 0) {
-        _amount = _formatNumber(result.amount!.toInt().toString());
+        _amount = result.amount.toString();
       }
 
-      // Fill in suggested category if detected
+      // Update date if detected
+      if (result.date != null) {
+        _selectedDate = result.date!;
+      }
+
+      // Update category if suggested
       if (result.suggestedCategories.isNotEmpty) {
-        _selectedCategory = result.suggestedCategories.first;
+        final suggestedCategory = result.suggestedCategories.first;
+        final currentCategories = _categories[_selectedTab] ?? [];
+        if (currentCategories.any((cat) => cat['name'] == suggestedCategory)) {
+          _selectedCategory = suggestedCategory;
+        }
       }
 
-      // Add full text to notes
+      // Add full text to note
       if (result.fullText.isNotEmpty) {
-        _noteController.text = 'Quét từ hóa đơn';
+        _noteController.text = result.fullText;
       }
     });
 
-    // Show success dialog with details
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('✅ Đã quét hóa đơn thành công'),
+        backgroundColor: AppTheme.accentGreen,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _showLoadingDialog(String message) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: Row(
+        content: Row(
           children: [
-            Icon(Icons.check_circle, color: Colors.green),
-            SizedBox(width: 10),
-            Text('Quét thành công'),
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Expanded(child: Text(message)),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (result.amount != null)
-              Text(
-                '✓ Số tiền: ${_formatNumber(result.amount!.toInt().toString())} ₫',
-              ),
-            if (result.suggestedCategories.isNotEmpty)
-              Text(
-                '✓ Danh mục gợi ý: ${result.suggestedCategories.join(", ")}',
-              ),
-            SizedBox(height: 10),
-            Text(
-              'Vui lòng kiểm tra và chỉnh sửa nếu cần.',
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('OK', style: TextStyle(color: AppTheme.primaryTeal)),
-          ),
-        ],
       ),
     );
   }
@@ -1112,18 +1075,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.error_outline, color: Colors.red),
-            SizedBox(width: 10),
-            Text('Lỗi'),
-          ],
-        ),
+        title: Text('Lỗi'),
         content: Text(message),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('OK', style: TextStyle(color: AppTheme.primaryTeal)),
+            child: Text('Đóng'),
           ),
         ],
       ),

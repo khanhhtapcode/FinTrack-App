@@ -36,6 +36,8 @@ dependencies:
   intl: ^0.19.0             # Date và number formatting
   fl_chart: ^0.66.0         # Charts cho reports
   go_router: ^12.1.3        # Navigation 
+  onnxruntime: ^1.4.1
+  image: ^4.0.0        
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
@@ -53,7 +55,7 @@ dependencies:
   
   # Image & OCR
   image_picker: ^1.1.2
-  google_mlkit_text_recognition: ^0.13.1
+  # google_mlkit_text_recognition: ^0.13.1  # Removed - will use custom TFLite model
   permission_handler: ^11.3.1
 
 
@@ -79,6 +81,7 @@ flutter:
   assets:
     - assets/icons/
     - assets/images/
+    - assets/models/vietnamese_ocr_model.onnx
 
 
   # An image asset can refer to one or more resolution-specific "variants", see
