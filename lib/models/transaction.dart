@@ -28,6 +28,9 @@ class Transaction extends HiveObject {
   @HiveField(7)
   DateTime createdAt;
 
+  @HiveField(8)
+  String userId; // ID của user sở hữu transaction này
+
   Transaction({
     required this.id,
     required this.amount,
@@ -37,6 +40,7 @@ class Transaction extends HiveObject {
     required this.type,
     this.paymentMethod,
     required this.createdAt,
+    required this.userId,
   });
 
   Map<String, dynamic> toJson() {
@@ -49,6 +53,7 @@ class Transaction extends HiveObject {
       'type': type.toString(),
       'paymentMethod': paymentMethod,
       'createdAt': createdAt.toIso8601String(),
+      'userId': userId,
     };
   }
 
@@ -64,6 +69,7 @@ class Transaction extends HiveObject {
       ),
       paymentMethod: json['paymentMethod'],
       createdAt: DateTime.parse(json['createdAt']),
+      userId: json['userId'] ?? '', // Fallback cho data cũ
     );
   }
 }

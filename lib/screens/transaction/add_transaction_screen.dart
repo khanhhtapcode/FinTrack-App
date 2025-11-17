@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../models/transaction.dart' as model;
 import '../../services/transaction_service.dart';
 import '../../services/custom_ocr_service.dart';
+import '../../services/auth_service.dart';
 import 'package:uuid/uuid.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -685,6 +687,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         type = model.TransactionType.loan;
       }
 
+      // Get current user ID
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final userId = authService.currentUser?.id ?? '';
+
+      if (userId.isEmpty) {
+        throw Exception('User not logged in');
+      }
+
       // Create transaction
       final transaction = model.Transaction(
         id: Uuid().v4(),
@@ -695,6 +705,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         type: type,
         paymentMethod: _selectedPaymentMethod,
         createdAt: DateTime.now(),
+        userId: userId,
       );
 
       // Save to Hive

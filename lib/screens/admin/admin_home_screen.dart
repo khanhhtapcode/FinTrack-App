@@ -4,6 +4,7 @@ import '../../config/theme.dart';
 import '../../services/auth_service.dart';
 import '../debug/debug_screen.dart';
 import '../auth/login_screen.dart';
+import 'user_management_screen.dart';
 
 class AdminHomeScreen extends StatelessWidget {
   const AdminHomeScreen({Key? key}) : super(key: key);
@@ -122,7 +123,9 @@ class AdminHomeScreen extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => DebugScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => UserManagementScreen(),
+                  ),
                 );
               },
             ),

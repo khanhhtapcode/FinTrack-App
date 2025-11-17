@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../config/theme.dart';
 import '../../services/transaction_service.dart';
+import '../../services/auth_service.dart';
 import '../../widgets/transaction_list_widget.dart';
 
 class TransactionsScreen extends StatefulWidget {
@@ -26,8 +28,20 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 
   Future<void> _loadSummary() async {
-    final income = await _transactionService.getCurrentMonthIncome();
-    final expense = await _transactionService.getCurrentMonthExpense();
+    // Get current user ID
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final userId = authService.currentUser?.id;
+
+    if (userId == null || userId.isEmpty) {
+      return;
+    }
+
+    final income = await _transactionService.getCurrentMonthIncome(
+      userId: userId,
+    );
+    final expense = await _transactionService.getCurrentMonthExpense(
+      userId: userId,
+    );
 
     setState(() {
       _totalIncome = income;

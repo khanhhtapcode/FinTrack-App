@@ -45,8 +45,20 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Load all transactions
-      _allTransactions = await _transactionService.getAllTransactions();
+      // Get current user ID
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final userId = authService.currentUser?.id;
+
+      if (userId == null || userId.isEmpty) {
+        // User not logged in
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      // Load all transactions for this user
+      _allTransactions = await _transactionService.getAllTransactions(
+        userId: userId,
+      );
 
       // Calculate totals
       _totalIncome = _allTransactions
