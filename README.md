@@ -43,7 +43,7 @@ cd FinTrack-App
 
 ### Bước 2: Cài đặt Dependencies
 ```bash
-# Cài Flutter packages
+# Cài Flutter packages (bao gồm cả ONNX Runtime cho OCR)
 flutter pub get
 
 # Cài Firebase Functions dependencies (nếu cần)
@@ -51,6 +51,9 @@ cd functions
 npm install
 cd ..
 ```
+
+⭐ **OCR đã sẵn sàng!** Model ONNX đã được include trong repo, không cần tải thêm.  
+📖 Xem chi tiết: [SETUP_OCR.md](./SETUP_OCR.md)
 
 ### Bước 3: **QUAN TRỌNG** - Generate Code
 ⚠️ **Các file `.g.dart` KHÔNG được push lên Git và cần generate lại!**
@@ -142,11 +145,15 @@ flutter build ios --release
 - Chọn ngày giao dịch
 - Ghi chú cho mỗi giao dịch
 
-### 📸 OCR Quét hóa đơn
+### 📸 OCR Quét hóa đơn ⭐ NEW
 - Quét từ **Camera** hoặc **Gallery**
 - Tự động nhận diện số tiền
+- Tự động phát hiện ngày tháng
 - Gợi ý danh mục dựa trên text
-- Sử dụng **Google ML Kit**
+- Sử dụng **Custom ONNX Model** (trained trên MC-OCR 2021)
+- Hỗ trợ **200+ ký tự tiếng Việt có dấu**
+
+📖 **Xem hướng dẫn chi tiết:** [SETUP_OCR.md](./SETUP_OCR.md)
 
 ### 📊 Thống kê & Báo cáo
 - Tổng chi/thu tháng hiện tại
@@ -256,7 +263,8 @@ Password:
 | `firebase_core` | ^3.6.0 | Firebase initialization |
 | `cloud_functions` | ^5.1.3 | Call Cloud Functions |
 | `image_picker` | ^1.1.2 | Chọn ảnh từ camera/gallery |
-| `google_mlkit_text_recognition` | ^0.13.1 | OCR nhận diện text |
+| `onnxruntime` | ^1.4.1 | Chạy model OCR (ONNX) |
+| `image` | ^4.0.0 | Xử lý ảnh cho OCR |
 | `permission_handler` | ^11.3.1 | Xin permission |
 | `uuid` | ^4.5.1 | Generate unique ID |
 | `fl_chart` | ^0.66.0 | Vẽ charts |
@@ -331,6 +339,9 @@ flutter pub run build_runner build --delete-conflicting-outputs
 
 ## 📚 Tài liệu bổ sung
 
+- 📖 **SETUP_OCR.md** - ⭐ Hướng dẫn setup OCR cho người mới
+- 📖 **OCR_TRAINING_GUIDE.md** - Hướng dẫn train lại model OCR
+- 📖 **FLUTTER_OCR_INTEGRATION_COMPLETE.md** - Chi tiết kỹ thuật OCR
 - 📖 **ADMIN_GUIDE.md** - Hướng dẫn sử dụng Admin Panel
 - 📖 **TRANSACTION_STORAGE_GUIDE.md** - Chi tiết về cách lưu trữ giao dịch
 - 📖 **BACKEND_SETUP.md** - Setup Firebase Backend
@@ -377,11 +388,14 @@ flutter format lib/
 - [ ] Chạy `flutter pub get`
 - [ ] **Chạy `build_runner` để generate `.g.dart` files** ⚠️
 - [ ] Kiểm tra file `google-services.json` có trong `android/app/`
+- [ ] ⭐ **Kiểm tra file OCR model có trong `assets/models/vietnamese_ocr_model.onnx`** (đã có sẵn)
 - [ ] Chạy `flutter run` để test
 - [ ] Login với user thường để test
 - [ ] Login với admin (`admin@fintracker.com`) để test Admin Panel
 - [ ] Test thêm giao dịch
-- [ ] Test OCR quét hóa đơn
+- [ ] ⭐ **Test OCR quét hóa đơn** (chụp ảnh hoặc chọn từ thư viện)
+
+📖 **Hướng dẫn chi tiết OCR:** [SETUP_OCR.md](./SETUP_OCR.md)
 
 ---
 
@@ -407,5 +421,5 @@ Nếu gặp vấn đề, hãy:
 
 ---
 
-**Last updated:** 16/11/2025  
-**Version:** 1.0.0
+**Last updated:** 18/11/2025  
+**Version:** 1.1.0 (Added Custom OCR with ONNX Runtime)
