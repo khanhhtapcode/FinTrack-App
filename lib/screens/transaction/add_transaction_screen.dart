@@ -3,10 +3,12 @@ import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../models/transaction.dart' as model;
 import '../../services/transaction_service.dart';
-import '../../services/custom_ocr_service.dart';
+import '../../services/ocr_service.dart';
+import '../../models/receipt_data.dart';
 import '../../services/auth_service.dart';
 import 'package:uuid/uuid.dart';
 import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class AddTransactionScreen extends StatefulWidget {
   const AddTransactionScreen({Key? key}) : super(key: key);
@@ -23,7 +25,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   DateTime _selectedDate = DateTime.now();
   final TextEditingController _noteController = TextEditingController();
   final TransactionService _transactionService = TransactionService();
-  final CustomOCRService _ocrService = CustomOCRService();
+  final OcrService _ocrService = OcrService();
   final ImagePicker _imagePicker = ImagePicker();
 
   // Payment methods
@@ -1080,12 +1082,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       if (image != null) {
         _showLoadingDialog('Đang xử lý hóa đơn...');
 
-        final result = await _ocrService.processImage(image.path);
+        final result = await _ocrService.scanReceipt(File(image.path));
 
         Navigator.pop(context); // Close loading dialog
 
         if (result != null) {
-          _processOCRResult(result);
+          _processReceiptData(result);
         } else {
           _showErrorDialog('Không thể nhận diện hóa đơn');
         }
@@ -1108,12 +1110,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       if (image != null) {
         _showLoadingDialog('Đang xử lý hóa đơn...');
 
-        final result = await _ocrService.processImage(image.path);
+        final result = await _ocrService.scanReceipt(File(image.path));
 
         Navigator.pop(context); // Close loading dialog
 
         if (result != null) {
-          _processOCRResult(result);
+          _processReceiptData(result);
         } else {
           _showErrorDialog('Không thể nhận diện hóa đơn');
         }
@@ -1124,39 +1126,74 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     }
   }
 
-  void _processOCRResult(OCRResult result) {
+  void _processReceiptData(ReceiptData data) {
     setState(() {
-      // Update amount if detected
-      if (result.amount != null && result.amount! > 0) {
-        _amount = result.amount.toString();
+      // Update amount
+      if (data.amount > 0) {
+        _amount = data.amount.toStringAsFixed(0);
       }
 
-      // Update date if detected
-      if (result.date != null) {
-        _selectedDate = result.date!;
+      // Update date
+      _selectedDate = data.date;
+
+      // Update category - map from standard to Vietnamese
+      final categoryMapping = {
+        'Food & Drink': 'Ăn uống',
+        'Transport': 'Xăng xe',
+        'Shopping': 'Shopping',
+        'Entertainment': 'Giải trí',
+        'Healthcare': 'Y tế',
+        'Education': 'Giáo dục',
+        'Bills': 'Hóa đơn',
+        'Other': 'Khác',
+      };
+
+      final vietnameseCategory =
+          categoryMapping[data.category] ?? data.category;
+      final currentCategories = _categories[_selectedTab] ?? [];
+      if (currentCategories.any((cat) => cat['name'] == vietnameseCategory)) {
+        _selectedCategory = vietnameseCategory;
       }
 
-      // Update category if suggested
-      if (result.suggestedCategories.isNotEmpty) {
-        final suggestedCategory = result.suggestedCategories.first;
-        final currentCategories = _categories[_selectedTab] ?? [];
-        if (currentCategories.any((cat) => cat['name'] == suggestedCategory)) {
-          _selectedCategory = suggestedCategory;
-        }
+      // Build note from merchant and items
+      String noteText = '';
+      if (data.merchant != 'Unknown' && data.merchant.isNotEmpty) {
+        noteText += 'Cửa hàng: ${data.merchant}\n';
+      }
+      if (data.items.isNotEmpty) {
+        noteText += 'Món: ${data.items.join(", ")}\n';
+      }
+      if (data.notes != null && data.notes!.isNotEmpty) {
+        noteText += data.notes!;
       }
 
-      // Add full text to note
-      if (result.fullText.isNotEmpty) {
-        _noteController.text = result.fullText;
+      if (noteText.isNotEmpty) {
+        _noteController.text = noteText.trim();
       }
     });
 
-    // Show success message
+    // Show success message with confidence
+    final confidencePercent = (data.confidence * 100).toStringAsFixed(0);
+    final confidenceEmoji = data.confidence >= 0.7 ? '✅' : '⚠️';
+    final confidenceText = data.confidence >= 0.7
+        ? 'Độ tin cậy: $confidencePercent%'
+        : 'Độ tin cậy thấp: $confidencePercent% - Vui lòng kiểm tra lại';
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('✅ Đã quét hóa đơn thành công'),
-        backgroundColor: AppTheme.accentGreen,
-        duration: Duration(seconds: 2),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('$confidenceEmoji Đã quét hóa đơn thành công'),
+            SizedBox(height: 4),
+            Text(confidenceText, style: TextStyle(fontSize: 12)),
+          ],
+        ),
+        backgroundColor: data.confidence >= 0.7
+            ? AppTheme.accentGreen
+            : Colors.orange,
+        duration: Duration(seconds: 3),
       ),
     );
   }

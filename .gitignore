@@ -37,6 +37,9 @@ migrate_working_dir/
 **/*.g.dart
 **/*.freezed.dart
 
+# Environment variables
+.env
+
 # Symbolication related
 app.*.symbols
 
