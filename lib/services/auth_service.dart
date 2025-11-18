@@ -13,6 +13,8 @@ class AuthService extends ChangeNotifier {
   User? _currentUser;
   String? _currentOTP;
   String? _pendingEmail; // Email waiting for OTP verification
+  String? _resetPasswordEmail; // Email for password reset
+  String? _resetOTP; // OTP for password reset
 
   // Admin credentials (hardcoded)
   static const String ADMIN_EMAIL = 'admin@fintracker.com';
@@ -241,6 +243,123 @@ class AuthService extends ChangeNotifier {
 
     _currentOTP = _generateOTP();
     bool emailSent = await EmailService.sendOTP(_pendingEmail!, _currentOTP!);
+
+    if (!emailSent) {
+      return {'success': false, 'message': 'Không thể gửi email'};
+    }
+
+    return {'success': true, 'message': 'OTP mới đã được gửi'};
+  }
+
+  // ==================== PASSWORD RESET FLOW ====================
+
+  // Step 1: Request Password Reset (send OTP to email)
+  Future<Map<String, dynamic>> requestPasswordReset(String email) async {
+    try {
+      final box = await Hive.openBox<User>(_userBoxName);
+
+      // Check if email exists
+      final user = box.get(email);
+      if (user == null) {
+        return {'success': false, 'message': 'Email không tồn tại'};
+      }
+
+      if (!user.isVerified) {
+        return {'success': false, 'message': 'Tài khoản chưa được xác thực'};
+      }
+
+      // Generate OTP
+      _resetOTP = _generateOTP();
+      _resetPasswordEmail = email;
+
+      // Send OTP via email
+      bool emailSent = await EmailService.sendOTP(email, _resetOTP!);
+
+      if (!emailSent) {
+        return {
+          'success': false,
+          'message': 'Không thể gửi email. Vui lòng thử lại.',
+        };
+      }
+
+      notifyListeners();
+
+      return {'success': true, 'message': 'Mã OTP đã được gửi đến $email'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi: ${e.toString()}'};
+    }
+  }
+
+  // Step 2: Verify Reset OTP
+  Future<Map<String, dynamic>> verifyResetOTP(String otp) async {
+    try {
+      if (_resetOTP == null || _resetPasswordEmail == null) {
+        return {
+          'success': false,
+          'message': 'Không tìm thấy OTP. Vui lòng yêu cầu lại.',
+        };
+      }
+
+      if (otp != _resetOTP) {
+        return {'success': false, 'message': 'Mã OTP không đúng'};
+      }
+
+      // OTP verified - don't clear yet, need for password reset
+      notifyListeners();
+
+      return {'success': true, 'message': 'Xác thực thành công!'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi: ${e.toString()}'};
+    }
+  }
+
+  // Step 3: Reset Password
+  Future<Map<String, dynamic>> resetPassword(
+    String email,
+    String newPassword,
+  ) async {
+    try {
+      if (_resetPasswordEmail == null || _resetPasswordEmail != email) {
+        return {
+          'success': false,
+          'message': 'Phiên làm việc không hợp lệ. Vui lòng thử lại.',
+        };
+      }
+
+      final box = await Hive.openBox<User>(_userBoxName);
+      final user = box.get(email);
+
+      if (user == null) {
+        return {'success': false, 'message': 'Người dùng không tồn tại'};
+      }
+
+      // Update password
+      user.passwordHash = _hashPassword(newPassword);
+      await user.save();
+
+      // Clear reset data
+      _resetOTP = null;
+      _resetPasswordEmail = null;
+
+      notifyListeners();
+
+      return {'success': true, 'message': 'Đặt lại mật khẩu thành công!'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi: ${e.toString()}'};
+    }
+  }
+
+  // Resend Reset OTP
+  Future<Map<String, dynamic>> resendResetOTP() async {
+    if (_resetPasswordEmail == null) {
+      return {'success': false, 'message': 'Không tìm thấy email'};
+    }
+
+    _resetOTP = _generateOTP();
+    bool emailSent = await EmailService.sendOTP(
+      _resetPasswordEmail!,
+      _resetOTP!,
+    );
 
     if (!emailSent) {
       return {'success': false, 'message': 'Không thể gửi email'};

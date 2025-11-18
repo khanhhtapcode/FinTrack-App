@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 class ReceiptData {
   final String merchant;
   final double amount;

@@ -4,7 +4,7 @@ class EmailService {
   // Development mode: true = mock email, false = real email via Firebase
   // Set to TRUE for emulator testing (Firebase doesn't work well on emulator)
   // Set to FALSE when testing on real device
-  static const bool _isDevelopmentMode = true;
+  static const bool _isDevelopmentMode = false;
 
   static Future<bool> sendOTP(String recipientEmail, String otp) async {
     try {

@@ -20,8 +20,45 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+
+  // Password strength indicators
+  bool _hasMinLength = false;
+  bool _hasUpperCase = false;
+  bool _hasLowerCase = false;
+  bool _hasDigit = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _passwordController.addListener(_checkPasswordStrength);
+  }
+
+  void _checkPasswordStrength() {
+    final password = _passwordController.text;
+    setState(() {
+      _hasMinLength = password.length >= 6;
+      _hasUpperCase = password.contains(RegExp(r'[A-Z]'));
+      _hasLowerCase = password.contains(RegExp(r'[a-z]'));
+      _hasDigit = password.contains(RegExp(r'[0-9]'));
+    });
+  }
+
+  bool get _isPasswordValid {
+    return _hasMinLength && _hasUpperCase && _hasLowerCase && _hasDigit;
+  }
+
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (!_isPasswordValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Mật khẩu chưa đủ mạnh'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
 
@@ -91,7 +128,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
 
-                SizedBox(height: 5),
+                SizedBox(height: 1),
 
                 // Logo Section - Compact
                 Container(
@@ -110,7 +147,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   child: Icon(
                     Icons.account_balance_wallet_rounded,
-                    size: 50,
+                    size: 90,
                     color: AppTheme.primaryTeal,
                   ),
                 ),
@@ -299,11 +336,52 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   if (value == null || value.isEmpty) {
                                     return 'Vui lòng nhập mật khẩu';
                                   }
-                                  if (value.length < 6) {
-                                    return 'Mật khẩu phải có ít nhất 6 ký tự';
-                                  }
                                   return null;
                                 },
+                              ),
+                            ),
+
+                            SizedBox(height: 12),
+
+                            // Password Strength Indicators
+                            Container(
+                              padding: EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppTheme.lightGray.withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Mật khẩu phải có:',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppTheme.textPrimary,
+                                    ),
+                                  ),
+                                  SizedBox(height: 6),
+                                  _buildStrengthIndicator(
+                                    'Ít nhất 6 ký tự',
+                                    _hasMinLength,
+                                  ),
+                                  SizedBox(height: 3),
+                                  _buildStrengthIndicator(
+                                    'Chữ hoa (A-Z)',
+                                    _hasUpperCase,
+                                  ),
+                                  SizedBox(height: 3),
+                                  _buildStrengthIndicator(
+                                    'Chữ thường (a-z)',
+                                    _hasLowerCase,
+                                  ),
+                                  SizedBox(height: 3),
+                                  _buildStrengthIndicator(
+                                    'Số (0-9)',
+                                    _hasDigit,
+                                  ),
+                                ],
                               ),
                             ),
 
@@ -447,6 +525,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  Widget _buildStrengthIndicator(String label, bool isValid) {
+    return Row(
+      children: [
+        Icon(
+          isValid ? Icons.check_circle : Icons.circle_outlined,
+          size: 14,
+          color: isValid ? Colors.green : AppTheme.textSecondary,
+        ),
+        SizedBox(width: 6),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: isValid ? Colors.green : AppTheme.textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSocialButton({
     required IconData icon,
     required Color color,
@@ -480,7 +578,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return ClipPath(
       clipper: CurvedTopClipper(),
       child: Container(
-        height: 200,
+        height: 225,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,

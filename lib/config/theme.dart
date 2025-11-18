@@ -9,6 +9,7 @@ class AppTheme {
   static const Color cardColor = Color(0xFFFFFFFF);
   static const Color textPrimary = Color(0xFF2C3E50);
   static const Color textSecondary = Color(0xFF7F8C8D);
+  static const Color lightGray = Color(0xFFF5F6F7);
 
   // Text Styles
   static const TextStyle logoText = TextStyle(

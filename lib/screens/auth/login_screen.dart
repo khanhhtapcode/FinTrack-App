@@ -5,6 +5,7 @@ import '../../services/auth_service.dart';
 import '../home/home_screen.dart';
 import '../admin/admin_home_screen.dart';
 import 'register_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -227,7 +228,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             alignment: Alignment.centerRight,
                             child: TextButton(
                               onPressed: () {
-                                print('Forgot password');
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        ForgotPasswordScreen(),
+                                  ),
+                                );
                               },
                               child: Text(
                                 'Quên mật khẩu?',
@@ -245,7 +252,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           SizedBox(
                             height: 56,
                             child: ElevatedButton(
-                              onPressed: _isLoading ? null : () => _handleLogin(context),
+                              onPressed: _isLoading
+                                  ? null
+                                  : () => _handleLogin(context),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppTheme.primaryTeal,
                                 foregroundColor: Colors.white,
@@ -260,9 +269,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                       height: 24,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(
-                                          Colors.white,
-                                        ),
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Colors.white,
+                                            ),
                                       ),
                                     )
                                   : Text(
@@ -350,7 +360,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 style: TextButton.styleFrom(
                                   padding: EdgeInsets.zero,
                                   minimumSize: Size(0, 0),
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
                                 ),
                                 child: Text(
                                   'Đăng ký',
