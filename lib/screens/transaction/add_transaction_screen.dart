@@ -972,8 +972,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           _amount = '0';
         }
       } else if (input == '→') {
-        // Submit/Continue action
-        _saveTransaction();
+        // Just close keyboard/focus, don't save
+        FocusScope.of(context).unfocus();
       } else if (input == '+' || input == '-' || input == '*' || input == '/') {
         // Calculator functions (optional - can implement later)
       } else {

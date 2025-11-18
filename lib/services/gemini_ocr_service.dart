@@ -9,28 +9,33 @@ import '../models/receipt_data.dart';
 
 /// Top-level isolate function for image preprocessing (runs off UI thread)
 Uint8List _preprocessImageBytes(List<int> originalBytes) {
-  final decoded = img.decodeImage(Uint8List.fromList(originalBytes));
-  if (decoded == null) {
-    throw Exception('Failed to decode image');
-  }
-
-  img.Image working = decoded;
-
-  // Resize keeping aspect ratio, max dimension 800 (faster preprocess)
-  if (working.width > 800 || working.height > 800) {
-    if (working.width >= working.height) {
-      working = img.copyResize(working, width: 800);
-    } else {
-      working = img.copyResize(working, height: 800);
+  try {
+    final decoded = img.decodeImage(Uint8List.fromList(originalBytes));
+    if (decoded == null) {
+      // Return original if decode fails
+      return Uint8List.fromList(originalBytes);
     }
+
+    img.Image working = decoded;
+
+    // Aggressive resize to 512px to prevent OOM
+    if (working.width > 512 || working.height > 512) {
+      if (working.width >= working.height) {
+        working = img.copyResize(working, width: 512);
+      } else {
+        working = img.copyResize(working, height: 512);
+      }
+    }
+
+    // Skip color adjustment to reduce processing time and memory
+    // Compress JPEG 70% quality (balance size vs quality)
+    final compressed = img.encodeJpg(working, quality: 70);
+    return Uint8List.fromList(compressed);
+  } catch (e) {
+    // If any processing fails, return original bytes
+    debugPrint('[Isolate] Image processing error: $e');
+    return Uint8List.fromList(originalBytes);
   }
-
-  // Enhance contrast & brightness for OCR clarity
-  working = img.adjustColor(working, contrast: 1.2, brightness: 1.05);
-
-  // Compress JPEG 85% quality
-  final compressed = img.encodeJpg(working, quality: 85);
-  return Uint8List.fromList(compressed);
 }
 
 class GeminiOcrService {
@@ -56,17 +61,17 @@ class GeminiOcrService {
   Future<ReceiptData> scanReceipt(File imageFile) async {
     final totalSw = Stopwatch()..start();
     try {
+      debugPrint('[GeminiOCR] Starting scan...');
+
       final preprocessSw = Stopwatch()..start();
       final processedImage = await _preprocessImage(imageFile);
       preprocessSw.stop();
-      debugPrint(
-        '[GeminiOCR] Preprocess (isolate) took ${preprocessSw.elapsedMilliseconds}ms',
+      final imgSizeMB = (processedImage.length / 1024 / 1024).toStringAsFixed(
+        2,
       );
-      if (preprocessSw.elapsedMilliseconds > 400) {
-        debugPrint(
-          '[GeminiOCR][Warn] Preprocess slow (>400ms). Consider stronger downscale.',
-        );
-      }
+      debugPrint(
+        '[GeminiOCR] Preprocess took ${preprocessSw.elapsedMilliseconds}ms, output: $imgSizeMB MB',
+      );
 
       final prompt = _buildPrompt();
 
@@ -74,36 +79,35 @@ class GeminiOcrService {
       final response = await _callGeminiWithRetry(processedImage, prompt);
       apiSw.stop();
       debugPrint('[GeminiOCR] API call took ${apiSw.elapsedMilliseconds}ms');
-      if (apiSw.elapsedMilliseconds > 4500) {
-        debugPrint(
-          '[GeminiOCR][Warn] API latency high (>4500ms). Possible network slowdown.',
-        );
-      }
 
       final parseSw = Stopwatch()..start();
       final receiptData = _parseResponse(response);
       parseSw.stop();
       debugPrint('[GeminiOCR] Parse took ${parseSw.elapsedMilliseconds}ms');
-      if (parseSw.elapsedMilliseconds > 300) {
-        debugPrint('[GeminiOCR][Warn] Parsing slow (>300ms). Large response?');
-      }
 
       totalSw.stop();
       debugPrint(
         '[GeminiOCR] Total scanReceipt duration ${totalSw.elapsedMilliseconds}ms',
       );
-      if (totalSw.elapsedMilliseconds > 5500) {
-        debugPrint(
-          '[GeminiOCR][Warn] End-to-end OCR slow (>5500ms). Investigate network + CPU load.',
-        );
-      }
       return receiptData;
-    } catch (e) {
+    } catch (e, stack) {
       totalSw.stop();
       debugPrint(
-        '[GeminiOCR] Error scanning receipt after ${totalSw.elapsedMilliseconds}ms: $e',
+        '[GeminiOCR][ERROR] Scan failed after ${totalSw.elapsedMilliseconds}ms',
       );
-      rethrow;
+      debugPrint('[GeminiOCR][ERROR] Exception: $e');
+      debugPrint('[GeminiOCR][ERROR] Stack: $stack');
+
+      // Return default data instead of rethrowing to prevent app crash
+      return ReceiptData(
+        merchant: 'Error',
+        amount: 0,
+        date: DateTime.now(),
+        category: 'Other',
+        items: [],
+        confidence: 0.0,
+        notes: 'Scan failed: ${e.toString()}',
+      );
     }
   }
 
@@ -111,12 +115,28 @@ class GeminiOcrService {
   Future<Uint8List> _preprocessImage(File imageFile) async {
     try {
       final bytes = await imageFile.readAsBytes();
-      // Offload heavy work to isolate to reduce UI jank
-      return await compute(_preprocessImageBytes, bytes);
-    } catch (e) {
-      debugPrint(
-        '[GeminiOCR] Isolate preprocessing failed, fallback to original bytes: $e',
+      final sizeMB = (bytes.length / 1024 / 1024).toStringAsFixed(2);
+      debugPrint('[GeminiOCR] Image size: ${bytes.length} bytes ($sizeMB MB)');
+
+      // If image too large, skip isolate processing
+      if (bytes.length > 10 * 1024 * 1024) {
+        // >10MB
+        debugPrint('[GeminiOCR] Image too large, returning original');
+        return bytes;
+      }
+
+      // Offload with timeout to prevent hanging
+      return await compute(_preprocessImageBytes, bytes).timeout(
+        Duration(seconds: 10),
+        onTimeout: () {
+          debugPrint('[GeminiOCR] Preprocessing timeout, returning original');
+          return bytes;
+        },
       );
+    } catch (e, stack) {
+      debugPrint('[GeminiOCR] Preprocessing failed: $e');
+      debugPrint('[GeminiOCR] Stack: $stack');
+      // Fallback: return original bytes
       return await imageFile.readAsBytes();
     }
   }

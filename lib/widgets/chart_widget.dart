@@ -51,9 +51,10 @@ class ChartWidget extends StatelessWidget {
     }
 
     // Find max value for scaling
-    final maxValue = chartData
-        .map((e) => e['amount'] as double)
-        .reduce((a, b) => a > b ? a : b);
+    final amounts = chartData.map((e) => e['amount'] as double).toList();
+    final maxValue = amounts.isEmpty
+        ? 0.0
+        : amounts.reduce((a, b) => a > b ? a : b);
     final effectiveMaxValue = maxValue > 0
         ? maxValue
         : 1000000; // Default scale if no data

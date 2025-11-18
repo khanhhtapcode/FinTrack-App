@@ -14,6 +14,29 @@ class RecentTransactionsWidget extends StatelessWidget {
     return '$sign${formatter.format(amount)} ${AppConstants.currencySymbol}';
   }
 
+  Widget _buildIcon(String? iconPath) {
+    if (iconPath == null || iconPath.isEmpty) {
+      return Icon(
+        Icons.receipt,
+        color: Colors.white,
+        size: AppConstants.iconMedium,
+      );
+    }
+
+    return Image.asset(
+      iconPath,
+      width: AppConstants.iconMedium,
+      height: AppConstants.iconMedium,
+      errorBuilder: (context, error, stackTrace) {
+        return Icon(
+          Icons.receipt,
+          color: Colors.white,
+          size: AppConstants.iconMedium,
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -63,7 +86,7 @@ class RecentTransactionsWidget extends StatelessWidget {
     BuildContext context,
     Map<String, dynamic> transaction,
   ) {
-    final amount = transaction['amount'].toDouble();
+    final amount = (transaction['amount'] as num?)?.toDouble() ?? 0.0;
 
     return Container(
       margin: EdgeInsets.only(bottom: AppConstants.paddingSmall),
@@ -90,11 +113,7 @@ class RecentTransactionsWidget extends StatelessWidget {
               color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(AppConstants.radiusSmall),
             ),
-            child: Image.asset(
-              transaction['iconPath'] as String,
-              width: AppConstants.iconMedium,
-              height: AppConstants.iconMedium,
-            ),
+            child: _buildIcon(transaction['iconPath'] as String?),
           ),
 
           SizedBox(width: AppConstants.paddingMedium),
