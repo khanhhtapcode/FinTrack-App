@@ -108,6 +108,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenHeight < 700;
+
+    // Responsive spacing
+    final verticalSpacing = isSmallScreen ? 8.0 : 16.0;
+    final sectionSpacing = isSmallScreen ? 12.0 : 20.0;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -134,65 +142,71 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Tab selector (Khoản chi / Khoản thu / Vay/Nợ)
-          _buildTabSelector(),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Tab selector (Khoản chi / Khoản thu / Vay/Nợ)
+            _buildTabSelector(),
 
-          // Main content
-          Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Category selector with dropdown
-                  Center(child: _buildCategorySelector()),
+            // Main content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: screenWidth * 0.05, // 5% of screen width
+                  vertical: 12,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Category selector with dropdown
+                    Center(child: _buildCategorySelector()),
 
-                  SizedBox(height: 20),
+                    SizedBox(height: sectionSpacing),
 
-                  // Amount display
-                  _buildAmountDisplay(),
+                    // Amount display
+                    _buildAmountDisplay(),
 
-                  SizedBox(height: 16),
+                    SizedBox(height: verticalSpacing),
 
-                  // Payment Method Selector
-                  _buildPaymentMethodSelector(),
+                    // Payment Method Selector
+                    _buildPaymentMethodSelector(),
 
-                  SizedBox(height: 16),
+                    SizedBox(height: verticalSpacing),
 
-                  // Note field
-                  _buildNoteField(),
+                    // Note field
+                    _buildNoteField(),
 
-                  SizedBox(height: 16),
+                    SizedBox(height: verticalSpacing),
 
-                  // Date picker
-                  _buildDatePicker(),
+                    // Date picker
+                    _buildDatePicker(),
 
-                  SizedBox(height: 24),
+                    SizedBox(height: verticalSpacing),
 
-                  // Add details button
-                  _buildAddDetailsButton(),
+                    // Add details button
+                    if (!isSmallScreen) _buildAddDetailsButton(),
+                    if (!isSmallScreen) SizedBox(height: verticalSpacing),
 
-                  SizedBox(height: 16),
+                    // Save button (Lưu)
+                    _buildSaveButton(),
 
-                  // Save button (Lưu)
-                  _buildSaveButton(),
+                    SizedBox(height: sectionSpacing),
 
-                  SizedBox(height: 20),
+                    // Quick amount buttons
+                    _buildQuickAmountButtons(),
 
-                  // Quick amount buttons
-                  _buildQuickAmountButtons(),
+                    SizedBox(height: sectionSpacing),
 
-                  SizedBox(height: 20),
+                    // Custom numpad
+                    _buildCustomNumpad(),
 
-                  // Custom numpad
-                  _buildCustomNumpad(),
-                ],
+                    SizedBox(height: 20), // Bottom padding
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -418,6 +432,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   Widget _buildAmountDisplay() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+
     return Row(
       children: [
         Container(
@@ -431,18 +448,22 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             style: TextStyle(
               color: AppTheme.primaryTeal,
               fontWeight: FontWeight.w600,
-              fontSize: 14,
+              fontSize: isSmallScreen ? 12 : 14,
             ),
           ),
         ),
         SizedBox(width: 12),
         Expanded(
-          child: Text(
-            _amount,
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.primaryTeal,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              _amount,
+              style: TextStyle(
+                fontSize: isSmallScreen ? 28 : 32,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primaryTeal,
+              ),
             ),
           ),
         ),
@@ -577,6 +598,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   Widget _buildDatePicker() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+
+    // Format date text
+    final dateText = isSmallScreen
+        ? '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}'
+        : 'Thứ ${_selectedDate.weekday}, ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}';
+
     return GestureDetector(
       onTap: () async {
         final DateTime? picked = await showDatePicker(
@@ -603,24 +632,37 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         children: [
           Icon(Icons.calendar_today_outlined, color: Colors.grey[400]),
           SizedBox(width: 12),
-          Row(
-            children: [
-              Icon(Icons.chevron_left, color: AppTheme.primaryTeal, size: 20),
-              SizedBox(width: 8),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryTeal.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+          Expanded(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.chevron_left, color: AppTheme.primaryTeal, size: 20),
+                SizedBox(width: 4),
+                Flexible(
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryTeal.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      dateText,
+                      style: TextStyle(
+                        color: AppTheme.primaryTeal,
+                        fontSize: isSmallScreen ? 12 : 14,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ),
-                child: Text(
-                  'Thứ năm, ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                  style: TextStyle(color: AppTheme.primaryTeal, fontSize: 14),
+                SizedBox(width: 4),
+                Icon(
+                  Icons.chevron_right,
+                  color: AppTheme.primaryTeal,
+                  size: 20,
                 ),
-              ),
-              SizedBox(width: 8),
-              Icon(Icons.chevron_right, color: AppTheme.primaryTeal, size: 20),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -737,9 +779,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   Widget _buildQuickAmountButtons() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: isSmallScreen ? 6 : 8,
+      runSpacing: isSmallScreen ? 6 : 8,
       alignment: WrapAlignment.center,
       children: _quickAmounts.map((amount) {
         return InkWell(
@@ -749,14 +794,20 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             });
           },
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: EdgeInsets.symmetric(
+              horizontal: isSmallScreen ? 12 : 16,
+              vertical: isSmallScreen ? 6 : 8,
+            ),
             decoration: BoxDecoration(
               color: Colors.grey[200],
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               amount,
-              style: TextStyle(color: Colors.grey[600], fontSize: 14),
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: isSmallScreen ? 12 : 14,
+              ),
             ),
           ),
         );
@@ -765,27 +816,57 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   Widget _buildCustomNumpad() {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenHeight < 700;
+
+    // Responsive button height
+    final buttonHeight = isSmallScreen ? 48.0 : 56.0;
+    final spacing = isSmallScreen ? 6.0 : 8.0;
+
     return Column(
       children: [
-        _buildNumpadRow(['C', '/', '*', '⌫']),
-        SizedBox(height: 8),
-        _buildNumpadRow(['7', '8', '9', '-']),
-        SizedBox(height: 8),
-        _buildNumpadRow(['4', '5', '6', '+']),
-        SizedBox(height: 8),
-        _buildNumpadRow(['1', '2', '3', '→'], isLastRow: true),
-        SizedBox(height: 8),
+        _buildNumpadRow(
+          ['C', '/', '*', '⌫'],
+          buttonHeight: buttonHeight,
+          spacing: spacing,
+        ),
+        SizedBox(height: spacing),
+        _buildNumpadRow(
+          ['7', '8', '9', '-'],
+          buttonHeight: buttonHeight,
+          spacing: spacing,
+        ),
+        SizedBox(height: spacing),
+        _buildNumpadRow(
+          ['4', '5', '6', '+'],
+          buttonHeight: buttonHeight,
+          spacing: spacing,
+        ),
+        SizedBox(height: spacing),
+        _buildNumpadRow(
+          ['1', '2', '3', '→'],
+          isLastRow: true,
+          buttonHeight: buttonHeight,
+          spacing: spacing,
+        ),
+        SizedBox(height: spacing),
         Row(
           children: [
-            Expanded(child: _buildNumpadButton('0')),
-            SizedBox(width: 8),
-            Expanded(child: _buildNumpadButton('000')),
-            SizedBox(width: 8),
-            Expanded(child: _buildNumpadButton('.')),
-            SizedBox(width: 8),
+            Expanded(
+              child: _buildNumpadButton('0', buttonHeight: buttonHeight),
+            ),
+            SizedBox(width: spacing),
+            Expanded(
+              child: _buildNumpadButton('000', buttonHeight: buttonHeight),
+            ),
+            SizedBox(width: spacing),
+            Expanded(
+              child: _buildNumpadButton('.', buttonHeight: buttonHeight),
+            ),
+            SizedBox(width: spacing),
             Expanded(
               child: Container(
-                height: 56,
+                height: buttonHeight,
                 decoration: BoxDecoration(
                   color: AppTheme.primaryTeal,
                   borderRadius: BorderRadius.circular(12),
@@ -799,15 +880,24 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
-  Widget _buildNumpadRow(List<String> buttons, {bool isLastRow = false}) {
+  Widget _buildNumpadRow(
+    List<String> buttons, {
+    bool isLastRow = false,
+    double? buttonHeight,
+    double? spacing,
+  }) {
+    final height = buttonHeight ?? 56.0;
+    final gap = spacing ?? 8.0;
+
     return Row(
       children: buttons.map((button) {
         return Expanded(
           child: Padding(
-            padding: EdgeInsets.only(right: button == buttons.last ? 0 : 8),
+            padding: EdgeInsets.only(right: button == buttons.last ? 0 : gap),
             child: _buildNumpadButton(
               button,
               isSpecial: isLastRow && button == '→',
+              buttonHeight: height,
             ),
           ),
         );
@@ -815,7 +905,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
-  Widget _buildNumpadButton(String text, {bool isSpecial = false}) {
+  Widget _buildNumpadButton(
+    String text, {
+    bool isSpecial = false,
+    double? buttonHeight,
+  }) {
+    final height = buttonHeight ?? 56.0;
     Color bgColor;
     Color textColor;
 
@@ -838,7 +933,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         _handleNumpadInput(text);
       },
       child: Container(
-        height: 56,
+        height: height,
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(12),

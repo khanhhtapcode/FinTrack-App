@@ -52,6 +52,11 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenWidth < 360 || screenHeight < 700;
+    final padding = isSmallScreen ? 12.0 : 20.0;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -61,71 +66,80 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           'Giao dịch tháng ${DateTime.now().month}',
           style: TextStyle(
             color: Colors.white,
-            fontSize: 18,
+            fontSize: isSmallScreen ? 16 : 18,
             fontWeight: FontWeight.w600,
           ),
         ),
         centerTitle: true,
       ),
-      body: RefreshIndicator(
-        onRefresh: _loadSummary,
-        child: SingleChildScrollView(
-          physics: AlwaysScrollableScrollPhysics(),
-          child: Column(
-            children: [
-              // Summary cards
-              Container(
-                color: AppTheme.primaryTeal,
-                padding: EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    _buildSummaryCard(
-                      'Thu nhập',
-                      _totalIncome,
-                      Colors.green,
-                      Icons.arrow_upward,
-                    ),
-                    SizedBox(height: 12),
-                    _buildSummaryCard(
-                      'Chi tiêu',
-                      _totalExpense,
-                      Colors.red,
-                      Icons.arrow_downward,
-                    ),
-                    SizedBox(height: 12),
-                    _buildSummaryCard(
-                      'Số dư',
-                      _balance,
-                      _balance >= 0 ? Colors.green : Colors.red,
-                      Icons.account_balance_wallet,
-                    ),
-                  ],
-                ),
-              ),
-
-              SizedBox(height: 20),
-
-              // Transaction list
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    Text(
-                      'Giao dịch gần đây',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.textPrimary,
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _loadSummary,
+          child: SingleChildScrollView(
+            physics: AlwaysScrollableScrollPhysics(),
+            child: Column(
+              children: [
+                // Summary cards
+                Container(
+                  color: AppTheme.primaryTeal,
+                  padding: EdgeInsets.all(padding),
+                  child: Column(
+                    children: [
+                      _buildSummaryCard(
+                        'Thu nhập',
+                        _totalIncome,
+                        Colors.green,
+                        Icons.arrow_upward,
+                        isSmallScreen,
                       ),
-                    ),
-                  ],
+                      SizedBox(height: isSmallScreen ? 10 : 12),
+                      _buildSummaryCard(
+                        'Chi tiêu',
+                        _totalExpense,
+                        Colors.red,
+                        Icons.arrow_downward,
+                        isSmallScreen,
+                      ),
+                      SizedBox(height: isSmallScreen ? 10 : 12),
+                      _buildSummaryCard(
+                        'Số dư',
+                        _balance,
+                        _balance >= 0 ? Colors.green : Colors.red,
+                        Icons.account_balance_wallet,
+                        isSmallScreen,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
 
-              SizedBox(height: 12),
+                SizedBox(height: isSmallScreen ? 16 : 20),
 
-              TransactionListWidget(),
-            ],
+                // Transaction list
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 12 : 16,
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Giao dịch gần đây',
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 16 : 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                SizedBox(height: 12),
+
+                TransactionListWidget(),
+
+                SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
@@ -137,9 +151,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     double amount,
     Color color,
     IconData icon,
+    bool isSmallScreen,
   ) {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -154,30 +169,37 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       child: Row(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: isSmallScreen ? 40 : 48,
+            height: isSmallScreen ? 40 : 48,
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: color, size: 24),
+            child: Icon(icon, color: color, size: isSmallScreen ? 20 : 24),
           ),
-          SizedBox(width: 16),
+          SizedBox(width: isSmallScreen ? 12 : 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: isSmallScreen ? 13 : 14,
+                  ),
                 ),
                 SizedBox(height: 4),
-                Text(
-                  '${_currencyFormat.format(amount)} ₫',
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '${_currencyFormat.format(amount)} ₫',
+                    style: TextStyle(
+                      color: color,
+                      fontSize: isSmallScreen ? 18 : 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],

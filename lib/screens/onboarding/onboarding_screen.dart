@@ -46,12 +46,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenHeight < 700 || screenWidth < 360;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
-            _buildHeader(),
+            _buildHeader(isSmallScreen, screenWidth),
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
@@ -61,57 +65,69 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     _currentIndex = index;
                   });
                 },
-                itemBuilder: (context, index) => _buildPage(_pages[index]),
+                itemBuilder: (context, index) =>
+                    _buildPage(_pages[index], isSmallScreen),
               ),
             ),
-            _buildBottomSection(),
+            _buildBottomSection(isSmallScreen),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(bool isSmallScreen, double screenWidth) {
     return Padding(
-      padding: EdgeInsets.all(16),
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Logo Section
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(0xFF4ECDC4),
-                ),
-                child: Icon(
-                  Icons.account_balance_wallet_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-              SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'FINTRAKCER',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2C3E50),
-                    ),
+          Flexible(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: isSmallScreen ? 35 : 40,
+                  height: isSmallScreen ? 35 : 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFF4ECDC4),
                   ),
-                  Text(
-                    'Smart spend, Bright future',
-                    style: TextStyle(fontSize: 10, color: Color(0xFF7F8C8D)),
+                  child: Icon(
+                    Icons.account_balance_wallet_rounded,
+                    color: Colors.white,
+                    size: isSmallScreen ? 18 : 20,
                   ),
-                ],
-              ),
-            ],
+                ),
+                SizedBox(width: isSmallScreen ? 8 : 12),
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'FINTRAKCER',
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 14 : 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2C3E50),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        'Smart spend, Bright future',
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 9 : 10,
+                          color: Color(0xFF7F8C8D),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
 
           // Language Selector
@@ -160,7 +176,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ],
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: EdgeInsets.symmetric(
+                horizontal: isSmallScreen ? 8 : 12,
+                vertical: isSmallScreen ? 4 : 6,
+              ),
               decoration: BoxDecoration(
                 border: Border.all(color: Color(0xFF4ECDC4), width: 1),
                 borderRadius: BorderRadius.circular(20),
@@ -168,20 +187,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.language, size: 16, color: Color(0xFF4ECDC4)),
+                  Icon(
+                    Icons.language,
+                    size: isSmallScreen ? 14 : 16,
+                    color: Color(0xFF4ECDC4),
+                  ),
                   SizedBox(width: 4),
                   Text(
-                    _selectedLanguage == 'vi' ? 'Tiếng Việt' : 'English',
+                    _selectedLanguage == 'vi' ? 'VI' : 'EN',
                     style: TextStyle(
                       color: Color(0xFF4ECDC4),
-                      fontSize: 12,
+                      fontSize: isSmallScreen ? 11 : 12,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  SizedBox(width: 4),
+                  SizedBox(width: 2),
                   Icon(
                     Icons.keyboard_arrow_down,
-                    size: 16,
+                    size: isSmallScreen ? 14 : 16,
                     color: Color(0xFF4ECDC4),
                   ),
                 ],
@@ -193,91 +216,107 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildPage(Map<String, dynamic> page) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Illustration
-          Container(
-            width: 280,
-            height: 280,
-            decoration: BoxDecoration(
-              color: page['color'].withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Container(
-                  width: 200,
-                  height: 200,
-                  decoration: BoxDecoration(
-                    color: page['color'].withOpacity(0.15),
-                    shape: BoxShape.circle,
+  Widget _buildPage(Map<String, dynamic> page, bool isSmallScreen) {
+    final illustrationSize = isSmallScreen ? 200.0 : 280.0;
+    final innerSize1 = isSmallScreen ? 140.0 : 200.0;
+    final innerSize2 = isSmallScreen ? 100.0 : 140.0;
+    final innerSize3 = isSmallScreen ? 60.0 : 80.0;
+    final iconSize = isSmallScreen ? 30.0 : 40.0;
+
+    return SingleChildScrollView(
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(height: isSmallScreen ? 20 : 40),
+
+            // Illustration
+            Container(
+              width: illustrationSize,
+              height: illustrationSize,
+              decoration: BoxDecoration(
+                color: page['color'].withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: innerSize1,
+                    height: innerSize1,
+                    decoration: BoxDecoration(
+                      color: page['color'].withOpacity(0.15),
+                      shape: BoxShape.circle,
+                    ),
                   ),
-                ),
-                Container(
-                  width: 140,
-                  height: 140,
-                  decoration: BoxDecoration(
-                    color: page['color'].withOpacity(0.2),
-                    shape: BoxShape.circle,
+                  Container(
+                    width: innerSize2,
+                    height: innerSize2,
+                    decoration: BoxDecoration(
+                      color: page['color'].withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
                   ),
-                ),
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: page['color'],
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: page['color'].withOpacity(0.3),
-                        blurRadius: 20,
-                        offset: Offset(0, 8),
-                      ),
-                    ],
+                  Container(
+                    width: innerSize3,
+                    height: innerSize3,
+                    decoration: BoxDecoration(
+                      color: page['color'],
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: page['color'].withOpacity(0.3),
+                          blurRadius: isSmallScreen ? 15 : 20,
+                          offset: Offset(0, isSmallScreen ? 6 : 8),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      page['icon'],
+                      size: iconSize,
+                      color: Colors.white,
+                    ),
                   ),
-                  child: Icon(page['icon'], size: 40, color: Colors.white),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
 
-          SizedBox(height: 48),
+            SizedBox(height: isSmallScreen ? 30 : 48),
 
-          Text(
-            page['title'],
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2C3E50),
-              height: 1.3,
+            Text(
+              page['title'],
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: isSmallScreen ? 18 : 22,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF2C3E50),
+                height: 1.3,
+              ),
             ),
-          ),
 
-          SizedBox(height: 16),
+            SizedBox(height: isSmallScreen ? 12 : 16),
 
-          Text(
-            page['subtitle'],
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 16,
-              color: Color(0xFF7F8C8D),
-              height: 1.5,
+            Text(
+              page['subtitle'],
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: isSmallScreen ? 14 : 16,
+                color: Color(0xFF7F8C8D),
+                height: 1.5,
+              ),
             ),
-          ),
-        ],
+
+            SizedBox(height: isSmallScreen ? 20 : 40),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildBottomSection() {
+  Widget _buildBottomSection(bool isSmallScreen) {
     return Container(
-      padding: EdgeInsets.all(24),
+      padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
       child: Column(
         children: [
           // Page Indicators
@@ -285,25 +324,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(_pages.length, (index) {
               return Container(
-                margin: EdgeInsets.symmetric(horizontal: 4),
-                width: _currentIndex == index ? 24 : 8,
-                height: 8,
+                margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 3 : 4),
+                width: _currentIndex == index
+                    ? (isSmallScreen ? 20 : 24)
+                    : (isSmallScreen ? 6 : 8),
+                height: isSmallScreen ? 6 : 8,
                 decoration: BoxDecoration(
                   color: _currentIndex == index
                       ? _pages[_currentIndex]['color']
                       : Color(0xFF7F8C8D).withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(isSmallScreen ? 3 : 4),
                 ),
               );
             }),
           ),
 
-          SizedBox(height: 32),
+          SizedBox(height: isSmallScreen ? 20 : 32),
 
           // Single Register Button
           SizedBox(
             width: double.infinity,
-            height: 56,
+            height: isSmallScreen ? 50 : 56,
             child: ElevatedButton(
               onPressed: () {
                 Navigator.push(
@@ -325,7 +366,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               child: Text(
                 'ĐĂNG KÝ MIỄN PHÍ',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 16 : 18,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
@@ -348,16 +392,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               'ĐĂNG NHẬP',
               style: TextStyle(
                 color: Color(0xFF4ECDC4),
-                fontSize: 16,
+                fontSize: isSmallScreen ? 14 : 16,
                 fontWeight: FontWeight.w500,
               ),
             ),
           ),
-          SizedBox(height: 8),
+
+          if (!isSmallScreen) SizedBox(height: 8),
+
           // Version Text
           Text(
             'Phiên bản 1.1',
-            style: TextStyle(color: Colors.grey, fontSize: 12),
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: isSmallScreen ? 11 : 12,
+            ),
           ),
         ],
       ),

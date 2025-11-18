@@ -200,6 +200,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenWidth < 360 || screenHeight < 700;
+    final padding = isSmallScreen ? 12.0 : AppConstants.paddingMedium;
+    final spacing = isSmallScreen ? 12.0 : AppConstants.paddingLarge;
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       body: _isLoading
@@ -213,29 +219,29 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: SingleChildScrollView(
                   physics: AlwaysScrollableScrollPhysics(),
                   child: Padding(
-                    padding: EdgeInsets.all(AppConstants.paddingMedium),
+                    padding: EdgeInsets.all(padding),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Header with avatar, name, notification
                         _buildHeader(),
 
-                        SizedBox(height: AppConstants.paddingLarge),
+                        SizedBox(height: spacing),
 
                         // Balance Card with real data
                         BalanceCardWidget(balance: _totalBalance),
 
-                        SizedBox(height: AppConstants.paddingMedium),
+                        SizedBox(height: padding),
 
                         // Income & Expense Summary
                         _buildSummaryCards(),
 
-                        SizedBox(height: AppConstants.paddingLarge),
+                        SizedBox(height: spacing),
 
                         // Chart Section
                         _buildChartSection(),
 
-                        SizedBox(height: AppConstants.paddingLarge),
+                        SizedBox(height: spacing),
 
                         // Recent Transactions
                         _recentTransactions.isEmpty
@@ -243,6 +249,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             : RecentTransactionsWidget(
                                 transactions: _recentTransactions,
                               ),
+
+                        SizedBox(height: 80), // Space for FAB
                       ],
                     ),
                   ),

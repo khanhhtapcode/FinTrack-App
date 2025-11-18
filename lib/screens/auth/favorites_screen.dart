@@ -11,58 +11,79 @@ class FavoritesScreen extends StatefulWidget {
 
 class _FavoritesScreenState extends State<FavoritesScreen> {
   final List<Map<String, dynamic>> _preferences = [
-    {'icon': Icons.calculate, 'text': 'Quản lý chi tiêu hàng ngày', 'selected': false},
-    {'icon': Icons.receipt_long, 'text': 'Tìm kiếm cho tiết cải nhất', 'selected': false},
+    {
+      'icon': Icons.calculate,
+      'text': 'Quản lý chi tiêu hàng ngày',
+      'selected': false,
+    },
+    {
+      'icon': Icons.receipt_long,
+      'text': 'Tìm kiếm cho tiết cải nhất',
+      'selected': false,
+    },
     {'icon': Icons.calendar_today, 'text': 'Thêm sự dậu ra', 'selected': false},
-    {'icon': Icons.notifications, 'text': 'Gửi nhắc nhở cho chuẩn để nhất', 'selected': false},
-    {'icon': Icons.analytics, 'text': 'Quản lý chi tiết hết đủ ròng', 'selected': false},
+    {
+      'icon': Icons.notifications,
+      'text': 'Gửi nhắc nhở cho chuẩn để nhất',
+      'selected': false,
+    },
+    {
+      'icon': Icons.analytics,
+      'text': 'Quản lý chi tiết hết đủ ròng',
+      'selected': false,
+    },
   ];
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenHeight < 700;
+    final padding = screenWidth * 0.06;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
-          padding: EdgeInsets.all(24),
+          padding: EdgeInsets.all(padding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SizedBox(height: 20),
+              SizedBox(height: isSmallScreen ? 12 : 20),
 
               // Logo
-              _buildLogo(),
+              _buildLogo(isSmallScreen),
 
-              SizedBox(height: 32),
+              SizedBox(height: isSmallScreen ? 24 : 32),
 
               // Title
               Text(
                 'BẠN ĐANG QUAN TÂM ĐẾN ĐIỀU GÌ?',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: isSmallScreen ? 18 : 20,
                   fontWeight: FontWeight.bold,
                   color: AppTheme.textPrimary,
                 ),
               ),
 
-              SizedBox(height: 32),
+              SizedBox(height: isSmallScreen ? 24 : 32),
 
               // Preference Items
               Expanded(
                 child: ListView.builder(
                   itemCount: _preferences.length,
                   itemBuilder: (context, index) {
-                    return _buildPreferenceItem(index);
+                    return _buildPreferenceItem(index, isSmallScreen);
                   },
                 ),
               ),
 
-              SizedBox(height: 24),
+              SizedBox(height: isSmallScreen ? 16 : 24),
 
               // Continue Button
               SizedBox(
-                height: 56,
+                height: isSmallScreen ? 50 : 56,
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.pushReplacement(
@@ -81,14 +102,14 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   child: Text(
                     'XÁC NHẬN',
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: isSmallScreen ? 16 : 18,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
               ),
 
-              SizedBox(height: 16),
+              SizedBox(height: isSmallScreen ? 12 : 16),
 
               // Skip Button
               TextButton(
@@ -102,7 +123,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   'BỎ QUA',
                   style: TextStyle(
                     color: AppTheme.textSecondary,
-                    fontSize: 16,
+                    fontSize: isSmallScreen ? 14 : 16,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -114,19 +135,19 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     );
   }
 
-  Widget _buildLogo() {
+  Widget _buildLogo(bool isSmallScreen) {
     return Column(
       children: [
         Container(
-          width: 80,
-          height: 80,
+          width: isSmallScreen ? 70 : 80,
+          height: isSmallScreen ? 70 : 80,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: AppTheme.primaryTeal,
           ),
           child: Icon(
             Icons.account_balance_wallet_rounded,
-            size: 40,
+            size: isSmallScreen ? 35 : 40,
             color: Colors.white,
           ),
         ),
@@ -134,7 +155,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         Text(
           'FINTRACKER',
           style: TextStyle(
-            fontSize: 16,
+            fontSize: isSmallScreen ? 14 : 16,
             fontWeight: FontWeight.bold,
             color: AppTheme.textPrimary,
           ),
@@ -143,13 +164,13 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     );
   }
 
-  Widget _buildPreferenceItem(int index) {
+  Widget _buildPreferenceItem(int index, bool isSmallScreen) {
     return Container(
-      margin: EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: isSmallScreen ? 10 : 12),
       decoration: BoxDecoration(
         border: Border.all(
-          color: _preferences[index]['selected'] 
-              ? AppTheme.primaryTeal 
+          color: _preferences[index]['selected']
+              ? AppTheme.primaryTeal
               : AppTheme.textSecondary.withOpacity(0.3),
           width: _preferences[index]['selected'] ? 2 : 1,
         ),
@@ -166,17 +187,17 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           children: [
             Icon(
               _preferences[index]['icon'],
-              color: _preferences[index]['selected'] 
-                  ? AppTheme.primaryTeal 
+              color: _preferences[index]['selected']
+                  ? AppTheme.primaryTeal
                   : AppTheme.textSecondary,
-              size: 24,
+              size: isSmallScreen ? 20 : 24,
             ),
             SizedBox(width: 12),
             Expanded(
               child: Text(
                 _preferences[index]['text'],
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: isSmallScreen ? 13 : 14,
                   color: AppTheme.textPrimary,
                 ),
               ),
