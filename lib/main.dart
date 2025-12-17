@@ -47,7 +47,7 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [ChangeNotifierProvider(create: (_) => AuthService())],
       child: MaterialApp(
-        title: 'FinTracker',
+        title: 'FinTracke',
         theme: AppTheme.lightTheme,
         home: SplashScreen(), // hoặc HomeScreen(), tùy ý bạn
         debugShowCheckedModeBanner: false,
