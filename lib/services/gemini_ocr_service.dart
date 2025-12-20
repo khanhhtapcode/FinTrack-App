@@ -41,6 +41,19 @@ class GeminiOcrService {
       debugPrint('[OCR][ERROR] Stack: $stack');
 
       // Return default data instead of rethrowing to prevent app crash
+      String errorMessage = 'Scan failed';
+      if (e.toString().contains('timeout')) {
+        errorMessage = 'Timeout - Server không phản hồi. Vui lòng thử lại.';
+      } else if (e.toString().contains('SocketException')) {
+        errorMessage = 'Không có kết nối internet. Vui lòng kiểm tra kết nối.';
+      } else if (e.toString().contains('404')) {
+        errorMessage = 'API endpoint không tìm thấy.';
+      } else if (e.toString().contains('500')) {
+        errorMessage = 'Lỗi server. Vui lòng thử lại sau.';
+      } else {
+        errorMessage = 'Lỗi: ${e.toString()}';
+      }
+
       return ReceiptData(
         merchant: 'Error',
         amount: 0,
@@ -48,7 +61,7 @@ class GeminiOcrService {
         category: 'Other',
         items: [],
         confidence: 0.0,
-        notes: 'Scan failed: ${e.toString()}',
+        notes: errorMessage,
       );
     }
   }
