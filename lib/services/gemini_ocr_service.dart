@@ -73,15 +73,18 @@ class GeminiOcrService {
     for (int attempt = 1; attempt <= _maxRetries; attempt++) {
       try {
         debugPrint('[OCR] API call attempt $attempt/$_maxRetries');
+        debugPrint('[OCR] Uploading to: $_apiUrl/api/ocr');
 
         // Create multipart request
         final request = http.MultipartRequest(
           'POST',
-          Uri.parse('$_apiUrl/ocr'),
+          Uri.parse('$_apiUrl/api/ocr'),
         );
 
         // Add image file
         final imageBytes = await imageFile.readAsBytes();
+        debugPrint('[OCR] Image size: ${imageBytes.length} bytes');
+
         final multipartFile = http.MultipartFile.fromBytes(
           'image',
           imageBytes,
@@ -89,37 +92,54 @@ class GeminiOcrService {
         );
         request.files.add(multipartFile);
 
+        debugPrint('[OCR] Sending request...');
         // Send request
         final streamedResponse = await request.send().timeout(
           Duration(seconds: 30),
           onTimeout: () {
+            debugPrint('[OCR] Request timeout!');
             throw Exception('Request timeout after 30 seconds');
           },
+        );
+
+        debugPrint(
+          '[OCR] Got response with status: ${streamedResponse.statusCode}',
         );
 
         // Get response
         final response = await http.Response.fromStream(streamedResponse);
 
         if (response.statusCode == 200) {
-          debugPrint('[OCR] API response: ${response.body}');
+          debugPrint('[OCR] Success! Response: ${response.body}');
           final jsonResponse =
               jsonDecode(response.body) as Map<String, dynamic>;
           return jsonResponse;
         } else {
+          debugPrint(
+            '[OCR] API error ${response.statusCode}: ${response.body}',
+          );
           throw Exception(
             'API error: ${response.statusCode} - ${response.body}',
           );
         }
-      } catch (e) {
+      } catch (e, stackTrace) {
         lastException = Exception('OCR API error: $e');
-        debugPrint('[OCR] Error (attempt $attempt): $e');
+        debugPrint('[OCR] ❌ Error (attempt $attempt/$_maxRetries): $e');
+        debugPrint('[OCR] Error type: ${e.runtimeType}');
+        if (attempt == 1) {
+          debugPrint('[OCR] Stack trace: $stackTrace');
+        }
 
         if (attempt < _maxRetries) {
+          debugPrint(
+            '[OCR] Retrying in ${_retryDelay.inSeconds * attempt} seconds...',
+          );
           await Future.delayed(_retryDelay * attempt);
         }
       }
     }
 
+    debugPrint('[OCR] ❌ All $maxRetries attempts failed!');
     throw lastException ??
         Exception('Failed to call OCR API after $_maxRetries attempts');
   }
