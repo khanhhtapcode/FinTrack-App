@@ -1,102 +1,44 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:image/image.dart' as img;
+import 'package:http/http.dart' as http;
 import '../models/receipt_data.dart';
 
-/// Top-level isolate function for image preprocessing (runs off UI thread)
-Uint8List _preprocessImageBytes(List<int> originalBytes) {
-  try {
-    final decoded = img.decodeImage(Uint8List.fromList(originalBytes));
-    if (decoded == null) {
-      // Return original if decode fails
-      return Uint8List.fromList(originalBytes);
-    }
-
-    img.Image working = decoded;
-
-    // Aggressive resize to 512px to prevent OOM
-    if (working.width > 512 || working.height > 512) {
-      if (working.width >= working.height) {
-        working = img.copyResize(working, width: 512);
-      } else {
-        working = img.copyResize(working, height: 512);
-      }
-    }
-
-    // Skip color adjustment to reduce processing time and memory
-    // Compress JPEG 70% quality (balance size vs quality)
-    final compressed = img.encodeJpg(working, quality: 70);
-    return Uint8List.fromList(compressed);
-  } catch (e) {
-    // If any processing fails, return original bytes
-    debugPrint('[Isolate] Image processing error: $e');
-    return Uint8List.fromList(originalBytes);
-  }
-}
-
 class GeminiOcrService {
-  late final GenerativeModel _model;
+  static const String _apiUrl = 'https://api-ocr-production.up.railway.app';
   static const int _maxRetries = 3;
   static const Duration _retryDelay = Duration(seconds: 2);
-  static const bool _enableVerboseLogs =
-      true; // toggle detailed logs (used in parsing)
 
-  GeminiOcrService() {
-    final raw = dotenv.env['GEMINI_API_KEY'];
-    final apiKey = raw?.trim();
-    if (apiKey == null || apiKey.isEmpty) {
-      throw Exception(
-        'GEMINI_API_KEY not found in .env file. Please add your API key.',
-      );
-    }
-
-    _model = GenerativeModel(model: 'gemini-flash-latest', apiKey: apiKey);
-  }
+  GeminiOcrService();
 
   /// Scan receipt image and extract transaction data
   Future<ReceiptData> scanReceipt(File imageFile) async {
     final totalSw = Stopwatch()..start();
     try {
-      debugPrint('[GeminiOCR] Starting scan...');
-
-      final preprocessSw = Stopwatch()..start();
-      final processedImage = await _preprocessImage(imageFile);
-      preprocessSw.stop();
-      final imgSizeMB = (processedImage.length / 1024 / 1024).toStringAsFixed(
-        2,
-      );
-      debugPrint(
-        '[GeminiOCR] Preprocess took ${preprocessSw.elapsedMilliseconds}ms, output: $imgSizeMB MB',
-      );
-
-      final prompt = _buildPrompt();
+      debugPrint('[OCR] Starting scan...');
 
       final apiSw = Stopwatch()..start();
-      final response = await _callGeminiWithRetry(processedImage, prompt);
+      final response = await _uploadImageToOcr(imageFile);
       apiSw.stop();
-      debugPrint('[GeminiOCR] API call took ${apiSw.elapsedMilliseconds}ms');
+      debugPrint('[OCR] API call took ${apiSw.elapsedMilliseconds}ms');
 
       final parseSw = Stopwatch()..start();
-      final receiptData = _parseResponse(response);
+      final receiptData = _parseOcrResponse(response);
       parseSw.stop();
-      debugPrint('[GeminiOCR] Parse took ${parseSw.elapsedMilliseconds}ms');
+      debugPrint('[OCR] Parse took ${parseSw.elapsedMilliseconds}ms');
 
       totalSw.stop();
       debugPrint(
-        '[GeminiOCR] Total scanReceipt duration ${totalSw.elapsedMilliseconds}ms',
+        '[OCR] Total scanReceipt duration ${totalSw.elapsedMilliseconds}ms',
       );
       return receiptData;
     } catch (e, stack) {
       totalSw.stop();
       debugPrint(
-        '[GeminiOCR][ERROR] Scan failed after ${totalSw.elapsedMilliseconds}ms',
+        '[OCR][ERROR] Scan failed after ${totalSw.elapsedMilliseconds}ms',
       );
-      debugPrint('[GeminiOCR][ERROR] Exception: $e');
-      debugPrint('[GeminiOCR][ERROR] Stack: $stack');
+      debugPrint('[OCR][ERROR] Exception: $e');
+      debugPrint('[OCR][ERROR] Stack: $stack');
 
       // Return default data instead of rethrowing to prevent app crash
       return ReceiptData(
@@ -111,173 +53,143 @@ class GeminiOcrService {
     }
   }
 
-  /// Preprocess image: resize, compress, enhance
-  Future<Uint8List> _preprocessImage(File imageFile) async {
-    try {
-      final bytes = await imageFile.readAsBytes();
-      final sizeMB = (bytes.length / 1024 / 1024).toStringAsFixed(2);
-      debugPrint('[GeminiOCR] Image size: ${bytes.length} bytes ($sizeMB MB)');
-
-      // If image too large, skip isolate processing
-      if (bytes.length > 10 * 1024 * 1024) {
-        // >10MB
-        debugPrint('[GeminiOCR] Image too large, returning original');
-        return bytes;
-      }
-
-      // Offload with timeout to prevent hanging
-      return await compute(_preprocessImageBytes, bytes).timeout(
-        Duration(seconds: 10),
-        onTimeout: () {
-          debugPrint('[GeminiOCR] Preprocessing timeout, returning original');
-          return bytes;
-        },
-      );
-    } catch (e, stack) {
-      debugPrint('[GeminiOCR] Preprocessing failed: $e');
-      debugPrint('[GeminiOCR] Stack: $stack');
-      // Fallback: return original bytes
-      return await imageFile.readAsBytes();
-    }
-  }
-
-  /// Build optimized prompt for Gemini
-  String _buildPrompt() {
-    return '''
-Analyze this receipt/invoice image and extract transaction information.
-
-Requirements:
-1. Merchant name (tên cửa hàng/công ty) - Keep original Vietnamese if applicable
-2. Total amount in VND (số tiền) - Extract ONLY the final total after all taxes/discounts
-3. Date (format: DD/MM/YYYY) - If not found, use today's date
-4. Category - Choose EXACTLY ONE from this list:
-   - Food & Drink (Ăn uống, nhà hàng, cafe, food delivery)
-   - Shopping (Mua sắm, siêu thị, quần áo, đồ dùng)
-   - Transport (Đi lại, xăng xe, taxi, grab, vé xe)
-   - Entertainment (Giải trí, phim ảnh, game, du lịch)
-   - Bills (Hóa đơn, điện nước, internet, điện thoại)
-   - Healthcare (Y tế, thuốc, bệnh viện)
-   - Education (Giáo dục, sách vở, học phí)
-   - Other (Khác)
-5. Items purchased (optional, max 5 items, ngắn gọn)
-6. Confidence score (0.0 to 1.0) - Your confidence in the extraction accuracy
-
-Important rules:
-- For amount: Remove all non-numeric characters except decimal point
-- If multiple totals shown, take the FINAL total (after tax/discount)
-- Date format must be DD/MM/YYYY
-- Category must be exactly one of the listed options
-- For Vietnamese receipts, preserve Vietnamese characters
-- If information is unclear, use reasonable defaults and lower confidence score
-
-Return ONLY valid JSON in this EXACT format (no markdown, no code blocks):
-{
-  "merchant": "Tên cửa hàng",
-  "amount": 150000,
-  "date": "18/11/2025",
-  "category": "Food & Drink",
-  "items": ["Cơm", "Nước ngọt"],
-  "confidence": 0.95
-}
-''';
-  }
-
-  /// Call Gemini API with retry logic
-  Future<String> _callGeminiWithRetry(
-    Uint8List imageBytes,
-    String prompt,
-  ) async {
+  /// Upload image to OCR API and get response
+  Future<Map<String, dynamic>> _uploadImageToOcr(File imageFile) async {
     Exception? lastException;
 
     for (int attempt = 1; attempt <= _maxRetries; attempt++) {
       try {
-        debugPrint('Gemini API call attempt $attempt/$_maxRetries');
+        debugPrint('[OCR] API call attempt $attempt/$_maxRetries');
 
-        final content = [
-          Content.multi([TextPart(prompt), DataPart('image/jpeg', imageBytes)]),
-        ];
+        // Create multipart request
+        final request = http.MultipartRequest(
+          'POST',
+          Uri.parse('$_apiUrl/ocr'),
+        );
 
-        final response = await _model.generateContent(content);
+        // Add image file
+        final imageBytes = await imageFile.readAsBytes();
+        final multipartFile = http.MultipartFile.fromBytes(
+          'image',
+          imageBytes,
+          filename: 'receipt.jpg',
+        );
+        request.files.add(multipartFile);
 
-        if (response.text == null || response.text!.isEmpty) {
-          throw Exception('Empty response from Gemini API');
+        // Send request
+        final streamedResponse = await request.send().timeout(
+          Duration(seconds: 30),
+          onTimeout: () {
+            throw Exception('Request timeout after 30 seconds');
+          },
+        );
+
+        // Get response
+        final response = await http.Response.fromStream(streamedResponse);
+
+        if (response.statusCode == 200) {
+          debugPrint('[OCR] API response: ${response.body}');
+          final jsonResponse =
+              jsonDecode(response.body) as Map<String, dynamic>;
+          return jsonResponse;
+        } else {
+          throw Exception(
+            'API error: ${response.statusCode} - ${response.body}',
+          );
         }
-
-        debugPrint('Gemini response: ${response.text}');
-        return response.text!;
-      } on GenerativeAIException catch (e) {
-        lastException = e;
-        debugPrint('Gemini API error (attempt $attempt): ${e.message}');
+      } catch (e) {
+        lastException = Exception('OCR API error: $e');
+        debugPrint('[OCR] Error (attempt $attempt): $e');
 
         if (attempt < _maxRetries) {
           await Future.delayed(_retryDelay * attempt);
-        }
-      } catch (e) {
-        lastException = Exception('Unexpected error: $e');
-        debugPrint('Unexpected error (attempt $attempt): $e');
-
-        if (attempt < _maxRetries) {
-          await Future.delayed(_retryDelay);
         }
       }
     }
 
     throw lastException ??
-        Exception('Failed to call Gemini API after $_maxRetries attempts');
+        Exception('Failed to call OCR API after $_maxRetries attempts');
   }
 
-  /// Parse Gemini response to ReceiptData
-  ReceiptData _parseResponse(String response) {
+  /// Parse OCR API response to ReceiptData
+  ReceiptData _parseOcrResponse(Map<String, dynamic> json) {
     try {
-      // Clean response (remove markdown code blocks if present)
-      String cleanedResponse = response.trim();
+      debugPrint('[OCR] Parsing response: $json');
 
-      // Remove markdown code blocks
-      if (cleanedResponse.startsWith('```json')) {
-        cleanedResponse = cleanedResponse.substring(7);
-      } else if (cleanedResponse.startsWith('```')) {
-        cleanedResponse = cleanedResponse.substring(3);
+      // Parse merchant name
+      final merchant = json['merchant_name'] as String? ?? 'Unknown';
+
+      // Parse total amount
+      final totalAmount = json['total_amount'];
+      double amount = 0;
+      if (totalAmount is num) {
+        amount = totalAmount.toDouble();
+      } else if (totalAmount is String) {
+        amount = double.tryParse(totalAmount) ?? 0;
       }
 
-      if (cleanedResponse.endsWith('```')) {
-        cleanedResponse = cleanedResponse.substring(
-          0,
-          cleanedResponse.length - 3,
-        );
+      // Parse date
+      DateTime date = DateTime.now();
+      final dateStr = json['date'] as String?;
+      if (dateStr != null && dateStr.isNotEmpty) {
+        try {
+          // Expected format: dd/mm/yyyy
+          final parts = dateStr.split('/');
+          if (parts.length == 3) {
+            final day = int.parse(parts[0]);
+            final month = int.parse(parts[1]);
+            final year = int.parse(parts[2]);
+            date = DateTime(year, month, day);
+          }
+        } catch (e) {
+          debugPrint('[OCR] Error parsing date: $e');
+        }
       }
 
-      cleanedResponse = cleanedResponse.trim();
-
-      // Parse JSON
-      final decodeSw = Stopwatch()..start();
-      final Map<String, dynamic> json = jsonDecode(cleanedResponse);
-      decodeSw.stop();
-      if (_enableVerboseLogs) {
-        debugPrint(
-          '[GeminiOCR] JSON decode took ${decodeSw.elapsedMilliseconds}ms',
-        );
+      // Parse items
+      final itemsList = <String>[];
+      final itemsJson = json['items'] as List<dynamic>?;
+      if (itemsJson != null) {
+        for (var item in itemsJson) {
+          if (item is Map<String, dynamic>) {
+            final name = item['name'] as String?;
+            if (name != null && name.isNotEmpty) {
+              itemsList.add(name);
+            }
+          }
+        }
       }
 
-      // Validate required fields
-      if (!json.containsKey('merchant') ||
-          !json.containsKey('amount') ||
-          !json.containsKey('date') ||
-          !json.containsKey('category')) {
-        throw Exception('Missing required fields in response');
+      // Determine category based on items or default to Other
+      String category = _determineCategoryFromItems(itemsList);
+
+      // Parse payment method and other fields for notes
+      final paymentMethod = json['payment_method'] as String? ?? '';
+      final invoiceNumber = json['invoice_number'] as String? ?? '';
+
+      String notes = '';
+      if (paymentMethod.isNotEmpty) {
+        notes += 'Thanh toán: $paymentMethod';
+      }
+      if (invoiceNumber.isNotEmpty) {
+        if (notes.isNotEmpty) notes += '\n';
+        notes += 'Số hóa đơn: $invoiceNumber';
       }
 
-      // Create ReceiptData from JSON
-      final receiptData = ReceiptData.fromJson(json);
-
-      // Validate data
-      if (receiptData.amount <= 0) {
-        throw Exception('Invalid amount: ${receiptData.amount}');
-      }
-
-      return receiptData;
-    } catch (e) {
-      debugPrint('Error parsing Gemini response: $e');
-      debugPrint('Raw response: $response');
+      return ReceiptData(
+        merchant: merchant,
+        amount: amount,
+        date: date,
+        category: category,
+        items: itemsList,
+        confidence:
+            0.9, // High confidence since it comes from dedicated OCR service
+        notes: notes.isNotEmpty ? notes : null,
+      );
+    } catch (e, stack) {
+      debugPrint('[OCR] Error parsing response: $e');
+      debugPrint('[OCR] Stack: $stack');
+      debugPrint('[OCR] Raw response: $json');
 
       // Return default data with low confidence
       return ReceiptData(
@@ -292,15 +204,40 @@ Return ONLY valid JSON in this EXACT format (no markdown, no code blocks):
     }
   }
 
-  /// Check if API key is configured
-  static bool isConfigured() {
-    try {
-      final apiKey = dotenv.env['GEMINI_API_KEY'];
-      return apiKey != null &&
-          apiKey.isNotEmpty &&
-          apiKey != 'your_gemini_api_key_here';
-    } catch (e) {
-      return false;
+  /// Determine category from items (simple heuristic)
+  String _determineCategoryFromItems(List<String> items) {
+    if (items.isEmpty) return 'Other';
+
+    final allItems = items.join(' ').toLowerCase();
+
+    // Food & Drink keywords
+    if (allItems.contains('cơm') ||
+        allItems.contains('phở') ||
+        allItems.contains('nước') ||
+        allItems.contains('cafe') ||
+        allItems.contains('trà')) {
+      return 'Food & Drink';
     }
+
+    // Shopping keywords
+    if (allItems.contains('áo') ||
+        allItems.contains('quần') ||
+        allItems.contains('giày')) {
+      return 'Shopping';
+    }
+
+    // Transport keywords
+    if (allItems.contains('xăng') ||
+        allItems.contains('xe') ||
+        allItems.contains('taxi')) {
+      return 'Transport';
+    }
+
+    return 'Other';
+  }
+
+  /// Check if OCR service is available
+  static bool isConfigured() {
+    return true; // OCR service is always available via API
   }
 }
