@@ -606,7 +606,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     // Format date text
     final dateText = isSmallScreen
         ? '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}'
-        : 'Thứ ${_selectedDate.weekday}, ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}';
+        : 'Thứ ${_selectedDate.weekday == 7 ? 'CN' : _selectedDate.weekday + 1}, ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}';
 
     return GestureDetector(
       onTap: () async {
