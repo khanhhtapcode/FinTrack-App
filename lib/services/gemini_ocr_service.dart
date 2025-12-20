@@ -160,11 +160,23 @@ class GeminiOcrService {
     try {
       debugPrint('[OCR] Parsing response: $json');
 
+      // Extract data from response
+      final success = json['success'] as bool? ?? false;
+      if (!success) {
+        throw Exception('API returned success: false');
+      }
+
+      // Get the actual data object
+      final data = json['data'] as Map<String, dynamic>?;
+      if (data == null) {
+        throw Exception('No data field in response');
+      }
+
       // Parse merchant name
-      final merchant = json['merchant_name'] as String? ?? 'Unknown';
+      final merchant = data['merchant_name'] as String? ?? 'Unknown';
 
       // Parse total amount
-      final totalAmount = json['total_amount'];
+      final totalAmount = data['total_amount'];
       double amount = 0;
       if (totalAmount is num) {
         amount = totalAmount.toDouble();
@@ -174,7 +186,7 @@ class GeminiOcrService {
 
       // Parse date
       DateTime date = DateTime.now();
-      final dateStr = json['date'] as String?;
+      final dateStr = data['date'] as String?;
       if (dateStr != null && dateStr.isNotEmpty) {
         try {
           // Expected format: dd/mm/yyyy
@@ -192,7 +204,7 @@ class GeminiOcrService {
 
       // Parse items
       final itemsList = <String>[];
-      final itemsJson = json['items'] as List<dynamic>?;
+      final itemsJson = data['items'] as List<dynamic>?;
       if (itemsJson != null) {
         for (var item in itemsJson) {
           if (item is Map<String, dynamic>) {
@@ -208,8 +220,9 @@ class GeminiOcrService {
       String category = _determineCategoryFromItems(itemsList);
 
       // Parse payment method and other fields for notes
-      final paymentMethod = json['payment_method'] as String? ?? '';
-      final invoiceNumber = json['invoice_number'] as String? ?? '';
+      final paymentMethod = data['payment_method'] as String? ?? '';
+      final invoiceNumber = data['invoice_number'] as String? ?? '';
+      final address = data['address'] as String? ?? '';
 
       String notes = '';
       if (paymentMethod.isNotEmpty) {
@@ -219,6 +232,14 @@ class GeminiOcrService {
         if (notes.isNotEmpty) notes += '\n';
         notes += 'Số hóa đơn: $invoiceNumber';
       }
+      if (address.isNotEmpty) {
+        if (notes.isNotEmpty) notes += '\n';
+        notes += 'Địa chỉ: $address';
+      }
+
+      debugPrint(
+        '[OCR] ✅ Parsed successfully: $merchant - ${amount}đ - ${itemsList.length} items',
+      );
 
       return ReceiptData(
         merchant: merchant,
