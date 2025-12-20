@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import '../models/receipt_data.dart';
 
 class GeminiOcrService {
@@ -85,10 +86,20 @@ class GeminiOcrService {
         final imageBytes = await imageFile.readAsBytes();
         debugPrint('[OCR] Image size: ${imageBytes.length} bytes');
 
+        // Determine content type from file extension
+        final fileName = imageFile.path.toLowerCase();
+        String mimeType = 'image/jpeg';
+        if (fileName.endsWith('.png')) {
+          mimeType = 'image/png';
+        } else if (fileName.endsWith('.webp')) {
+          mimeType = 'image/webp';
+        }
+
         final multipartFile = http.MultipartFile.fromBytes(
           'image',
           imageBytes,
           filename: 'receipt.jpg',
+          contentType: MediaType.parse(mimeType),
         );
         request.files.add(multipartFile);
 
