@@ -139,7 +139,7 @@ class GeminiOcrService {
       }
     }
 
-    debugPrint('[OCR] ❌ All $maxRetries attempts failed!');
+    debugPrint('[OCR] ❌ All $_maxRetries attempts failed!');
     throw lastException ??
         Exception('Failed to call OCR API after $_maxRetries attempts');
   }
