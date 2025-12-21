@@ -3,6 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'config/theme.dart';
 import 'screens/splash/splash_screen.dart';
 import 'services/auth_service.dart';
@@ -11,6 +12,9 @@ import 'models/transaction.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize date formatting for Vietnamese locale
+  await initializeDateFormatting('vi_VN', null);
 
   // Load environment variables
   await dotenv.load(fileName: ".env");
