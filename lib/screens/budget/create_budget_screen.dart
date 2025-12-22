@@ -1,0 +1,587 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import '../../config/constants.dart';
+import '../../config/theme.dart';
+
+class CreateBudgetScreen extends StatefulWidget {
+  const CreateBudgetScreen({super.key});
+
+  @override
+  State<CreateBudgetScreen> createState() => _CreateBudgetScreenState();
+}
+
+class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
+  String _selectedCategory = 'Ăn uống';
+  double _amount = 0.0;
+  bool _repeatBudget = false;
+  DateTime _periodStart = DateTime(DateTime.now().year, DateTime.now().month, 1);
+  DateTime _periodEnd = DateTime(DateTime.now().year, DateTime.now().month + 1, 0);
+  BudgetPeriodType _periodType = BudgetPeriodType.month;
+
+  final List<Map<String, dynamic>> _expenseCategories = const [
+    {'name': 'Ăn uống', 'icon': Icons.restaurant},
+    {'name': 'Xăng xe', 'icon': Icons.local_gas_station},
+    {'name': 'Shopping', 'icon': Icons.shopping_bag},
+    {'name': 'Giải trí', 'icon': Icons.movie},
+    {'name': 'Y tế', 'icon': Icons.medical_services},
+    {'name': 'Giáo dục', 'icon': Icons.school},
+    {'name': 'Hóa đơn', 'icon': Icons.receipt},
+    {'name': 'Điện nước', 'icon': Icons.bolt},
+    {'name': 'Nhà cửa', 'icon': Icons.home},
+    {'name': 'Quần áo', 'icon': Icons.checkroom},
+    {'name': 'Làm đẹp', 'icon': Icons.face},
+    {'name': 'Thể thao', 'icon': Icons.fitness_center},
+    {'name': 'Du lịch', 'icon': Icons.flight},
+    {'name': 'Điện thoại', 'icon': Icons.phone_android},
+    {'name': 'Internet', 'icon': Icons.wifi},
+    {'name': 'Khác', 'icon': Icons.more_horiz},
+  ];
+
+  String _selectedWallet = 'Ví chính';
+
+  final List<Map<String, dynamic>> _wallets = const [
+    {'name': 'Ví chính', 'icon': Icons.account_balance_wallet},
+    {'name': 'Ví tiết kiệm', 'icon': Icons.savings},
+    {'name': 'Ví hàng ngày', 'icon': Icons.shopping_bag},
+  ];
+
+  IconData _getSelectedCategoryIcon() {
+    final match = _expenseCategories.firstWhere(
+      (cat) => cat['name'] == _selectedCategory,
+      orElse: () => {'name': _selectedCategory, 'icon': Icons.category},
+    );
+    return match['icon'] as IconData;
+  }
+
+  IconData _getSelectedWalletIcon() {
+    final match = _wallets.firstWhere(
+      (w) => w['name'] == _selectedWallet,
+      orElse: () => {'name': _selectedWallet, 'icon': Icons.account_balance_wallet},
+    );
+    return match['icon'] as IconData;
+  }
+
+  void _showCategoryPicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        return Padding(
+          padding: const EdgeInsets.all(AppConstants.paddingMedium),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Text(
+                'Chọn nhóm',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppConstants.paddingMedium),
+              GridView.builder(
+                shrinkWrap: true,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 1,
+                ),
+                itemCount: _expenseCategories.length,
+                itemBuilder: (context, index) {
+                  final cat = _expenseCategories[index];
+                  final isSelected = cat['name'] == _selectedCategory;
+                  return InkWell(
+                    onTap: () {
+                      setState(() => _selectedCategory = cat['name'] as String);
+                      Navigator.pop(context);
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppTheme.primaryTeal.withOpacity(0.1)
+                            : Colors.grey[100],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected ? AppTheme.primaryTeal : Colors.transparent,
+                          width: 2,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(cat['icon'] as IconData, color: AppTheme.primaryTeal),
+                          const SizedBox(height: 8),
+                          Text(
+                            cat['name'] as String,
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showWalletPicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        return Padding(
+          padding: const EdgeInsets.all(AppConstants.paddingMedium),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Text(
+                'Chọn ví',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppConstants.paddingMedium),
+              ListView.builder(
+                shrinkWrap: true,
+                itemCount: _wallets.length,
+                itemBuilder: (context, index) {
+                  final wallet = _wallets[index];
+                  final isSelected = wallet['name'] == _selectedWallet;
+                  return ListTile(
+                    leading: Icon(
+                      wallet['icon'] as IconData,
+                      color: isSelected ? AppTheme.primaryTeal : AppTheme.textSecondary,
+                    ),
+                    title: Text(
+                      wallet['name'] as String,
+                      style: TextStyle(
+                        color: isSelected ? AppTheme.primaryTeal : AppTheme.textPrimary,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                    ),
+                    trailing: isSelected ? const Icon(Icons.check, color: Colors.green) : null,
+                    onTap: () {
+                      setState(() => _selectedWallet = wallet['name'] as String);
+                      Navigator.pop(context);
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showPeriodPicker() async {
+    final now = DateTime.now();
+    BudgetPeriodType tempType = _periodType;
+
+    DateTime monthStart = DateTime(now.year, now.month, 1);
+    DateTime monthEnd = DateTime(now.year, now.month + 1, 0);
+
+    int qIndex = ((now.month - 1) ~/ 3); // 0..3
+    int qStartMonth = qIndex * 3 + 1;
+    int qEndMonth = qStartMonth + 2;
+    DateTime quarterStart = DateTime(now.year, qStartMonth, 1);
+    DateTime quarterEnd = DateTime(now.year, qEndMonth + 1, 0);
+
+    DateTime yearStart = DateTime(now.year, 1, 1);
+    DateTime yearEnd = DateTime(now.year, 12, 31);
+
+    String rangeLabel(DateTime s, DateTime e) {
+      final df = DateFormat('dd/MM');
+      return '(${df.format(s)} - ${df.format(e)})';
+    }
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(AppConstants.paddingMedium),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    Text(
+                      'Khoảng thời gian',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: AppConstants.paddingMedium),
+
+                    RadioListTile<BudgetPeriodType>(
+                      value: BudgetPeriodType.month,
+                      groupValue: tempType,
+                      onChanged: (val) => setModalState(() => tempType = val!),
+                      title: Text('Tháng này ${rangeLabel(monthStart, monthEnd)}'),
+                    ),
+
+                    RadioListTile<BudgetPeriodType>(
+                      value: BudgetPeriodType.quarter,
+                      groupValue: tempType,
+                      onChanged: (val) => setModalState(() => tempType = val!),
+                      title: Text('Quý này ${rangeLabel(quarterStart, quarterEnd)}'),
+                    ),
+
+                    RadioListTile<BudgetPeriodType>(
+                      value: BudgetPeriodType.year,
+                      groupValue: tempType,
+                      onChanged: (val) => setModalState(() => tempType = val!),
+                      title: Text('Năm nay ${rangeLabel(yearStart, yearEnd)}'),
+                    ),
+
+                    RadioListTile<BudgetPeriodType>(
+                      value: BudgetPeriodType.custom,
+                      groupValue: tempType,
+                      onChanged: (val) => setModalState(() => tempType = val!),
+                      title: const Text('Tùy chỉnh'),
+                    ),
+
+                    const SizedBox(height: AppConstants.paddingMedium),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Hủy'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () async {
+                            if (tempType == BudgetPeriodType.custom) {
+                              final initialRange = DateTimeRange(
+                                start: _periodStart,
+                                end: _periodEnd,
+                              );
+                              final picked = await showDateRangePicker(
+                                context: context,
+                                initialDateRange: initialRange,
+                                firstDate: DateTime(now.year - 5, 1, 1),
+                                lastDate: DateTime(now.year + 5, 12, 31),
+                                helpText: 'Chọn khoảng thời gian',
+                              );
+                              if (picked != null) {
+                                setState(() {
+                                  _periodType = tempType;
+                                  _periodStart = picked.start;
+                                  _periodEnd = picked.end;
+                                });
+                              }
+                              Navigator.pop(context);
+                              return;
+                            }
+
+                            setState(() {
+                              _periodType = tempType;
+                              if (tempType == BudgetPeriodType.month) {
+                                _periodStart = monthStart;
+                                _periodEnd = monthEnd;
+                              } else if (tempType == BudgetPeriodType.quarter) {
+                                _periodStart = quarterStart;
+                                _periodEnd = quarterEnd;
+                              } else if (tempType == BudgetPeriodType.year) {
+                                _periodStart = yearStart;
+                                _periodEnd = yearEnd;
+                              }
+                            });
+                            Navigator.pop(context);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryTeal,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Lưu'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String _periodLabel() {
+    final df = DateFormat('dd/MM');
+    final range = '(${df.format(_periodStart)} - ${df.format(_periodEnd)})';
+    switch (_periodType) {
+      case BudgetPeriodType.month:
+        return 'Tháng này ' + range;
+      case BudgetPeriodType.quarter:
+        return 'Quý này ' + range;
+      case BudgetPeriodType.year:
+        return 'Năm nay ' + range;
+      case BudgetPeriodType.custom:
+        return 'Tùy chỉnh ' + range;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new, color: AppTheme.textPrimary),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Thêm ngân sách',
+          style: TextStyle(
+            color: AppTheme.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppConstants.paddingMedium),
+          child: Column(
+            children: [
+              // Card-like container for fields
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    // Category (Chọn nhóm)
+                    ListTile(
+                      leading: CircleAvatar(
+                        radius: 18,
+                        backgroundColor: AppTheme.primaryTeal.withOpacity(0.12),
+                        child: Icon(
+                          _getSelectedCategoryIcon(),
+                          color: AppTheme.primaryTeal,
+                        ),
+                      ),
+                      title: Text('Chọn nhóm'),
+                      subtitle: Text(_selectedCategory, style: TextStyle(color: AppTheme.primaryTeal)),
+                      trailing: Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+                      onTap: _showCategoryPicker,
+                    ),
+                    const Divider(height: 1),
+
+                    // Amount (Số tiền)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppConstants.paddingMedium,
+                        vertical: AppConstants.paddingMedium,
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text('VND'),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              initialValue: _amount == 0 ? '' : NumberFormat('#,##0').format(_amount),
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                border: InputBorder.none,
+                                hintText: '0',
+                              ),
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.green,
+                              ),
+                              onChanged: (value) {
+                                final clean = value.replaceAll('.', '').replaceAll(',', '');
+                                setState(() => _amount = double.tryParse(clean) ?? 0.0);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
+
+                    // Period (Tháng này)
+                    ListTile(
+                      leading: Icon(Icons.calendar_today, color: AppTheme.textSecondary),
+                      title: Text(_periodLabel()),
+                      trailing: Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+                      onTap: _showPeriodPicker,
+                    ),
+                    const Divider(height: 1),
+
+                    // Wallet (Tổng cộng)
+                    ListTile(
+                      leading: CircleAvatar(
+                        radius: 18,
+                        backgroundColor: AppTheme.primaryTeal.withOpacity(0.12),
+                        child: Icon(
+                          _getSelectedWalletIcon(),
+                          color: AppTheme.primaryTeal,
+                        ),
+                      ),
+                      title: const Text('Tổng cộng'),
+                      subtitle: Text(_selectedWallet, style: TextStyle(color: AppTheme.primaryTeal)),
+                      trailing: Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+                      onTap: _showWalletPicker,
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: AppConstants.paddingLarge),
+
+              // Repeat budget checkbox
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.paddingMedium,
+                  vertical: AppConstants.paddingSmall,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Checkbox(
+                      value: _repeatBudget,
+                      onChanged: (val) => setState(() => _repeatBudget = val ?? false),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text('Lặp lại ngân sách này'),
+                          SizedBox(height: 4),
+                          Text(
+                            'Ngân sách được tự động lặp lại ở kỳ hạn tiếp theo.',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: AppConstants.paddingLarge * 2),
+
+              // Save button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (_amount <= 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Vui lòng nhập số tiền hợp lệ')),
+                      );
+                      return;
+                    }
+                    // TODO: Persist budget to storage/service
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Đã lưu ngân sách')),
+                    );
+                    Navigator.pop(context, true);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryTeal,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppConstants.paddingMedium,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                  ),
+                  child: const Text('Lưu'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+enum BudgetPeriodType {
+  month,
+  quarter,
+  year,
+  custom,
+}
