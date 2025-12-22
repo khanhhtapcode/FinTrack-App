@@ -12,6 +12,7 @@ import '../../models/transaction.dart' as model;
 import '../transaction/add_transaction_screen.dart';
 import '../auth/login_screen.dart';
 import '../transaction/transactions_screen.dart';
+import '../budget/budget_screen.dart';
 import '../profile/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -211,6 +212,8 @@ class _HomeScreenState extends State<HomeScreen> {
           _buildHomeTab(padding, spacing),
           const TransactionsScreen(),
           const SizedBox.shrink(), // placeholder for FAB slot
+          const BudgetScreen(embedded: true),
+          _buildAccountPlaceholder(),
           _buildReportsPlaceholder(),
           const ProfileScreen(),
         ],

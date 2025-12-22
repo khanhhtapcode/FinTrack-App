@@ -1,12 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+import '../../models/budget.dart';
 import '../../config/constants.dart';
 import '../../config/theme.dart';
 import '../../services/auth_service.dart';
+import '../../services/budget_service.dart';
+import '../../services/transaction_service.dart';
+import '../../services/budget_progress.dart';
+import '_progress_bar.dart';
 import 'create_budget_screen.dart';
+import 'budget_detail_screen.dart';
+import 'completed_budgets_screen.dart';
+
+enum BudgetSortOption {
+  startDateAsc,
+  endDateAsc,
+  limitDesc,
+}
 
 class BudgetScreen extends StatefulWidget {
-  const BudgetScreen({super.key});
+  final bool embedded;
+
+  const BudgetScreen({super.key, this.embedded = false});
 
   @override
   State<BudgetScreen> createState() => _BudgetScreenState();
@@ -14,6 +30,13 @@ class BudgetScreen extends StatefulWidget {
 
 class _BudgetScreenState extends State<BudgetScreen> {
   int _selectedNavIndex = 3; // Budget tab
+  BudgetPeriodType _periodType = BudgetPeriodType.month;
+  late DateTime _periodStart;
+  late DateTime _periodEnd;
+  final Set<BudgetPeriodType> _visiblePeriods = {};
+  final BudgetService _budgetService = BudgetService();
+  final TransactionService _transactionService = TransactionService();
+  BudgetSortOption _sort = BudgetSortOption.startDateAsc;
 
 
   void _onNavItemTapped(int index) {
@@ -24,6 +47,21 @@ class _BudgetScreenState extends State<BudgetScreen> {
     if (index != 3) {
       Navigator.pop(context);
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeBudgetService();
+    final now = DateTime.now();
+    _periodStart = DateTime(now.year, now.month, 1);
+    _periodEnd = DateTime(now.year, now.month + 1, 0);
+    _refreshVisiblePeriods();
+  }
+
+  Future<void> _initializeBudgetService() async {
+    await _budgetService.init();
+    _refreshVisiblePeriods();
   }
 
   Widget _buildBottomNavBar() {
@@ -70,41 +108,68 @@ class _BudgetScreenState extends State<BudgetScreen> {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        backgroundColor: AppTheme.cardColor, // White bar like nav bar
+        backgroundColor: AppTheme.primaryTeal,
         elevation: 0,
         centerTitle: true,
+        toolbarHeight: 60,
+        leadingWidth: 64,
         leading: Padding(
           padding: const EdgeInsets.only(left: 12),
           child: CircleAvatar(
             radius: 20,
-            backgroundColor: AppTheme.primaryTeal.withOpacity(0.2),
+            backgroundColor: Colors.white.withOpacity(0.3),
             child: Text(
               userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
-              style: TextStyle(
-                color: AppTheme.primaryTeal,
+              style: const TextStyle(
+                color: Colors.white,
                 fontWeight: FontWeight.bold,
-                fontSize: 16,
+                fontSize: 18,
               ),
             ),
           ),
         ),
-        title: Text(
+        title: const Text(
           'Ngân sách',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: AppTheme.textPrimary,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline, color: Colors.white),
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const CreateBudgetScreen(),
+                ),
+              );
+              if (result == true && mounted) {
+                _markPeriodsWithNewBudget();
+              }
+            },
+          ),
           PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert, color: AppTheme.textPrimary),
+            icon: const Icon(Icons.more_vert, color: Colors.white),
+            color: AppTheme.cardColor,
             onSelected: (value) {
               if (value == 'completed') {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Chưa có ngân sách kết thúc'),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CompletedBudgetsScreen(),
                   ),
-                );
+                ).then((_) {
+                  setState(() {});
+                });
+              } else if (value == 'sort_start') {
+                setState(() => _sort = BudgetSortOption.startDateAsc);
+              } else if (value == 'sort_end') {
+                setState(() => _sort = BudgetSortOption.endDateAsc);
+              } else if (value == 'sort_limit') {
+                setState(() => _sort = BudgetSortOption.limitDesc);
               }
             },
             itemBuilder: (context) => [
@@ -112,70 +177,431 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 value: 'completed',
                 child: Text('Xem ngân sách đã kết thúc'),
               ),
+              const PopupMenuDivider(),
+              const PopupMenuItem<String>(
+                value: 'sort_start',
+                child: Text('Sắp xếp: Ngày bắt đầu ↑'),
+              ),
+              const PopupMenuItem<String>(
+                value: 'sort_end',
+                child: Text('Sắp xếp: Ngày kết thúc ↑'),
+              ),
+              const PopupMenuItem<String>(
+                value: 'sort_limit',
+                child: Text('Sắp xếp: Giới hạn ↓'),
+              ),
             ],
           ),
         ],
       ),
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: EdgeInsets.all(AppConstants.paddingMedium),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.pie_chart_outline,
-                  size: 100,
-                  color: AppTheme.textSecondary.withOpacity(0.3),
-                ),
-                SizedBox(height: AppConstants.paddingLarge),
-                Text(
-                  'Chưa có ngân sách nào',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+        child: _visiblePeriods.isNotEmpty
+            ? _buildBudgetsList(userName)
+            : _buildEmptyState(userName),
+      ),
+      bottomNavigationBar: widget.embedded ? null : _buildBottomNavBar(),
+    );
+  }
+
+  Widget _buildEmptyState(String userName) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(AppConstants.paddingMedium),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.pie_chart_outline,
+              size: 100,
+              color: AppTheme.textSecondary.withOpacity(0.3),
+            ),
+            SizedBox(height: AppConstants.paddingLarge),
+            Text(
+              'Bạn chưa có ngân sách nào',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: AppTheme.textSecondary,
                     fontWeight: FontWeight.w600,
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: AppConstants.paddingSmall),
-                Text(
-                  'Hãy tạo ngân sách đầu tiên để quản lý chi tiêu của bạn',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: AppConstants.paddingSmall),
+            Text(
+              'Hãy tạo ngân sách để kiểm soát chi tiêu hiệu quả hơn',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: AppTheme.textSecondary,
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: AppConstants.paddingLarge * 2),
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    // Navigate to Create Budget screen
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const CreateBudgetScreen(),
-                      ),
-                    );
-                    if (result == true && mounted) {
-                      // Future: refresh budgets when persistence is added
-                    }
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text('Tạo ngân sách'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryTeal,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppConstants.paddingLarge,
-                      vertical: AppConstants.paddingMedium,
-                    ),
-                  ),
-                ),
-              ],
+              textAlign: TextAlign.center,
             ),
-          ),
+            SizedBox(height: AppConstants.paddingLarge * 1.2),
+            ElevatedButton.icon(
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const CreateBudgetScreen(),
+                  ),
+                );
+                if (result == true && mounted) {
+                  _markPeriodsWithNewBudget();
+                  // TODO: load budgets from storage when available and set visible periods accordingly
+                }
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Tạo ngân sách'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryTeal,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppConstants.paddingLarge,
+                  vertical: AppConstants.paddingMedium,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNavBar(),
     );
   }
+
+  // Category to icon mapping (shared with CreateBudgetScreen)
+  IconData _getCategoryIcon(String categoryName) {
+    const categoryIcons = {
+      'Ăn uống': Icons.restaurant,
+      'Xăng xe': Icons.local_gas_station,
+      'Shopping': Icons.shopping_bag,
+      'Giải trí': Icons.movie,
+      'Y tế': Icons.medical_services,
+      'Giáo dục': Icons.school,
+      'Hóa đơn': Icons.receipt,
+      'Điện nước': Icons.bolt,
+      'Nhà cửa': Icons.home,
+      'Quần áo': Icons.checkroom,
+      'Làm đẹp': Icons.face,
+      'Thể thao': Icons.fitness_center,
+      'Du lịch': Icons.flight,
+      'Điện thoại': Icons.phone_android,
+      'Internet': Icons.wifi,
+      'Khác': Icons.more_horiz,
+    };
+    return categoryIcons[categoryName] ?? Icons.category;
+  }
+
+  Widget _buildBudgetsList(String userName) {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final userId = authService.currentUser?.id;
+    
+    // Filter budgets overlapping the selected period range and not completed
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    final budgets = _budgetService.getBudgetsOverlapping(_periodStart, _periodEnd).where((b) {
+      final endDate = DateTime(b.endDate.year, b.endDate.month, b.endDate.day);
+      return !endDate.isBefore(today); // Chỉ lấy ngân sách chưa kết thúc
+    }).toList();
+    
+    budgets.sort((a, b) {
+      switch (_sort) {
+        case BudgetSortOption.startDateAsc:
+          return a.startDate.compareTo(b.startDate);
+        case BudgetSortOption.endDateAsc:
+          return a.endDate.compareTo(b.endDate);
+        case BudgetSortOption.limitDesc:
+          return b.limit.compareTo(a.limit);
+      }
+    });
+
+    Future<void> _onRefresh() async {
+      await _budgetService.init();
+      setState(() {});
+    }
+
+    if (budgets.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: _onRefresh,
+        color: AppTheme.primaryTeal,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.all(AppConstants.paddingMedium),
+          children: [
+            Container(
+              padding: EdgeInsets.all(AppConstants.paddingLarge),
+              decoration: BoxDecoration(
+                color: AppTheme.cardColor,
+                borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.refresh, size: 48, color: AppTheme.textSecondary.withOpacity(0.5)),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Kéo xuống để tải lại ngân sách',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.textSecondary,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _onRefresh,
+      color: AppTheme.primaryTeal,
+      child: ListView.separated(
+        padding: EdgeInsets.all(AppConstants.paddingMedium),
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemCount: budgets.length,
+        itemBuilder: (context, index) {
+          final b = budgets[index];
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => BudgetDetailScreen(budget: b),
+                ),
+              ).then((_) {
+                // Refresh list after returning from detail
+                setState(() {});
+              });
+            },
+            child: Container(
+              padding: EdgeInsets.all(AppConstants.paddingMedium),
+              decoration: BoxDecoration(
+                color: AppTheme.cardColor,
+                borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: FutureBuilder<double>(
+                future: _budgetService.computeTotalSpentForBudget(
+                  budget: b,
+                  transactionService: _transactionService,
+                  userId: userId,
+                ),
+                builder: (context, snapshot) {
+                  final spent = snapshot.data ?? 0;
+                  final remaining = (b.limit - spent).clamp(-double.infinity, double.infinity);
+                  final percent = b.limit > 0 ? (spent / b.limit).clamp(0, 10) : 0.0;
+                  Color barColor;
+                  if (percent >= 1.0) {
+                    barColor = Colors.red;
+                  } else if (percent >= 0.8) {
+                    barColor = Colors.orange;
+                  } else {
+                    barColor = AppTheme.primaryTeal;
+                  }
+
+                  final dateFormat = DateFormat('dd/MM/yyyy');
+                  final startStr = dateFormat.format(b.startDate);
+                  final endStr = dateFormat.format(b.endDate);
+                  final timePercent = BudgetProgress.computeTimeProgressPercent(
+                    b.startDate,
+                    b.endDate,
+                    DateTime.now(),
+                  );
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header: Category Icon + Name & Limit
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: AppTheme.primaryTeal.withOpacity(0.12),
+                                  child: Icon(
+                                    _getCategoryIcon(b.category),
+                                    color: AppTheme.primaryTeal,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    b.category,
+                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            '${NumberFormat('#,##0').format(b.limit)} VND',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: AppTheme.textSecondary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      // Date range
+                      Row(
+                        children: [
+                          Icon(Icons.calendar_today, size: 14, color: AppTheme.textSecondary),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$startStr → $endStr',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppTheme.textSecondary,
+                                ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      // Spent & Remaining
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Đã chi: ${NumberFormat('#,##0').format(spent)}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          Text(
+                            'Còn lại: ${NumberFormat('#,##0').format(remaining)}',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: remaining < 0 ? Colors.red : AppTheme.textSecondary,
+                                ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      BudgetProgressBar(
+                        spendingPercent: (spent / b.limit),
+                        timePercent: timePercent,
+                        barColor: barColor,
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+
+  void _setPeriod(BudgetPeriodType type) {
+    if (!_visiblePeriods.contains(type)) return;
+    final now = DateTime.now();
+    setState(() {
+      _periodType = type;
+      if (type == BudgetPeriodType.month) {
+        _periodStart = DateTime(now.year, now.month, 1);
+        _periodEnd = DateTime(now.year, now.month + 1, 0);
+      } else if (type == BudgetPeriodType.quarter) {
+        final qIndex = ((now.month - 1) ~/ 3); // 0..3
+        final qStartMonth = qIndex * 3 + 1;
+        final qEndMonth = qStartMonth + 2;
+        _periodStart = DateTime(now.year, qStartMonth, 1);
+        _periodEnd = DateTime(now.year, qEndMonth + 1, 0);
+      } else if (type == BudgetPeriodType.year) {
+        _periodStart = DateTime(now.year, 1, 1);
+        _periodEnd = DateTime(now.year, 12, 31);
+      } else if (type == BudgetPeriodType.custom) {
+        _openCustomRangePicker();
+      }
+    });
+  }
+
+  Future<void> _openCustomRangePicker() async {
+    final now = DateTime.now();
+    final initial = DateTimeRange(start: _periodStart, end: _periodEnd);
+    final picked = await showDateRangePicker(
+      context: context,
+      initialDateRange: initial,
+      firstDate: DateTime(now.year - 5, 1, 1),
+      lastDate: DateTime(now.year + 5, 12, 31),
+      helpText: 'Chọn khoảng thời gian',
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _periodType = BudgetPeriodType.custom;
+        _periodStart = picked.start;
+        _periodEnd = picked.end;
+        _visiblePeriods.add(BudgetPeriodType.custom);
+      });
+    } else {
+      // If canceled, revert selection to previous type (month)
+      if (_visiblePeriods.contains(BudgetPeriodType.month)) {
+        setState(() {
+          _periodType = BudgetPeriodType.month;
+          _periodStart = DateTime(now.year, now.month, 1);
+          _periodEnd = DateTime(now.year, now.month + 1, 0);
+        });
+      }
+    }
+  }
+
+  void _markPeriodsWithNewBudget() {
+    _refreshVisiblePeriods();
+    final now = DateTime.now();
+    setState(() {
+      _periodType = BudgetPeriodType.month;
+      _periodStart = DateTime(now.year, now.month, 1);
+      _periodEnd = DateTime(now.year, now.month + 1, 0);
+    });
+  }
+
+  void _refreshVisiblePeriods() {
+    final now = DateTime.now();
+    final monthStart = DateTime(now.year, now.month, 1);
+    final monthEnd = DateTime(now.year, now.month + 1, 0);
+
+    final qIndex = ((now.month - 1) ~/ 3);
+    final qStartMonth = qIndex * 3 + 1;
+    final qEndMonth = qStartMonth + 2;
+    final quarterStart = DateTime(now.year, qStartMonth, 1);
+    final quarterEnd = DateTime(now.year, qEndMonth + 1, 0);
+
+    final yearStart = DateTime(now.year, 1, 1);
+    final yearEnd = DateTime(now.year, 12, 31);
+
+    final budgets = _budgetService.getAllBudgets();
+    final visible = <BudgetPeriodType>{};
+    if (budgets.any((b) => b.overlaps(monthStart, monthEnd))) {
+      visible.add(BudgetPeriodType.month);
+    }
+    if (budgets.any((b) => b.overlaps(quarterStart, quarterEnd))) {
+      visible.add(BudgetPeriodType.quarter);
+    }
+    if (budgets.any((b) => b.overlaps(yearStart, yearEnd))) {
+      visible.add(BudgetPeriodType.year);
+    }
+    // custom is added only when user selects a custom range and there are budgets overlapping it
+    setState(() {
+      _visiblePeriods
+        ..clear()
+        ..addAll(visible);
+    });
+  }
+
 }
+
+// Using BudgetPeriodType from models/budget.dart

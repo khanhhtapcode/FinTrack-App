@@ -5,21 +5,22 @@ import '../../config/theme.dart';
 import '../../models/budget.dart';
 import '../../services/budget_service.dart';
 
-class CreateBudgetScreen extends StatefulWidget {
-  const CreateBudgetScreen({super.key});
+class EditBudgetScreen extends StatefulWidget {
+  final Budget budget;
+
+  const EditBudgetScreen({super.key, required this.budget});
 
   @override
-  State<CreateBudgetScreen> createState() => _CreateBudgetScreenState();
+  State<EditBudgetScreen> createState() => _EditBudgetScreenState();
 }
 
-class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
-  String _selectedCategory = 'Ăn uống';
-  double _amount = 0.0;
-  String _note = '';
-  bool _repeatBudget = false;
-  DateTime _periodStart = DateTime(DateTime.now().year, DateTime.now().month, 1);
-  DateTime _periodEnd = DateTime(DateTime.now().year, DateTime.now().month + 1, 0);
-  BudgetPeriodType _periodType = BudgetPeriodType.month;
+class _EditBudgetScreenState extends State<EditBudgetScreen> {
+  late String _selectedCategory;
+  late double _amount;
+  late String _note;
+  late DateTime _periodStart;
+  late DateTime _periodEnd;
+  late BudgetPeriodType _periodType;
 
   final List<Map<String, dynamic>> _expenseCategories = const [
     {'name': 'Ăn uống', 'icon': Icons.restaurant},
@@ -47,6 +48,18 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
     {'name': 'Ví tiết kiệm', 'icon': Icons.savings},
     {'name': 'Ví hàng ngày', 'icon': Icons.shopping_bag},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-fill với dữ liệu budget hiện tại
+    _selectedCategory = widget.budget.category;
+    _amount = widget.budget.limit;
+    _note = widget.budget.note ?? '';
+    _periodStart = widget.budget.startDate;
+    _periodEnd = widget.budget.endDate;
+    _periodType = widget.budget.periodType;
+  }
 
   IconData _getSelectedCategoryIcon() {
     final match = _expenseCategories.firstWhere(
@@ -155,85 +168,6 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
     );
   }
 
-  void _showWalletPicker() {
-    FocusScope.of(context).unfocus();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) {
-        return SafeArea(
-          child: FractionallySizedBox(
-            heightFactor: 0.6,
-            child: Padding(
-              padding: const EdgeInsets.all(AppConstants.paddingMedium),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  Text(
-                    'Chọn ví',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                  const SizedBox(height: AppConstants.paddingMedium),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: _wallets.length,
-                      itemBuilder: (context, index) {
-                        final wallet = _wallets[index];
-                        final isSelected = wallet['name'] == _selectedWallet;
-                        return ListTile(
-                          leading: Icon(
-                            wallet['icon'] as IconData,
-                            color:
-                                isSelected ? AppTheme.primaryTeal : AppTheme.textSecondary,
-                          ),
-                          title: Text(
-                            wallet['name'] as String,
-                            style: TextStyle(
-                              color: isSelected
-                                  ? AppTheme.primaryTeal
-                                  : AppTheme.textPrimary,
-                              fontWeight:
-                                  isSelected ? FontWeight.w600 : FontWeight.normal,
-                            ),
-                          ),
-                          trailing: isSelected
-                              ? const Icon(Icons.check, color: Colors.green)
-                              : null,
-                          onTap: () {
-                            setState(() => _selectedWallet = wallet['name'] as String);
-                            Navigator.pop(context);
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   Future<void> _showPeriodPicker() async {
     final now = DateTime.now();
     BudgetPeriodType tempType = _periodType;
@@ -241,7 +175,7 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
     DateTime monthStart = DateTime(now.year, now.month, 1);
     DateTime monthEnd = DateTime(now.year, now.month + 1, 0);
 
-    int qIndex = ((now.month - 1) ~/ 3); // 0..3
+    int qIndex = ((now.month - 1) ~/ 3);
     int qStartMonth = qIndex * 3 + 1;
     int qEndMonth = qStartMonth + 2;
     DateTime quarterStart = DateTime(now.year, qStartMonth, 1);
@@ -434,7 +368,7 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
-          'Thêm ngân sách',
+          'Chỉnh sửa ngân sách',
           style: TextStyle(
             color: Colors.white,
             fontSize: 18,
@@ -473,7 +407,7 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                           color: AppTheme.primaryTeal,
                         ),
                       ),
-                      title: Text('Chọn nhóm'),
+                      title: const Text('Chọn nhóm'),
                       subtitle: Text(_selectedCategory, style: TextStyle(color: AppTheme.primaryTeal)),
                       trailing: Icon(Icons.chevron_right, color: AppTheme.textSecondary),
                       onTap: _showCategoryPicker,
@@ -499,13 +433,13 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: TextFormField(
-                              initialValue: _amount == 0 ? '' : NumberFormat('#,##0').format(_amount),
+                              initialValue: NumberFormat('#,##0').format(_amount),
                               keyboardType: TextInputType.number,
                               decoration: const InputDecoration(
                                 border: InputBorder.none,
                                 hintText: '0',
                               ),
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.green,
@@ -521,7 +455,7 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                     ),
                     const Divider(height: 1),
 
-                    // Period (Tháng này)
+                    // Period
                     ListTile(
                       leading: Icon(Icons.calendar_today, color: AppTheme.textSecondary),
                       title: Text(_periodLabel()),
@@ -543,52 +477,9 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                       title: const Text('Tổng cộng'),
                       subtitle: Text(_selectedWallet, style: TextStyle(color: AppTheme.primaryTeal)),
                       trailing: Icon(Icons.chevron_right, color: AppTheme.textSecondary),
-                      onTap: _showWalletPicker,
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: AppConstants.paddingLarge),
-
-              // Repeat budget checkbox
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.paddingMedium,
-                  vertical: AppConstants.paddingSmall,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Checkbox(
-                      value: _repeatBudget,
-                      onChanged: (val) => setState(() => _repeatBudget = val ?? false),
-                      activeColor: AppTheme.primaryTeal,
-                      checkColor: Colors.white,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text('Lặp lại ngân sách này'),
-                          SizedBox(height: 4),
-                          Text(
-                            'Ngân sách được tự động lặp lại ở kỳ hạn tiếp theo.',
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                        ],
-                      ),
+                      onTap: () {
+                        // Wallet picker disabled for edit
+                      },
                     ),
                   ],
                 ),
@@ -611,6 +502,7 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                   ],
                 ),
                 child: TextField(
+                  controller: TextEditingController(text: _note),
                   maxLines: 3,
                   cursorColor: AppTheme.primaryTeal,
                   decoration: InputDecoration(
@@ -644,34 +536,9 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                       );
                       return;
                     }
-                    // Reject budgets with end date in the past (date-only comparison)
-                    final today = DateTime.now();
-                    final todayDate = DateTime(today.year, today.month, today.day);
-                    final endDateOnly = DateTime(_periodEnd.year, _periodEnd.month, _periodEnd.day);
-                    if (endDateOnly.isBefore(todayDate)) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Ngày kết thúc ngân sách không được trong quá khứ')),
-                      );
-                      return;
-                    }
-                    final service = BudgetService();
-                    await service.init(); // Ensure Hive is initialized
-                    if (!context.mounted) return;
-                    final exists = service.existsOverlappingBudget(
-                      category: _selectedCategory,
-                      start: _periodStart,
-                      end: _periodEnd,
-                    );
-                    if (exists) {
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Đã có ngân sách cho danh mục này trong khoảng thời gian trùng lặp')),
-                      );
-                      return;
-                    }
 
-                    final newBudget = Budget(
-                      id: DateTime.now().millisecondsSinceEpoch.toString(),
+                    final updatedBudget = Budget(
+                      id: widget.budget.id, // Giữ nguyên ID
                       category: _selectedCategory,
                       limit: _amount,
                       startDate: _periodStart,
@@ -679,13 +546,16 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                       periodType: _periodType,
                       note: _note.isEmpty ? null : _note,
                     );
+
                     try {
-                      await service.addBudget(newBudget);
+                      final service = BudgetService();
+                      await service.init();
+                      await service.updateBudget(updatedBudget);
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Đã lưu ngân sách')),
+                        const SnackBar(content: Text('Đã cập nhật ngân sách')),
                       );
-                      Navigator.pop(context, true);
+                      Navigator.pop(context, true); // Return true to signal refresh
                     } catch (e) {
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -713,4 +583,3 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
     );
   }
 }
-
