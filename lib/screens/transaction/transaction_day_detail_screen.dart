@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 import '../../config/theme.dart';
 import '../../models/transaction.dart' as model;
 import '../../widgets/transaction/transaction_item.dart';
+import '../../widgets/transaction/compact_summary.dart';
+import 'transaction_detail_screen.dart';
 
 /// Màn hình chi tiết giao dịch theo ngày
 class TransactionDayDetailScreen extends StatelessWidget {
@@ -35,12 +37,13 @@ class TransactionDayDetailScreen extends StatelessWidget {
     final dayOfWeekStr = _getDayOfWeek(selectedDate);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         backgroundColor: AppTheme.primaryTeal,
         elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
         title: Text(
-          'Chi tiết giao dịch',
+          'Tổng hợp giao dịch theo ngày',
           style: TextStyle(
             color: Colors.white,
             fontSize: 18,
@@ -67,60 +70,14 @@ class TransactionDayDetailScreen extends StatelessWidget {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  SizedBox(height: 12),
-
-                  // Day balance
-                  Container(
-                    padding: EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      children: [
-                        Text(
-                          'Tổng số dư ngày',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 14,
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          '${currencyFormat.format(dayBalance)} ₫',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
                   SizedBox(height: 16),
 
-                  // Income and Expense summary
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildSummaryItem(
-                          'Thu nhập',
-                          totalIncome,
-                          Colors.green,
-                          currencyFormat,
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: _buildSummaryItem(
-                          'Chi tiêu',
-                          totalExpense,
-                          Colors.red,
-                          currencyFormat,
-                        ),
-                      ),
-                    ],
+                  // Summary using CompactSummaryWidget
+                  CompactSummaryWidget(
+                    totalBalance: dayBalance,
+                    totalIncome: totalIncome,
+                    totalExpense: totalExpense,
+                    currencyFormat: currencyFormat,
                   ),
                 ],
               ),
@@ -150,6 +107,21 @@ class TransactionDayDetailScreen extends StatelessWidget {
                                 TransactionItemWidget(
                                   transaction: transaction,
                                   currencyFormat: currencyFormat,
+                                  onTap: () async {
+                                    final deleted = await Navigator.push<bool>(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            TransactionDetailScreen(
+                                          transaction: transaction,
+                                          currencyFormat: currencyFormat,
+                                        ),
+                                      ),
+                                    );
+                                    if (deleted == true) {
+                                      Navigator.pop(context, true);
+                                    }
+                                  },
                                 ),
                                 SizedBox(height: 8),
                               ],
@@ -163,43 +135,6 @@ class TransactionDayDetailScreen extends StatelessWidget {
             SizedBox(height: 20),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildSummaryItem(
-    String label,
-    double amount,
-    Color color,
-    NumberFormat format,
-  ) {
-    return Container(
-      padding: EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
-              fontSize: 12,
-            ),
-          ),
-          SizedBox(height: 6),
-          Text(
-            '${format.format(amount)} ₫',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
       ),
     );
   }
