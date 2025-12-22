@@ -7,6 +7,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'config/theme.dart';
 import 'screens/splash/splash_screen.dart';
 import 'services/auth_service.dart';
+import 'services/app_settings_provider.dart';
 import 'models/user.dart';
 import 'models/transaction.dart';
 
@@ -49,7 +50,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => AuthService())],
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthService()),
+        ChangeNotifierProvider(create: (_) => AppSettingsProvider()),
+      ],
       child: MaterialApp(
         title: 'FinTracker',
         theme: AppTheme.lightTheme,
