@@ -5,34 +5,38 @@ class TransactionService {
   static const String _boxName = 'transactions';
   Box<Transaction>? _box;
 
-  // Singleton pattern
+  // ================= SINGLETON =================
   static final TransactionService _instance = TransactionService._internal();
   factory TransactionService() => _instance;
   TransactionService._internal();
 
-  // Initialize Hive box
+  // ================= INIT =================
   Future<void> init() async {
     if (_box == null || !_box!.isOpen) {
       _box = await Hive.openBox<Transaction>(_boxName);
     }
   }
 
-  // Add transaction
+  // ================= ADD =================
   Future<void> addTransaction(Transaction transaction) async {
     await init();
     await _box!.put(transaction.id, transaction);
   }
 
-  // Get all transactions for a specific user
+  // ================= GET ALL (OPTIMIZED) =================
   Future<List<Transaction>> getAllTransactions({String? userId}) async {
     await init();
     if (userId == null || userId.isEmpty) {
-      return []; // Không có user ID = không có transactions
+      return [];
     }
-    return _box!.values.where((t) => t.userId == userId).toList();
+
+    // 🔥 SNAPSHOT DATA → TRÁNH LIVE ITERABLE (FIX ANR)
+    final List<Transaction> all = List<Transaction>.from(_box!.values);
+
+    return all.where((t) => t.userId == userId).toList();
   }
 
-  // Get transactions by type for a specific user
+  // ================= GET BY TYPE =================
   Future<List<Transaction>> getTransactionsByType(
     TransactionType type, {
     String? userId,
@@ -41,12 +45,13 @@ class TransactionService {
     if (userId == null || userId.isEmpty) {
       return [];
     }
-    return _box!.values
-        .where((t) => t.type == type && t.userId == userId)
-        .toList();
+
+    final List<Transaction> all = List<Transaction>.from(_box!.values);
+
+    return all.where((t) => t.type == type && t.userId == userId).toList();
   }
 
-  // Get transactions by date range for a specific user
+  // ================= GET BY DATE RANGE =================
   Future<List<Transaction>> getTransactionsByDateRange(
     DateTime start,
     DateTime end, {
@@ -56,14 +61,17 @@ class TransactionService {
     if (userId == null || userId.isEmpty) {
       return [];
     }
-    return _box!.values.where((t) {
+
+    final List<Transaction> all = List<Transaction>.from(_box!.values);
+
+    return all.where((t) {
       return t.userId == userId &&
-          t.date.isAfter(start.subtract(Duration(days: 1))) &&
-          t.date.isBefore(end.add(Duration(days: 1)));
+          t.date.isAfter(start.subtract(const Duration(days: 1))) &&
+          t.date.isBefore(end.add(const Duration(days: 1)));
     }).toList();
   }
 
-  // Get transactions for current month for a specific user
+  // ================= CURRENT MONTH =================
   Future<List<Transaction>> getCurrentMonthTransactions({
     String? userId,
   }) async {
@@ -73,53 +81,59 @@ class TransactionService {
     return getTransactionsByDateRange(startOfMonth, endOfMonth, userId: userId);
   }
 
-  // Update transaction
+  // ================= UPDATE =================
   Future<void> updateTransaction(Transaction transaction) async {
     await init();
     await _box!.put(transaction.id, transaction);
   }
 
-  // Delete transaction
+  // ================= DELETE =================
   Future<void> deleteTransaction(String id) async {
     await init();
     await _box!.delete(id);
   }
 
-  // Get total expense for current month for a specific user
+  // ================= TOTAL EXPENSE =================
   Future<double> getCurrentMonthExpense({String? userId}) async {
     final transactions = await getCurrentMonthTransactions(userId: userId);
+
     return transactions
         .where((t) => t.type == TransactionType.expense)
         .fold<double>(0, (sum, t) => sum + t.amount);
   }
 
-  // Get total income for current month for a specific user
+  // ================= TOTAL INCOME =================
   Future<double> getCurrentMonthIncome({String? userId}) async {
     final transactions = await getCurrentMonthTransactions(userId: userId);
+
     return transactions
         .where((t) => t.type == TransactionType.income)
         .fold<double>(0, (sum, t) => sum + t.amount);
   }
 
-  // Admin: Get ALL transactions (for admin panel)
+  // ================= ADMIN =================
   Future<List<Transaction>> getAllTransactionsAdmin() async {
     await init();
-    return _box!.values.toList();
+
+    // snapshot để an toàn
+    return List<Transaction>.from(_box!.values);
   }
 
-  // Admin: Get transactions by user ID
   Future<List<Transaction>> getTransactionsByUserId(String userId) async {
     await init();
-    return _box!.values.where((t) => t.userId == userId).toList();
+
+    final List<Transaction> all = List<Transaction>.from(_box!.values);
+
+    return all.where((t) => t.userId == userId).toList();
   }
 
-  // Clear all transactions (for testing)
+  // ================= CLEAR =================
   Future<void> clearAll() async {
     await init();
     await _box!.clear();
   }
 
-  // Close box
+  // ================= CLOSE =================
   Future<void> close() async {
     await _box?.close();
   }

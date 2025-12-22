@@ -1,3 +1,4 @@
+import 'package:expense_tracker_app/screens/profile/profile_screen.dart';
 import 'package:expense_tracker_app/widgets/home/balance_card_widget.dart';
 import 'package:expense_tracker_app/widgets/home/chart_widget.dart';
 import 'package:expense_tracker_app/widgets/home/recent_transactions_widget.dart';
@@ -39,7 +40,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
   }
 
   Future<void> _loadData() async {
@@ -208,7 +212,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const TransactionsScreen(),
           const SizedBox.shrink(), // placeholder for FAB slot
           _buildReportsPlaceholder(),
-          _buildAccountPlaceholder(),
+          const ProfileScreen(), // ✅ THÊM PROFILE SCREEN
         ],
       ),
 
@@ -619,9 +623,9 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Text(
           'Ngân sách / Báo cáo (đang cập nhật)',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.textSecondary,
-                fontWeight: FontWeight.w600,
-              ),
+            color: AppTheme.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
           textAlign: TextAlign.center,
         ),
       ),
@@ -634,9 +638,9 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Text(
           'Tài khoản (đang cập nhật)',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.textSecondary,
-                fontWeight: FontWeight.w600,
-              ),
+            color: AppTheme.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
           textAlign: TextAlign.center,
         ),
       ),
