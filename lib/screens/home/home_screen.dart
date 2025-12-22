@@ -1,4 +1,3 @@
-import 'package:expense_tracker_app/screens/profile/profile_screen.dart';
 import 'package:expense_tracker_app/widgets/home/balance_card_widget.dart';
 import 'package:expense_tracker_app/widgets/home/chart_widget.dart';
 import 'package:expense_tracker_app/widgets/home/recent_transactions_widget.dart';
