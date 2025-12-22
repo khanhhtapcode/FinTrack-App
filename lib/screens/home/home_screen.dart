@@ -213,8 +213,6 @@ class _HomeScreenState extends State<HomeScreen> {
           const TransactionsScreen(),
           const SizedBox.shrink(), // placeholder for FAB slot
           const BudgetScreen(embedded: true),
-          _buildAccountPlaceholder(),
-          _buildReportsPlaceholder(),
           const ProfileScreen(),
         ],
       ),
