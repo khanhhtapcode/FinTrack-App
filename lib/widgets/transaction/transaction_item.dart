@@ -8,11 +8,13 @@ import '../../utils/category_helper.dart';
 class TransactionItemWidget extends StatelessWidget {
   final model.Transaction transaction;
   final NumberFormat currencyFormat;
+  final VoidCallback? onTap;
 
   const TransactionItemWidget({
     Key? key,
     required this.transaction,
     required this.currencyFormat,
+    this.onTap,
   }) : super(key: key);
 
   @override
@@ -28,15 +30,23 @@ class TransactionItemWidget extends StatelessWidget {
         ? Colors.green
         : Colors.red;
 
-    return Container(
-      margin: EdgeInsets.only(bottom: 8),
-      padding: EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Row(
+      return GestureDetector(
+        onTap: onTap,
+        child: Container(
+          margin: EdgeInsets.only(bottom: 8),
+          padding: EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppTheme.cardColor,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 6,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
         children: [
           // Category icon container
           Container(
@@ -102,6 +112,7 @@ class TransactionItemWidget extends StatelessWidget {
             ],
           ),
         ],
+      ),
       ),
     );
   }

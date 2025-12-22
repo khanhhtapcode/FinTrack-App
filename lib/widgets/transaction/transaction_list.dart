@@ -10,6 +10,7 @@ class TransactionListWidget extends StatelessWidget {
   final NumberFormat currencyFormat;
   final bool isLoading;
   final Function(DateTime, List<model.Transaction>)? onDateTapped;
+  final Function(model.Transaction)? onTransactionTapped;
 
   const TransactionListWidget({
     Key? key,
@@ -17,6 +18,7 @@ class TransactionListWidget extends StatelessWidget {
     required this.currencyFormat,
     this.isLoading = false,
     this.onDateTapped,
+    this.onTransactionTapped,
   }) : super(key: key);
 
   @override
@@ -33,31 +35,44 @@ class TransactionListWidget extends StatelessWidget {
       return _buildEmptyState();
     }
 
+    final entries = groupedTransactions.entries.toList();
+
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
-        children: groupedTransactions.entries.map((entry) {
+        children: entries.asMap().entries.map((entryMap) {
+          final index = entryMap.key;
+          final entry = entryMap.value;
           final dateLabel = entry.key;
           final transactions = entry.value;
+          final groupBg = index.isEven
+              ? AppTheme.cardColor
+              : AppTheme.primaryTeal.withOpacity(0.04);
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Date header
               Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
+                padding: const EdgeInsets.only(top: 8, bottom: 4),
                 child: GestureDetector(
                   onTap: () {
-                    // Call callback when date is tapped
                     if (onDateTapped != null) {
                       onDateTapped!(transactions[0].date, transactions);
                     }
                   },
                   child: Container(
-                    padding: EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
+                      color: AppTheme.primaryTeal,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Row(
                       children: [
@@ -66,8 +81,8 @@ class TransactionListWidget extends StatelessWidget {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: AppTheme.primaryTeal,
-                            borderRadius: BorderRadius.circular(8),
+                            color: Colors.white.withOpacity(0.18),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                           child: Center(
                             child: Text(
@@ -81,15 +96,15 @@ class TransactionListWidget extends StatelessWidget {
                             ),
                           ),
                         ),
-                        SizedBox(width: 12),
+                        const SizedBox(width: 12),
                         // Date label
                         Expanded(
                           child: Text(
                             dateLabel,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: AppTheme.textPrimary,
+                              color: Colors.white,
                             ),
                           ),
                         ),
@@ -97,7 +112,7 @@ class TransactionListWidget extends StatelessWidget {
                         Icon(
                           Icons.arrow_forward_ios,
                           size: 16,
-                          color: Colors.grey[600],
+                          color: Colors.white,
                         ),
                       ],
                     ),
@@ -106,16 +121,24 @@ class TransactionListWidget extends StatelessWidget {
               ),
               
               // Transactions for this date
-              Column(
-                children: transactions
-                    .map((transaction) => TransactionItemWidget(
-                          transaction: transaction,
-                          currencyFormat: currencyFormat,
-                        ))
-                    .toList(),
+              Container(
+                decoration: BoxDecoration(
+                  color: groupBg,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Column(
+                  children: transactions
+                      .map((transaction) => TransactionItemWidget(
+                            transaction: transaction,
+                            currencyFormat: currencyFormat,
+                            onTap: () => onTransactionTapped?.call(transaction),
+                          ))
+                      .toList(),
+                ),
               ),
               
-              SizedBox(height: 8),
+              const SizedBox(height: 4),
             ],
           );
         }).toList(),

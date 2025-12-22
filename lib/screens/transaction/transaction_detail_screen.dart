@@ -1,0 +1,288 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import '../../config/theme.dart';
+import '../../models/transaction.dart' as model;
+import '../../utils/category_helper.dart';
+import '../../services/transaction_service.dart';
+
+class TransactionDetailScreen extends StatefulWidget {
+  final model.Transaction transaction;
+  final NumberFormat currencyFormat;
+
+  const TransactionDetailScreen({
+    super.key,
+    required this.transaction,
+    required this.currencyFormat,
+  });
+
+  @override
+  State<TransactionDetailScreen> createState() => _TransactionDetailScreenState();
+}
+
+class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
+  final TransactionService _transactionService = TransactionService();
+  bool _isDeleting = false;
+
+  Future<void> _deleteTransaction() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Text(
+          'Xóa giao dịch này?',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        content: const Text(
+          'Không thể hoàn tác sau khi xóa.',
+        ),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'KHÔNG',
+              style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.w600),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'ĐỒNG Ý',
+              style: TextStyle(color: AppTheme.accentGreen, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isDeleting = true);
+    try {
+      await _transactionService.deleteTransaction(widget.transaction.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Đã xóa giao dịch')),
+        );
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isDeleting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final categoryColor = CategoryHelper.getCategoryColor(widget.transaction.category);
+    final categoryIcon = CategoryHelper.getCategoryIcon(widget.transaction.category);
+    final isIncome = widget.transaction.type == model.TransactionType.income;
+    final amountText = (isIncome ? '+' : '-') +
+        widget.currencyFormat.format(widget.transaction.amount.abs());
+    final dateStr = DateFormat('dd/MM/yyyy').format(widget.transaction.date);
+    final timeStr = DateFormat('HH:mm').format(widget.transaction.date);
+
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      appBar: AppBar(
+        backgroundColor: AppTheme.primaryTeal,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text(
+          'Chi tiết giao dịch',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit, color: Colors.white),
+            onPressed: () {
+              // TODO: Implement edit transaction
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Chức năng chỉnh sửa sẽ được phát triển')),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete, color: Colors.white),
+            onPressed: _isDeleting ? null : _deleteTransaction,
+          ),
+        ],
+      ),
+      body: _isDeleting
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Category and amount
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.cardColor,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: categoryColor.withOpacity(0.12),
+                          child: Icon(categoryIcon, color: categoryColor),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.transaction.category,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '$dateStr · $timeStr',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              amountText,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: isIncome ? AppTheme.accentGreen : Colors.red,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              isIncome ? 'Thu nhập' : 'Chi tiêu',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Details
+                  Text(
+                    'Chi tiết',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Payment method
+                  if (widget.transaction.paymentMethod != null &&
+                      widget.transaction.paymentMethod!.isNotEmpty) ...[
+                    _buildDetailRow(
+                      icon: Icons.account_balance_wallet,
+                      label: 'Phương thức thanh toán',
+                      value: widget.transaction.paymentMethod ?? '',
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // Note
+                  if (widget.transaction.note != null &&
+                      widget.transaction.note!.isNotEmpty) ...[
+                    _buildDetailRow(
+                      icon: Icons.note,
+                      label: 'Ghi chú',
+                      value: widget.transaction.note ?? '',
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // Date created
+                  _buildDetailRow(
+                    icon: Icons.schedule,
+                    label: 'Ngày tạo',
+                    value: DateFormat('dd/MM/yyyy · HH:mm')
+                        .format(widget.transaction.createdAt),
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _buildDetailRow({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.cardColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: AppTheme.textSecondary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

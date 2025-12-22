@@ -52,6 +52,23 @@ class TransactionGroupingService {
     return grouped;
   }
 
+  /// Group transactions by category name
+  static Map<String, List<model.Transaction>> groupTransactionsByCategory(
+    List<model.Transaction> transactions,
+  ) {
+    final grouped = <String, List<model.Transaction>>{};
+
+    // Sort by date desc to keep newest first inside each category
+    transactions.sort((a, b) => b.date.compareTo(a.date));
+
+    for (final transaction in transactions) {
+      final category = transaction.category;
+      grouped.putIfAbsent(category, () => []).add(transaction);
+    }
+
+    return grouped;
+  }
+
   /// Format date label (Hôm nay, Hôm qua, hoặc Thứ X - DD/MM/YYYY)
   static String _getDateLabel(DateTime date, DateTime today, DateTime yesterday) {
     if (date == today) {

@@ -69,8 +69,6 @@ class MonthTabsWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-
     return SingleChildScrollView(
       controller: scrollController,
       scrollDirection: Axis.horizontal,
