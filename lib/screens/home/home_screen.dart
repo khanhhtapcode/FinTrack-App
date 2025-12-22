@@ -1,4 +1,3 @@
-import 'package:expense_tracker_app/screens/profile/profile_screen.dart';
 import 'package:expense_tracker_app/widgets/home/balance_card_widget.dart';
 import 'package:expense_tracker_app/widgets/home/chart_widget.dart';
 import 'package:expense_tracker_app/widgets/home/recent_transactions_widget.dart';
@@ -13,6 +12,7 @@ import '../../models/transaction.dart' as model;
 import '../transaction/add_transaction_screen.dart';
 import '../auth/login_screen.dart';
 import '../transaction/transactions_screen.dart';
+import '../profile/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -212,7 +212,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const TransactionsScreen(),
           const SizedBox.shrink(), // placeholder for FAB slot
           _buildReportsPlaceholder(),
-          const ProfileScreen(), // ✅ THÊM PROFILE SCREEN
+          const ProfileScreen(),
         ],
       ),
 
@@ -220,11 +220,13 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: _buildBottomNavBar(),
 
       // Floating Action Button (Add button)
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openAddTransaction,
-        backgroundColor: AppTheme.primaryTeal,
-        child: Icon(Icons.add, size: 32),
-      ),
+      floatingActionButton: _selectedIndex == 0 || _selectedIndex == 1
+          ? FloatingActionButton(
+              onPressed: _openAddTransaction,
+              backgroundColor: AppTheme.primaryTeal,
+              child: const Icon(Icons.add, size: 32),
+            )
+          : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
@@ -387,7 +389,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // Home tab content wrapped so it can live inside IndexedStack
   Widget _buildHomeTab(double padding, double spacing) {
     if (_isLoading) {
-      return Center(
+      return const Center(
         child: CircularProgressIndicator(color: AppTheme.primaryTeal),
       );
     }
@@ -397,7 +399,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onRefresh: _loadData,
         color: AppTheme.primaryTeal,
         child: SingleChildScrollView(
-          physics: AlwaysScrollableScrollPhysics(),
+          physics: const AlwaysScrollableScrollPhysics(),
           child: Padding(
             padding: EdgeInsets.all(padding),
             child: Column(
@@ -430,7 +432,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         transactions: _recentTransactions,
                       ),
 
-                SizedBox(height: 80), // Space for FAB
+                const SizedBox(height: 80), // Space for FAB
               ],
             ),
           ),
@@ -622,21 +624,6 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Center(
         child: Text(
           'Ngân sách / Báo cáo (đang cập nhật)',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: AppTheme.textSecondary,
-            fontWeight: FontWeight.w600,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAccountPlaceholder() {
-    return SafeArea(
-      child: Center(
-        child: Text(
-          'Tài khoản (đang cập nhật)',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: AppTheme.textSecondary,
             fontWeight: FontWeight.w600,

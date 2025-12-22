@@ -31,14 +31,9 @@ class AppSettingsProvider with ChangeNotifier {
   bool get soundEnabled => _soundEnabled;
   bool get vibrationEnabled => _vibrationEnabled;
 
-  // ✅ Private constructor
-  AppSettingsProvider._();
-
-  // ✅ Factory method để khởi tạo async
-  static Future<AppSettingsProvider> create() async {
-    final provider = AppSettingsProvider._();
-    await provider._initialize();
-    return provider;
+  // ✅ Constructor - khởi tạo async trong constructor
+  AppSettingsProvider() {
+    _initialize();
   }
 
   Future<void> _initialize() async {
@@ -46,6 +41,8 @@ class AppSettingsProvider with ChangeNotifier {
       _prefs = await SharedPreferences.getInstance();
       _loadSettings();
       _initialized = true;
+      _isLoading = false;
+      notifyListeners();
       print('✅ AppSettingsProvider initialized successfully');
     } catch (e) {
       print('❌ Error initializing AppSettingsProvider: $e');

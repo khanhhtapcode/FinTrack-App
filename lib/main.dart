@@ -1,4 +1,3 @@
-import 'package:expense_tracker_app/services/app_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
@@ -41,40 +40,22 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<AppSettingsProvider>(
-      future: AppSettingsProvider.create(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const MaterialApp(
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthService()),
+        ChangeNotifierProvider(create: (_) => AppSettingsProvider()),
+      ],
+      child: Consumer<AppSettingsProvider>(
+        builder: (context, settings, _) {
+          return MaterialApp(
             debugShowCheckedModeBanner: false,
-            home: Scaffold(body: Center(child: CircularProgressIndicator())),
+            title: 'FinTracker',
+            locale: Locale(settings.language),
+            theme: AppTheme.lightTheme,
+            home: const SplashScreen(),
           );
-        }
-
-        return MultiProvider(
-          providers: [
-            ChangeNotifierProvider(create: (_) => AuthService()),
-
-            ChangeNotifierProvider<AppSettingsProvider>.value(
-              value: snapshot.data!,
-            ),
-          ],
-          child: Consumer<AppSettingsProvider>(
-            builder: (context, settings, _) {
-              return MaterialApp(
-                debugShowCheckedModeBanner: false,
-                title: 'FinTracker',
-
-                // 🔥 CHỈ CẦN THẾ NÀY
-                locale: Locale(settings.language),
-
-                theme: AppTheme.lightTheme,
-                home: const SplashScreen(),
-              );
-            },
-          ),
-        );
-      },
+        },
+      ),
     );
   }
 }
