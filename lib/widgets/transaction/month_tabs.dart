@@ -10,13 +10,13 @@ class MonthTabsWidget extends StatelessWidget {
   final String timeRangeType; // 'Ngày', 'Tuần', 'Tháng', 'Quý', 'Năm'
 
   const MonthTabsWidget({
-    Key? key,
+    super.key,
     required this.availableMonths,
     required this.selectedMonth,
     required this.onMonthSelected,
     required this.scrollController,
     this.timeRangeType = 'Tháng',
-  }) : super(key: key);
+  });
 
   String _getLabel(DateTime period, DateTime currentPeriod) {
     final now = DateTime.now();

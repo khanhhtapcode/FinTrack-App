@@ -3,7 +3,7 @@ import '../../config/theme.dart';
 import '../home/home_screen.dart';
 
 class CongratsScreen extends StatelessWidget {
-  const CongratsScreen({Key? key}) : super(key: key);
+  const CongratsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

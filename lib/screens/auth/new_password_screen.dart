@@ -7,7 +7,7 @@ import 'login_screen.dart';
 class NewPasswordScreen extends StatefulWidget {
   final String email;
 
-  const NewPasswordScreen({Key? key, required this.email}) : super(key: key);
+  const NewPasswordScreen({super.key, required this.email});
 
   @override
   State<NewPasswordScreen> createState() => _NewPasswordScreenState();

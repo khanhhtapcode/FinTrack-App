@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../models/transaction.dart' as model;
-import '../services/transaction_service.dart';
+import '../../models/transaction.dart' as model;
+import '../../services/transaction_service.dart';
 
 class TransactionListWidget extends StatefulWidget {
-  const TransactionListWidget({Key? key}) : super(key: key);
+  const TransactionListWidget({super.key});
 
   @override
   State<TransactionListWidget> createState() => _TransactionListWidgetState();

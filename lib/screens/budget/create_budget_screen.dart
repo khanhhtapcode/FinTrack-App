@@ -359,13 +359,13 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
     final range = '(${df.format(_periodStart)} - ${df.format(_periodEnd)})';
     switch (_periodType) {
       case BudgetPeriodType.month:
-        return 'Tháng này ' + range;
+        return 'Tháng này $range';
       case BudgetPeriodType.quarter:
-        return 'Quý này ' + range;
+        return 'Quý này $range';
       case BudgetPeriodType.year:
-        return 'Năm nay ' + range;
+        return 'Năm nay $range';
       case BudgetPeriodType.custom:
-        return 'Tùy chỉnh ' + range;
+        return 'Tùy chỉnh $range';
     }
   }
 

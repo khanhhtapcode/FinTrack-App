@@ -15,7 +15,7 @@ import '../../auth/login_screen.dart';
 // ============================================================================
 
 class AccountManagementScreen extends StatefulWidget {
-  const AccountManagementScreen({Key? key}) : super(key: key);
+  const AccountManagementScreen({super.key});
 
   @override
   State<AccountManagementScreen> createState() =>
@@ -60,8 +60,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
   Widget build(BuildContext context) {
     return Consumer<AppSettingsProvider>(
       builder: (context, settings, _) {
-        final t = (String key) =>
-            AppStrings.t(key, language: settings.language);
+        t(String key) => AppStrings.t(key, language: settings.language);
 
         return Scaffold(
           backgroundColor: AppTheme.backgroundColor,
@@ -381,8 +380,6 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     Function(String) t,
   ) async {
     try {
-      final userBox = await Hive.openBox<User>('users');
-
       if (currentUser == null) return false;
 
       // Verify old password

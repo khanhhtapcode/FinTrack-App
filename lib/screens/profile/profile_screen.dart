@@ -15,7 +15,7 @@ import '../about/about_screen.dart';
 // ============================================================================
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -29,8 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Consumer<AppSettingsProvider>(
       builder: (context, settings, _) {
-        final t = (String key) =>
-            AppStrings.t(key, language: settings.language);
+        t(String key) => AppStrings.t(key, language: settings.language);
 
         return Scaffold(
           backgroundColor: AppTheme.backgroundColor,
@@ -160,83 +159,130 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildMenuSection(BuildContext context, Function(String) t) {
-    return Container(
-      color: AppTheme.cardColor,
-      child: Column(
-        children: [
-          _buildMenuItem(
-            icon: Icons.account_balance_wallet_outlined,
-            title: t('my_wallets'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const MyWalletScreen()),
-              );
-            },
-          ),
-          _buildDivider(),
+    return Column(
+      children: [
+        // Account Section
+        Container(
+          color: AppTheme.cardColor,
+          child: Column(
+            children: [
+              _buildMenuItem(
+                icon: Icons.person_outline,
+                title: t('account_management'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AccountManagementScreen(),
+                    ),
+                  );
+                },
+              ),
+              _buildDivider(),
 
-          _buildMenuItem(
-            icon: Icons.category_outlined,
-            title: t('category_groups'),
-            onTap: () => _showComingSoonDialog(context, t),
-          ),
-          _buildDivider(),
+              _buildMenuItem(
+                icon: Icons.account_balance_wallet_outlined,
+                title: t('my_wallets'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MyWalletScreen(),
+                    ),
+                  );
+                },
+              ),
+              _buildDivider(),
 
-          _buildMenuItem(
-            icon: Icons.repeat,
-            title: t('recurring_transactions'),
-            onTap: () => _showComingSoonDialog(context, t),
+              _buildMenuItem(
+                icon: Icons.settings_outlined,
+                title: t('settings'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SettingsScreen(),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
-          _buildDivider(),
+        ),
 
-          _buildMenuItem(
-            icon: Icons.build_outlined,
-            title: t('tools'),
-            onTap: () => _showComingSoonDialog(context, t),
+        const SizedBox(height: 16),
+
+        // Features Section
+        Container(
+          color: AppTheme.cardColor,
+          child: Column(
+            children: [
+              _buildMenuItem(
+                icon: Icons.category_outlined,
+                title: t('category_groups'),
+                onTap: () => _showComingSoonDialog(context, t),
+              ),
+              _buildDivider(),
+
+              _buildMenuItem(
+                icon: Icons.repeat,
+                title: t('recurring_transactions'),
+                onTap: () => _showComingSoonDialog(context, t),
+              ),
+              _buildDivider(),
+
+              _buildMenuItem(
+                icon: Icons.build_outlined,
+                title: t('tools'),
+                onTap: () => _showComingSoonDialog(context, t),
+              ),
+            ],
           ),
-          _buildDivider(),
+        ),
 
-          _buildMenuItem(
-            icon: Icons.explore_outlined,
-            title: t('explore_fintracker'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const AboutScreen()),
-              );
-            },
+        const SizedBox(height: 16),
+
+        // Info & Support Section
+        Container(
+          color: AppTheme.cardColor,
+          child: Column(
+            children: [
+              _buildMenuItem(
+                icon: Icons.explore_outlined,
+                title: t('explore_fintracker'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AboutScreen(),
+                    ),
+                  );
+                },
+              ),
+              _buildDivider(),
+
+              _buildMenuItem(
+                icon: Icons.help_outline,
+                title: t('help'),
+                onTap: () => _showHelpDialog(context, t),
+              ),
+            ],
           ),
-          _buildDivider(),
+        ),
 
-          _buildMenuItem(
-            icon: Icons.help_outline,
-            title: t('help'),
-            onTap: () => _showHelpDialog(context, t),
-          ),
-          _buildDivider(),
+        const SizedBox(height: 16),
 
-          _buildMenuItem(
-            icon: Icons.settings_outlined,
-            title: t('settings'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              );
-            },
-          ),
-          _buildDivider(),
-
-          // Logout
-          _buildMenuItem(
+        // Logout Section
+        Container(
+          color: AppTheme.cardColor,
+          child: _buildMenuItem(
             icon: Icons.logout,
             title: t('logout'),
             onTap: () => _showLogoutDialog(context, t),
             textColor: Colors.red,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

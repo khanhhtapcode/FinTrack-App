@@ -5,7 +5,7 @@ import '../../../services/app_localization.dart';
 import '../../../services/app_settings_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({Key? key}) : super(key: key);
+  const SettingsScreen({super.key});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -36,7 +36,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Consumer<AppSettingsProvider>(
       builder: (context, settings, _) {
-        final t = (String key) =>
+        t(String key) =>
             AppStrings.t(key, language: settings.language);
 
         if (settings.isLoading) {
@@ -325,7 +325,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ========================================================================
 
   void _showLanguagePicker(BuildContext context, AppSettingsProvider settings) {
-    final t = (String key) => AppStrings.t(key, language: settings.language);
+    t(String key) => AppStrings.t(key, language: settings.language);
 
     showDialog(
       context: context,
@@ -381,7 +381,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showCurrencyPicker(BuildContext context, AppSettingsProvider settings) {
-    final t = (String key) => AppStrings.t(key, language: settings.language);
+    t(String key) => AppStrings.t(key, language: settings.language);
 
     showDialog(
       context: context,
@@ -433,7 +433,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     BuildContext context,
     AppSettingsProvider settings,
   ) {
-    final t = (String key) => AppStrings.t(key, language: settings.language);
+    t(String key) => AppStrings.t(key, language: settings.language);
 
     showDialog(
       context: context,
@@ -468,7 +468,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showWeekDayPicker(BuildContext context, AppSettingsProvider settings) {
-    final t = (String key) => AppStrings.t(key, language: settings.language);
+    t(String key) => AppStrings.t(key, language: settings.language);
 
     showDialog(
       context: context,
@@ -506,7 +506,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     BuildContext context,
     AppSettingsProvider settings,
   ) {
-    final t = (String key) => AppStrings.t(key, language: settings.language);
+    t(String key) => AppStrings.t(key, language: settings.language);
 
     showDialog(
       context: context,
@@ -561,7 +561,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     BuildContext context,
     AppSettingsProvider settings,
   ) {
-    final t = (String key) => AppStrings.t(key, language: settings.language);
+    t(String key) => AppStrings.t(key, language: settings.language);
 
     showDialog(
       context: context,

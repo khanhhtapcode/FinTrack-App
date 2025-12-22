@@ -9,12 +9,12 @@ class CompactSummaryWidget extends StatelessWidget {
   final NumberFormat currencyFormat;
 
   const CompactSummaryWidget({
-    Key? key,
+    super.key,
     required this.totalBalance,
     required this.totalIncome,
     required this.totalExpense,
     required this.currencyFormat,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -92,7 +92,7 @@ class CompactSummaryWidget extends StatelessWidget {
         Row(
           children: [
             Text(
-              '${amount >= 0 ? '' : '-'}',
+              amount >= 0 ? '' : '-',
               style: TextStyle(
                 color: color,
                 fontSize: 14,

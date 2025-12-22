@@ -8,7 +8,7 @@ import 'favorites_screen.dart';
 class OTPScreen extends StatefulWidget {
   final String email;
 
-  const OTPScreen({Key? key, required this.email}) : super(key: key);
+  const OTPScreen({super.key, required this.email});
 
   @override
   State<OTPScreen> createState() => _OTPScreenState();

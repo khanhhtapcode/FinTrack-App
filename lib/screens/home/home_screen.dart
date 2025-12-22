@@ -1,6 +1,6 @@
-import 'package:expense_tracker_app/widgets/balance_card_widget.dart';
-import 'package:expense_tracker_app/widgets/chart_widget.dart';
-import 'package:expense_tracker_app/widgets/recent_transactions_widget.dart';
+import 'package:expense_tracker_app/widgets/home/balance_card_widget.dart';
+import 'package:expense_tracker_app/widgets/home/chart_widget.dart';
+import 'package:expense_tracker_app/widgets/home/recent_transactions_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -32,7 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
   double _totalExpense = 0;
   List<model.Transaction> _allTransactions = [];
   List<Map<String, dynamic>> _recentTransactions = [];
-  Map<int, double> _monthlyExpenses = {}; // For chart
+  final Map<int, double> _monthlyExpenses = {}; // For chart
 
   bool _isLoading = true;
 

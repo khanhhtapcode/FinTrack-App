@@ -7,7 +7,7 @@ import '../auth/login_screen.dart';
 import 'user_management_screen.dart';
 
 class AdminHomeScreen extends StatelessWidget {
-  const AdminHomeScreen({Key? key}) : super(key: key);
+  const AdminHomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
