@@ -11,11 +11,11 @@ class TransactionItemWidget extends StatelessWidget {
   final VoidCallback? onTap;
 
   const TransactionItemWidget({
-    Key? key,
+    super.key,
     required this.transaction,
     required this.currencyFormat,
     this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

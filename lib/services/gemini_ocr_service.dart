@@ -238,7 +238,7 @@ class GeminiOcrService {
       }
 
       debugPrint(
-        '[OCR] ✅ Parsed successfully: $merchant - ${amount}đ - ${itemsList.length} items',
+        '[OCR] ✅ Parsed successfully: $merchant - $amountđ - ${itemsList.length} items',
       );
 
       return ReceiptData(

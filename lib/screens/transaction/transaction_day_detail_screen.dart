@@ -13,11 +13,11 @@ class TransactionDayDetailScreen extends StatelessWidget {
   final NumberFormat currencyFormat;
 
   const TransactionDayDetailScreen({
-    Key? key,
+    super.key,
     required this.selectedDate,
     required this.transactions,
     required this.currencyFormat,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

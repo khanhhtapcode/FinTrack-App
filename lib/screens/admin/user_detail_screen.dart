@@ -8,7 +8,7 @@ import '../../services/transaction_service.dart';
 class UserDetailScreen extends StatefulWidget {
   final User user;
 
-  const UserDetailScreen({Key? key, required this.user}) : super(key: key);
+  const UserDetailScreen({super.key, required this.user});
 
   @override
   State<UserDetailScreen> createState() => _UserDetailScreenState();

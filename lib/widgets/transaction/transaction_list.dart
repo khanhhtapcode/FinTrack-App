@@ -13,13 +13,13 @@ class TransactionListWidget extends StatelessWidget {
   final Function(model.Transaction)? onTransactionTapped;
 
   const TransactionListWidget({
-    Key? key,
+    super.key,
     required this.groupedTransactions,
     required this.currencyFormat,
     this.isLoading = false,
     this.onDateTapped,
     this.onTransactionTapped,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

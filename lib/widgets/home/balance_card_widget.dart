@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../../config/constants.dart';
-import '../../../config/theme.dart';
+import '../../../../config/constants.dart';
+import '../../../../config/theme.dart';
 
 class BalanceCardWidget extends StatelessWidget {
   final double balance;

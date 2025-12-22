@@ -5,7 +5,7 @@ import '../../models/user.dart';
 import '../../models/transaction.dart' as model;
 
 class DebugScreen extends StatefulWidget {
-  const DebugScreen({Key? key}) : super(key: key);
+  const DebugScreen({super.key});
 
   @override
   State<DebugScreen> createState() => _DebugScreenState();
@@ -191,7 +191,7 @@ class _DebugScreenState extends State<DebugScreen> {
               ),
             ),
           );
-        }).toList(),
+        }),
         if (_transactions.length > 5)
           Padding(
             padding: EdgeInsets.all(8),
