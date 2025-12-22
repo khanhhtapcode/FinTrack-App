@@ -1,12 +1,15 @@
+import 'package:expense_tracker_app/screens/wallet/wallets_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../config/theme.dart';
+import '../../services/app_settings_provider.dart';
+import '../../services/app_localization.dart';
 import '../../services/auth_service.dart';
 
+import '../../screens/profile/settings/category_group/category_group_screen.dart';
 import '../../screens/profile/account/account_management_screen.dart';
 import '../../screens/profile/settings/settings_screen.dart';
-import '../../screens/wallet/wallets_screen.dart';
 import '../../screens/about/about_screen.dart';
 import '../../screens/auth/login_screen.dart';
 
@@ -29,10 +32,11 @@ class ProfileMenuSection extends StatelessWidget {
             ),
             _divider(),
 
+            // ✅ NHÓM DANH MỤC – ĐÃ MỞ ĐƯỢC
             _menuItem(
               icon: Icons.category_outlined,
               title: t('category_groups'),
-              onTap: () => _comingSoon(context),
+              onTap: () => _push(context, const CategoryGroupScreen()),
             ),
             _divider(),
 

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../../config/theme.dart';
 import '../../../services/app_localization.dart';
 import '../../../services/app_settings_provider.dart';
+import 'category_group/category_group_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -34,170 +36,141 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AppSettingsProvider>(
-      builder: (context, settings, _) {
-        t(String key) =>
-            AppStrings.t(key, language: settings.language);
+    final settings = context.watch<AppSettingsProvider>();
+    t(String key) => AppStrings.t(key, language: settings.language);
 
-        if (settings.isLoading) {
-          return Scaffold(
-            backgroundColor: AppTheme.backgroundColor,
-            appBar: AppBar(
-              title: Text(t('settings')),
-              backgroundColor: AppTheme.cardColor,
-            ),
-            body: Center(
-              child: CircularProgressIndicator(color: AppTheme.primaryTeal),
-            ),
-          );
-        }
+    if (settings.isLoading) {
+      return Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        appBar: AppBar(
+          title: Text(t('settings')),
+          backgroundColor: AppTheme.cardColor,
+        ),
+        body: Center(
+          child: CircularProgressIndicator(color: AppTheme.primaryTeal),
+        ),
+      );
+    }
 
-        return Scaffold(
-          backgroundColor: AppTheme.backgroundColor,
-          appBar: AppBar(
-            title: Text(t('settings')),
-            backgroundColor: AppTheme.cardColor,
-            elevation: 0,
-            centerTitle: false,
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      appBar: AppBar(
+        title: Text(t('settings')),
+        backgroundColor: AppTheme.cardColor,
+        elevation: 0,
+      ),
+      body: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          // ===================== DISPLAY =====================
+          _buildSectionHeader(t('display')),
+
+          _buildSettingItem(
+            title: t('language'),
+            subtitle: _getLanguageName(settings.language),
+            icon: Icons.language,
+            onTap: () => _showLanguagePicker(context, settings),
           ),
-          body: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            children: [
-              // ===================== DISPLAY SECTION =====================
-              _buildSectionHeader(t('display')),
+          _buildDivider(),
 
-              _buildSettingItem(
-                context: context,
-                title: t('language'),
-                subtitle: _getLanguageName(settings.language),
-                icon: Icons.language,
-                onTap: () => _showLanguagePicker(context, settings),
-              ),
-              _buildDivider(),
-
-              _buildSettingItem(
-                context: context,
-                title: t('currency'),
-                subtitle: settings.currency,
-                icon: Icons.attach_money,
-                onTap: () => _showCurrencyPicker(context, settings),
-              ),
-              _buildDivider(),
-
-              _buildSettingItem(
-                context: context,
-                title: t('date_format'),
-                subtitle: settings.dateFormat,
-                icon: Icons.calendar_today_outlined,
-                onTap: () => _showDateFormatPicker(context, settings),
-              ),
-              _buildDivider(),
-
-              _buildSettingItem(
-                context: context,
-                title: t('first_day_week'),
-                subtitle: settings.firstDayOfWeek,
-                icon: Icons.event_outlined,
-                onTap: () => _showWeekDayPicker(context, settings),
-              ),
-              _buildDivider(),
-
-              _buildSettingItem(
-                context: context,
-                title: t('first_day_month'),
-                subtitle: settings.firstDayOfMonth,
-                icon: Icons.date_range_outlined,
-                onTap: () => _showDayOfMonthPicker(context, settings),
-              ),
-              _buildDivider(),
-
-              _buildSettingItem(
-                context: context,
-                title: t('first_month_year'),
-                subtitle: settings.firstMonthOfYear,
-                icon: Icons.calendar_month_outlined,
-                onTap: () => _showMonthOfYearPicker(context, settings),
-              ),
-
-              const SizedBox(height: 24),
-
-              // ===================== NOTIFICATION SECTION =====================
-              _buildSectionHeader(t('notifications')),
-
-              _buildSwitchItem(
-                context: context,
-                title: t('show_notifications'),
-                subtitle: t('allow_notifications'),
-                icon: Icons.notifications_outlined,
-                value: settings.showNotifications,
-                onChanged: (value) async {
-                  await settings.setShowNotifications(value);
-                },
-              ),
-              _buildDivider(),
-
-              _buildSwitchItem(
-                context: context,
-                title: t('notification_sound'),
-                subtitle: t('enable_sound'),
-                icon: Icons.volume_up_outlined,
-                value: settings.soundEnabled,
-                onChanged: settings.showNotifications
-                    ? (value) async => await settings.setSoundEnabled(value)
-                    : null,
-              ),
-              _buildDivider(),
-
-              _buildSwitchItem(
-                context: context,
-                title: t('vibration'),
-                subtitle: t('enable_vibration'),
-                icon: Icons.vibration,
-                value: settings.vibrationEnabled,
-                onChanged: settings.showNotifications
-                    ? (value) async => await settings.setVibrationEnabled(value)
-                    : null,
-              ),
-
-              const SizedBox(height: 24),
-
-              // ===================== ABOUT SECTION =====================
-              _buildSectionHeader(t('about')),
-
-              _buildInfoItem(
-                context: context,
-                title: t('version'),
-                subtitle: '1.0.0',
-                icon: Icons.info_outlined,
-              ),
-              _buildDivider(),
-
-              _buildSettingItem(
-                context: context,
-                title: t('privacy'),
-                icon: Icons.privacy_tip_outlined,
-                onTap: () => _showComingSoon(context, t('privacy')),
-              ),
-              _buildDivider(),
-
-              _buildSettingItem(
-                context: context,
-                title: t('terms'),
-                icon: Icons.description_outlined,
-                onTap: () => _showComingSoon(context, t('terms')),
-              ),
-
-              const SizedBox(height: 32),
-            ],
+          _buildSettingItem(
+            title: t('currency'),
+            subtitle: settings.currency,
+            icon: Icons.attach_money,
+            onTap: () => _showCurrencyPicker(context, settings),
           ),
-        );
-      },
+          _buildDivider(),
+
+          _buildSettingItem(
+            title: t('date_format'),
+            subtitle: settings.dateFormat,
+            icon: Icons.calendar_today_outlined,
+            onTap: () => _showDateFormatPicker(context, settings),
+          ),
+          _buildDivider(),
+
+          _buildSettingItem(
+            title: t('first_day_week'),
+            subtitle: settings.firstDayOfWeek,
+            icon: Icons.event_outlined,
+            onTap: () => _showWeekDayPicker(context, settings),
+          ),
+          _buildDivider(),
+
+          _buildSettingItem(
+            title: t('first_day_month'),
+            subtitle: settings.firstDayOfMonth,
+            icon: Icons.date_range_outlined,
+            onTap: () => _showDayOfMonthPicker(context, settings),
+          ),
+          _buildDivider(),
+
+          _buildSettingItem(
+            title: t('first_month_year'),
+            subtitle: settings.firstMonthOfYear,
+            icon: Icons.calendar_month_outlined,
+            onTap: () => _showMonthOfYearPicker(context, settings),
+          ),
+
+          const SizedBox(height: 24),
+
+          // ===================== CATEGORY =====================
+          _buildSectionHeader(t('category')),
+
+          _buildSettingItem(
+            title: t('manage_categories'),
+            subtitle: t('income_expense_categories'),
+            icon: Icons.category_outlined,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CategoryGroupScreen()),
+              );
+            },
+          ),
+
+          const SizedBox(height: 24),
+
+          // ===================== NOTIFICATION =====================
+          _buildSectionHeader(t('notifications')),
+
+          _buildSwitchItem(
+            title: t('show_notifications'),
+            subtitle: t('allow_notifications'),
+            icon: Icons.notifications_outlined,
+            value: settings.showNotifications,
+            onChanged: (value) => settings.setShowNotifications(value),
+          ),
+          _buildDivider(),
+
+          _buildSwitchItem(
+            title: t('notification_sound'),
+            subtitle: t('enable_sound'),
+            icon: Icons.volume_up_outlined,
+            value: settings.soundEnabled,
+            onChanged: settings.showNotifications
+                ? (v) => settings.setSoundEnabled(v)
+                : null,
+          ),
+          _buildDivider(),
+
+          _buildSwitchItem(
+            title: t('vibration'),
+            subtitle: t('enable_vibration'),
+            icon: Icons.vibration,
+            value: settings.vibrationEnabled,
+            onChanged: settings.showNotifications
+                ? (v) => settings.setVibrationEnabled(v)
+                : null,
+          ),
+
+          const SizedBox(height: 32),
+        ],
+      ),
     );
   }
 
-  // ========================================================================
-  // WIDGET BUILDERS
-  // ========================================================================
+  // ===================== UI HELPERS =====================
 
   Widget _buildSectionHeader(String title) {
     return Container(
@@ -215,408 +188,112 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildSettingItem({
-    required BuildContext context,
     required String title,
     String? subtitle,
     required IconData icon,
-    required VoidCallback? onTap,
+    required VoidCallback onTap,
   }) {
     return Container(
       color: AppTheme.cardColor,
       child: ListTile(
-        leading: Icon(icon, color: AppTheme.primaryTeal, size: 24),
-        title: Text(
-          title,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-        ),
+        leading: Icon(icon, color: AppTheme.primaryTeal),
+        title: Text(title),
         subtitle: subtitle != null
-            ? Text(
-                subtitle,
-                style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-              )
+            ? Text(subtitle, style: TextStyle(color: AppTheme.textSecondary))
             : null,
-        trailing: Icon(
-          Icons.chevron_right,
-          color: AppTheme.textSecondary,
-          size: 20,
-        ),
+        trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
       ),
     );
   }
 
-  Widget _buildInfoItem({
-    required BuildContext context,
-    required String title,
-    required String subtitle,
-    required IconData icon,
-  }) {
-    return Container(
-      color: AppTheme.cardColor,
-      child: ListTile(
-        leading: Icon(icon, color: AppTheme.primaryTeal, size: 24),
-        title: Text(
-          title,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-        ),
-      ),
-    );
-  }
-
   Widget _buildSwitchItem({
-    required BuildContext context,
     required String title,
     required String subtitle,
     required IconData icon,
     required bool value,
     required Function(bool)? onChanged,
   }) {
-    final isEnabled = onChanged != null;
-
     return Container(
       color: AppTheme.cardColor,
       child: ListTile(
-        enabled: isEnabled,
-        leading: Icon(
-          icon,
-          color: isEnabled ? AppTheme.primaryTeal : Colors.grey,
-          size: 24,
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
-            color: isEnabled ? AppTheme.textPrimary : Colors.grey,
-          ),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: TextStyle(
-            fontSize: 13,
-            color: isEnabled ? AppTheme.textSecondary : Colors.grey,
-          ),
-        ),
+        leading: Icon(icon, color: AppTheme.primaryTeal),
+        title: Text(title),
+        subtitle: Text(subtitle),
         trailing: Switch(
-          value: isEnabled ? value : false,
+          value: value,
           onChanged: onChanged,
           activeColor: AppTheme.primaryTeal,
-          inactiveTrackColor: Colors.grey[300],
         ),
       ),
     );
   }
 
-  Widget _buildDivider() {
-    return Divider(
-      height: 1,
-      thickness: 1,
-      indent: 56,
-      color: Colors.grey[200],
-    );
-  }
+  Widget _buildDivider() => const Divider(height: 1, indent: 56);
 
-  // ========================================================================
-  // PICKER DIALOGS
-  // ========================================================================
+  // ===================== PICKERS =====================
 
   void _showLanguagePicker(BuildContext context, AppSettingsProvider settings) {
-    t(String key) => AppStrings.t(key, language: settings.language);
-
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(t('language')),
+      builder: (_) => AlertDialog(
+        title: const Text('Ngôn ngữ'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: List.generate(
-            _languages.length,
-            (index) => ListTile(
-              leading: Radio<String>(
-                value: _languageCodes[index],
-                groupValue: settings.language,
-                onChanged: (value) {
-                  Navigator.pop(context);
-                  if (value != null) {
-                    settings.setLanguage(value);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          AppStrings.t('language_changed', language: value),
-                        ),
-                        backgroundColor: AppTheme.primaryTeal,
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  }
-                },
-                activeColor: AppTheme.primaryTeal,
-              ),
-              title: Text(_languages[index]),
-              onTap: () {
-                Navigator.pop(context);
-                settings.setLanguage(_languageCodes[index]);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      AppStrings.t(
-                        'language_changed',
-                        language: _languageCodes[index],
-                      ),
-                    ),
-                    backgroundColor: AppTheme.primaryTeal,
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
+          children: List.generate(_languageCodes.length, (i) {
+            return RadioListTile<String>(
+              value: _languageCodes[i],
+              groupValue: settings.language,
+              title: Text(_languages[i]),
+              onChanged: (v) async {
+                if (v == null) return;
+                await settings.setLanguage(v);
+                if (context.mounted) Navigator.pop(context);
               },
-            ),
-          ),
+            );
+          }),
         ),
       ),
     );
   }
 
   void _showCurrencyPicker(BuildContext context, AppSettingsProvider settings) {
-    t(String key) => AppStrings.t(key, language: settings.language);
-
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(t('currency')),
+      builder: (_) => AlertDialog(
+        title: const Text('Tiền tệ'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: List.generate(
-            _currencies.length,
-            (index) => ListTile(
-              leading: Radio<String>(
-                value: _currencies[index],
-                groupValue: settings.currency,
-                onChanged: (value) {
-                  Navigator.pop(context);
-                  if (value != null) {
-                    settings.setCurrency(value);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(t('currency_changed')),
-                        backgroundColor: AppTheme.primaryTeal,
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  }
-                },
-                activeColor: AppTheme.primaryTeal,
-              ),
-              title: Text(_currencies[index]),
-              onTap: () {
-                Navigator.pop(context);
-                settings.setCurrency(_currencies[index]);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(t('currency_changed')),
-                    backgroundColor: AppTheme.primaryTeal,
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
+          children: _currencies.map((c) {
+            return ListTile(
+              title: Text(c),
+              onTap: () async {
+                await settings.setCurrency(c);
+                if (context.mounted) Navigator.pop(context);
               },
-            ),
-          ),
+            );
+          }).toList(),
         ),
       ),
     );
   }
 
-  void _showDateFormatPicker(
-    BuildContext context,
-    AppSettingsProvider settings,
-  ) {
-    t(String key) => AppStrings.t(key, language: settings.language);
+  void _showDateFormatPicker(BuildContext c, AppSettingsProvider s) =>
+      _showComingSoon(c, 'Định dạng ngày');
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(t('date_format')),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(
-            _dateFormats.length,
-            (index) => ListTile(
-              leading: Radio<String>(
-                value: _dateFormats[index],
-                groupValue: settings.dateFormat,
-                onChanged: (value) {
-                  Navigator.pop(context);
-                  if (value != null) {
-                    settings.setDateFormat(value);
-                  }
-                },
-                activeColor: AppTheme.primaryTeal,
-              ),
-              title: Text(_dateFormats[index]),
-              onTap: () {
-                Navigator.pop(context);
-                settings.setDateFormat(_dateFormats[index]);
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  void _showWeekDayPicker(BuildContext c, AppSettingsProvider s) =>
+      _showComingSoon(c, 'Ngày đầu tuần');
 
-  void _showWeekDayPicker(BuildContext context, AppSettingsProvider settings) {
-    t(String key) => AppStrings.t(key, language: settings.language);
+  void _showDayOfMonthPicker(BuildContext c, AppSettingsProvider s) =>
+      _showComingSoon(c, 'Ngày đầu tháng');
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(t('first_day_week')),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(
-            _weekDays.length,
-            (index) => ListTile(
-              leading: Radio<String>(
-                value: _weekDays[index],
-                groupValue: settings.firstDayOfWeek,
-                onChanged: (value) {
-                  Navigator.pop(context);
-                  if (value != null) {
-                    settings.setFirstDayOfWeek(value);
-                  }
-                },
-                activeColor: AppTheme.primaryTeal,
-              ),
-              title: Text(_weekDays[index]),
-              onTap: () {
-                Navigator.pop(context);
-                settings.setFirstDayOfWeek(_weekDays[index]);
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showDayOfMonthPicker(
-    BuildContext context,
-    AppSettingsProvider settings,
-  ) {
-    t(String key) => AppStrings.t(key, language: settings.language);
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(t('first_day_month')),
-        content: SizedBox(
-          width: 300,
-          height: 300,
-          child: GridView.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 5,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-            ),
-            itemCount: 31,
-            itemBuilder: (context, index) {
-              final day = (index + 1).toString();
-              final isSelected = settings.firstDayOfMonth == day;
-
-              return GestureDetector(
-                onTap: () {
-                  Navigator.pop(context);
-                  settings.setFirstDayOfMonth(day);
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: isSelected ? AppTheme.primaryTeal : Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: isSelected ? AppTheme.primaryTeal : Colors.grey,
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      day,
-                      style: TextStyle(
-                        color: isSelected ? Colors.white : Colors.black,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showMonthOfYearPicker(
-    BuildContext context,
-    AppSettingsProvider settings,
-  ) {
-    t(String key) => AppStrings.t(key, language: settings.language);
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(t('first_month_year')),
-        content: SizedBox(
-          width: 300,
-          height: 300,
-          child: GridView.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-            ),
-            itemCount: 12,
-            itemBuilder: (context, index) {
-              final month = _months[index];
-              final isSelected = settings.firstMonthOfYear == month;
-
-              return GestureDetector(
-                onTap: () {
-                  Navigator.pop(context);
-                  settings.setFirstMonthOfYear(month);
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: isSelected ? AppTheme.primaryTeal : Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: isSelected ? AppTheme.primaryTeal : Colors.grey,
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      month.substring(0, 3),
-                      style: TextStyle(
-                        color: isSelected ? Colors.white : Colors.black,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
+  void _showMonthOfYearPicker(BuildContext c, AppSettingsProvider s) =>
+      _showComingSoon(c, 'Tháng đầu năm');
 
   void _showComingSoon(BuildContext context, String feature) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('$feature sẽ sớm được cập nhật'),
-        duration: const Duration(seconds: 2),
         backgroundColor: AppTheme.primaryTeal,
       ),
     );
@@ -624,6 +301,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   String _getLanguageName(String code) {
     final index = _languageCodes.indexOf(code);
-    return index >= 0 ? _languages[index] : _languages[0];
+    return index >= 0 ? _languages[index] : _languages.first;
   }
 }

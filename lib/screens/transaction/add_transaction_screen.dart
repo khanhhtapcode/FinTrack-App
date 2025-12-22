@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:hive/hive.dart';
+
 import '../../config/theme.dart';
 import '../../models/transaction.dart' as model;
 import '../../services/transaction_service.dart';
 import '../../services/ocr_service.dart';
 import '../../models/receipt_data.dart';
 import '../../services/auth_service.dart';
+import '../../models/category_group.dart';
+import '../../utils/category_icon_mapper.dart';
+
 import 'package:uuid/uuid.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -19,16 +24,20 @@ class AddTransactionScreen extends StatefulWidget {
 
 class _AddTransactionScreenState extends State<AddTransactionScreen> {
   int _selectedTab = 0; // 0: Khoản chi, 1: Khoản thu, 2: Vay/Nợ
-  String _selectedCategory = 'Ăn uống';
+  String _selectedCategory = '';
   String _selectedPaymentMethod = 'Tiền mặt';
   String _amount = '0';
   DateTime _selectedDate = DateTime.now();
+
   final TextEditingController _noteController = TextEditingController();
   final TransactionService _transactionService = TransactionService();
   final OcrService _ocrService = OcrService();
   final ImagePicker _imagePicker = ImagePicker();
 
-  // Payment methods
+  /// 🔹 DANH MỤC TỪ HIVE
+  List<CategoryGroup> _categories = [];
+
+  /// Payment methods (GIỮ NGUYÊN)
   final List<Map<String, dynamic>> _paymentMethods = [
     {'name': 'Tiền mặt', 'icon': Icons.money},
     {'name': 'Thẻ tín dụng', 'icon': Icons.credit_card},
@@ -38,46 +47,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     {'name': 'Khác', 'icon': Icons.more_horiz},
   ];
 
-  // Categories for each tab
-  final Map<int, List<Map<String, dynamic>>> _categories = {
-    0: [
-      // Khoản chi
-      {'name': 'Ăn uống', 'icon': Icons.restaurant},
-      {'name': 'Xăng xe', 'icon': Icons.local_gas_station},
-      {'name': 'Shopping', 'icon': Icons.shopping_bag},
-      {'name': 'Giải trí', 'icon': Icons.movie},
-      {'name': 'Y tế', 'icon': Icons.medical_services},
-      {'name': 'Giáo dục', 'icon': Icons.school},
-      {'name': 'Hóa đơn', 'icon': Icons.receipt},
-      {'name': 'Điện nước', 'icon': Icons.bolt},
-      {'name': 'Nhà cửa', 'icon': Icons.home},
-      {'name': 'Quần áo', 'icon': Icons.checkroom},
-      {'name': 'Làm đẹp', 'icon': Icons.face},
-      {'name': 'Thể thao', 'icon': Icons.fitness_center},
-      {'name': 'Du lịch', 'icon': Icons.flight},
-      {'name': 'Điện thoại', 'icon': Icons.phone_android},
-      {'name': 'Internet', 'icon': Icons.wifi},
-      {'name': 'Khác', 'icon': Icons.more_horiz},
-    ],
-    1: [
-      // Khoản thu
-      {'name': 'Lương', 'icon': Icons.account_balance_wallet},
-      {'name': 'Thưởng', 'icon': Icons.card_giftcard},
-      {'name': 'Đầu tư', 'icon': Icons.trending_up},
-      {'name': 'Bán hàng', 'icon': Icons.point_of_sale},
-      {'name': 'Làm thêm', 'icon': Icons.work},
-      {'name': 'Khác', 'icon': Icons.more_horiz},
-    ],
-    2: [
-      // Vay/Nợ
-      {'name': 'Cho vay', 'icon': Icons.arrow_upward},
-      {'name': 'Đi vay', 'icon': Icons.arrow_downward},
-      {'name': 'Trả nợ', 'icon': Icons.payment},
-      {'name': 'Thu nợ', 'icon': Icons.attach_money},
-    ],
-  };
-
-  // Quick amount buttons
+  /// Quick amount buttons
   final List<String> _quickAmounts = [
     '100,000',
     '200,000',
@@ -90,15 +60,34 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   void initState() {
     super.initState();
     _initializeOCR();
+    _loadCategoriesFromHive();
+  }
+
+  void _loadCategoriesFromHive() {
+    final box = Hive.box<CategoryGroup>('category_groups');
+
+    final type = _selectedTab == 0
+        ? CategoryType.expense
+        : _selectedTab == 1
+        ? CategoryType.income
+        : null;
+
+    final items = box.values
+        .where((c) => type == null || c.type == type)
+        .toList();
+
+    setState(() {
+      _categories = items;
+      if (_categories.isNotEmpty) {
+        _selectedCategory = _categories.first.name;
+      }
+    });
   }
 
   Future<void> _initializeOCR() async {
     try {
       await _ocrService.initialize();
-      print('✅ OCR service initialized successfully');
-    } catch (e) {
-      print('⚠️ Failed to initialize OCR service: $e');
-    }
+    } catch (_) {}
   }
 
   @override
@@ -108,16 +97,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     super.dispose();
   }
 
+  // ================= UI =================
+
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isSmallScreen = screenHeight < 700;
-
-    // Responsive spacing
-    final verticalSpacing = isSmallScreen ? 8.0 : 16.0;
-    final sectionSpacing = isSmallScreen ? 12.0 : 20.0;
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -131,132 +114,101 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           'Thêm giao dịch',
           style: TextStyle(
             color: AppTheme.textPrimary,
-            fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
         ),
         actions: [
           IconButton(
             icon: Icon(Icons.camera_alt_outlined, color: AppTheme.textPrimary),
-            onPressed: () {
-              _showScanOptions();
-            },
+            onPressed: _showScanOptions,
           ),
         ],
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Tab selector (Khoản chi / Khoản thu / Vay/Nợ)
-            _buildTabSelector(),
-
-            // Main content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(
-                  horizontal: screenWidth * 0.05, // 5% of screen width
-                  vertical: 12,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Category selector with dropdown
-                    Center(child: _buildCategorySelector()),
-
-                    SizedBox(height: sectionSpacing),
-
-                    // Amount display
-                    _buildAmountDisplay(),
-
-                    SizedBox(height: verticalSpacing),
-
-                    // Payment Method Selector
-                    _buildPaymentMethodSelector(),
-
-                    SizedBox(height: verticalSpacing),
-
-                    // Note field
-                    _buildNoteField(),
-
-                    SizedBox(height: verticalSpacing),
-
-                    // Date picker
-                    _buildDatePicker(),
-
-                    SizedBox(height: verticalSpacing),
-
-                    // Add details button
-                    if (!isSmallScreen) _buildAddDetailsButton(),
-                    if (!isSmallScreen) SizedBox(height: verticalSpacing),
-
-                    // Save button (Lưu)
-                    _buildSaveButton(),
-
-                    SizedBox(height: sectionSpacing),
-
-                    // Quick amount buttons
-                    _buildQuickAmountButtons(),
-
-                    SizedBox(height: sectionSpacing),
-
-                    // Custom numpad
-                    _buildCustomNumpad(),
-
-                    SizedBox(height: 20), // Bottom padding
-                  ],
-                ),
+      body: Column(
+        children: [
+          _buildTabSelector(),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  _buildCategorySelector(),
+                  const SizedBox(height: 20),
+                  _buildAmountDisplay(),
+                  const SizedBox(height: 16),
+                  _buildPaymentMethodSelector(),
+                  const SizedBox(height: 16),
+                  _buildNoteField(),
+                  const SizedBox(height: 16),
+                  _buildDatePicker(),
+                  const SizedBox(height: 20),
+                  _buildSaveButton(),
+                  const SizedBox(height: 20),
+                  _buildQuickAmountButtons(),
+                  const SizedBox(height: 20),
+                  _buildCustomNumpad(),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
+  // ================= TAB =================
+
   Widget _buildTabSelector() {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(25),
-      ),
-      child: Row(
-        children: [
-          _buildTab('Khoản chi', 0),
-          _buildTab('Khoản thu', 1),
-          _buildTab('Vay/Nợ', 2),
-        ],
-      ),
+    return Row(
+      children: [
+        _buildTab('Khoản chi', 0),
+        _buildTab('Khoản thu', 1),
+        _buildTab('Vay/Nợ', 2),
+      ],
     );
   }
 
   Widget _buildTab(String title, int index) {
-    bool isSelected = _selectedTab == index;
+    final isSelected = _selectedTab == index;
+
     return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedTab = index;
-            // Reset category to first category of new tab
-            final categories = _categories[index] ?? [];
-            if (categories.isNotEmpty) {
-              _selectedCategory = categories[0]['name'] as String;
-            }
-          });
-        },
-        child: Container(
-          padding: EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected ? AppTheme.primaryTeal : Colors.transparent,
-            borderRadius: BorderRadius.circular(25),
-          ),
-          child: Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: isSelected ? Colors.white : AppTheme.textSecondary,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              fontSize: 14,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () {
+            setState(() {
+              _selectedTab = index;
+              _loadCategoriesFromHive();
+            });
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              color: isSelected ? AppTheme.primaryTeal : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected ? AppTheme.primaryTeal : Colors.grey.shade300,
+              ),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: AppTheme.primaryTeal.withAlpha(
+                          (0.08 * 255).round(),
+                        ),
+                        blurRadius: 8,
+                        offset: Offset(0, 3),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: isSelected ? Colors.white : AppTheme.textPrimary,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              ),
             ),
           ),
         ),
@@ -264,39 +216,64 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
-  Widget _buildCategorySelector() {
-    // Get icon for selected category
-    IconData categoryIcon = Icons.category;
-    final currentCategories = _categories[_selectedTab] ?? [];
-    final selectedCat = currentCategories.firstWhere(
-      (cat) => cat['name'] == _selectedCategory,
-      orElse: () => {'name': _selectedCategory, 'icon': Icons.category},
-    );
-    categoryIcon = selectedCat['icon'] as IconData;
+  // ================= CATEGORY =================
 
-    return InkWell(
+  Widget _buildCategorySelector() {
+    if (_categories.isEmpty) {
+      return const Text('Chưa có danh mục');
+    }
+
+    final category = _categories.firstWhere(
+      (e) => e.name == _selectedCategory,
+      orElse: () => _categories.first,
+    );
+
+    return GestureDetector(
       onTap: _showCategoryPicker,
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: AppTheme.primaryTeal,
-          borderRadius: BorderRadius.circular(25),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(categoryIcon, color: Colors.white, size: 20),
-            SizedBox(width: 8),
-            Text(
-              _selectedCategory,
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
+            CircleAvatar(
+              radius: 14,
+              backgroundColor: Colors.white.withAlpha((0.15 * 255).round()),
+              child: Builder(
+                builder: (context) {
+                  final asset = CategoryIconMapper.assetForKey(
+                    category.iconKey,
+                  );
+                  if (asset != null) {
+                    return ClipOval(
+                      child: Image.asset(
+                        asset,
+                        width: 18,
+                        height: 18,
+                        fit: BoxFit.cover,
+                      ),
+                    );
+                  }
+                  return Icon(
+                    CategoryIconMapper.fromKey(category.iconKey),
+                    color: Colors.white,
+                    size: 18,
+                  );
+                },
               ),
             ),
-            SizedBox(width: 4),
+            const SizedBox(width: 10),
+            Text(
+              category.name,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 8),
             Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 20),
           ],
         ),
@@ -304,411 +281,202 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
-  Widget _buildPaymentMethodSelector() {
-    // Get icon for selected payment method
-    IconData methodIcon = Icons.payment;
-    final selectedMethod = _paymentMethods.firstWhere(
-      (method) => method['name'] == _selectedPaymentMethod,
-      orElse: () => {'name': _selectedPaymentMethod, 'icon': Icons.payment},
-    );
-    methodIcon = selectedMethod['icon'] as IconData;
-
-    return GestureDetector(
-      onTap: _showPaymentMethodPicker,
-      child: Row(
-        children: [
-          Icon(methodIcon, color: Colors.grey[400]),
-          SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              _selectedPaymentMethod,
-              style: TextStyle(color: AppTheme.textPrimary, fontSize: 16),
-            ),
-          ),
-          Icon(Icons.chevron_right, color: Colors.grey[400]),
-        ],
-      ),
-    );
-  }
-
-  void _showPaymentMethodPicker() {
+  void _showCategoryPicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: EdgeInsets.all(20),
-        height: 400,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle bar
-            Container(
-              width: 40,
-              height: 4,
-              margin: EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Text(
-              'Chọn phương thức thanh toán',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-            SizedBox(height: 20),
-            Expanded(
-              child: GridView.builder(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  childAspectRatio: 1,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                itemCount: _paymentMethods.length,
-                itemBuilder: (context, index) {
-                  final method = _paymentMethods[index];
-                  final isSelected = method['name'] == _selectedPaymentMethod;
-
-                  return InkWell(
-                    onTap: () {
-                      setState(() {
-                        _selectedPaymentMethod = method['name'] as String;
-                      });
-                      Navigator.pop(context);
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppTheme.primaryTeal.withOpacity(0.1)
-                            : Colors.grey[100],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isSelected
-                              ? AppTheme.primaryTeal
-                              : Colors.transparent,
-                          width: 2,
-                        ),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            method['icon'] as IconData,
-                            size: 32,
-                            color: isSelected
-                                ? AppTheme.primaryTeal
-                                : Colors.grey[600],
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            method['name'] as String,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: isSelected
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                              color: isSelected
-                                  ? AppTheme.primaryTeal
-                                  : AppTheme.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
+      builder: (_) => GridView.builder(
+        padding: const EdgeInsets.all(16),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
         ),
+        itemCount: _categories.length,
+        itemBuilder: (_, index) {
+          final c = _categories[index];
+          return InkWell(
+            onTap: () {
+              setState(() => _selectedCategory = c.name);
+              Navigator.pop(context);
+            },
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircleAvatar(
+                  backgroundColor: Color(c.colorValue),
+                  child: Builder(
+                    builder: (_) {
+                      final asset = CategoryIconMapper.assetForKey(c.iconKey);
+                      if (asset != null) {
+                        return ClipOval(
+                          child: Image.asset(
+                            asset,
+                            width: 28,
+                            height: 28,
+                            fit: BoxFit.cover,
+                          ),
+                        );
+                      }
+                      return Icon(
+                        CategoryIconMapper.fromKey(c.iconKey),
+                        color: Colors.white,
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(c.name, textAlign: TextAlign.center),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildAmountDisplay() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isSmallScreen = screenWidth < 360;
+  // ================= HELPERS =================
 
-    return Row(
+  Widget _buildAmountDisplay() {
+    final displayAmount = _amount.isEmpty ? '0' : _amount;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppTheme.primaryTeal.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            'VND',
-            style: TextStyle(
-              color: AppTheme.primaryTeal,
-              fontWeight: FontWeight.w600,
-              fontSize: isSmallScreen ? 12 : 14,
-            ),
-          ),
+        const Text(
+          'Số tiền',
+          style: TextStyle(fontSize: 12, color: Colors.grey),
         ),
-        SizedBox(width: 12),
-        Expanded(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              _amount,
-              style: TextStyle(
-                fontSize: isSmallScreen ? 28 : 32,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primaryTeal,
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Flexible(
+                child: Text(
+                  displayAmount,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    fontSize: 34,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 8),
+              Text(
+                '₫',
+                style: TextStyle(fontSize: 20, color: AppTheme.textPrimary),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  /// Show category picker dialog
-  void _showCategoryPicker() {
-    final categories = _categories[_selectedTab] ?? [];
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: EdgeInsets.all(20),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.7,
+  Widget _buildPaymentMethodSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Phương thức thanh toán',
+          style: TextStyle(fontSize: 12, color: Colors.grey),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle bar
-            Container(
-              width: 40,
-              height: 4,
-              margin: EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _paymentMethods.map((m) {
+            final name = m['name'] as String;
+            final icon = m['icon'] as IconData;
+            return ChoiceChip(
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 16),
+                  const SizedBox(width: 6),
+                  Text(name),
+                ],
               ),
-            ),
-            Text(
-              'Chọn danh mục',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimary,
+              selectedColor: AppTheme.primaryTeal,
+              backgroundColor: Colors.grey.shade200,
+              labelStyle: TextStyle(
+                color: _selectedPaymentMethod == name
+                    ? Colors.white
+                    : AppTheme.textPrimary,
               ),
-            ),
-            SizedBox(height: 20),
-            Expanded(
-              child: GridView.builder(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  childAspectRatio: 1,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                itemCount: categories.length,
-                itemBuilder: (context, index) {
-                  final category = categories[index];
-                  final isSelected = category['name'] == _selectedCategory;
-
-                  return InkWell(
-                    onTap: () {
-                      setState(() {
-                        _selectedCategory = category['name'] as String;
-                      });
-                      Navigator.pop(context);
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppTheme.primaryTeal.withOpacity(0.1)
-                            : Colors.grey[100],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isSelected
-                              ? AppTheme.primaryTeal
-                              : Colors.transparent,
-                          width: 2,
-                        ),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            category['icon'] as IconData,
-                            size: 32,
-                            color: isSelected
-                                ? AppTheme.primaryTeal
-                                : Colors.grey[600],
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            category['name'] as String,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isSelected
-                                  ? AppTheme.primaryTeal
-                                  : AppTheme.textPrimary,
-                              fontWeight: isSelected
-                                  ? FontWeight.w600
-                                  : FontWeight.normal,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
+              selected: _selectedPaymentMethod == name,
+              onSelected: (selected) {
+                if (selected) setState(() => _selectedPaymentMethod = name);
+              },
+            );
+          }).toList(),
         ),
-      ),
+      ],
     );
   }
 
   Widget _buildNoteField() {
-    return Row(
-      children: [
-        Icon(Icons.note_outlined, color: Colors.grey[400]),
-        SizedBox(width: 12),
-        Expanded(
-          child: TextField(
-            controller: _noteController,
-            decoration: InputDecoration(
-              hintText: 'Thêm ghi chú',
-              hintStyle: TextStyle(color: Colors.grey[400]),
-              border: InputBorder.none,
-            ),
-          ),
+    return TextField(
+      controller: _noteController,
+      maxLines: 3,
+      decoration: InputDecoration(
+        prefixIcon: Icon(Icons.note, size: 20),
+        hintText: 'Ghi chú',
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
         ),
-      ],
+        isDense: true,
+      ),
     );
   }
 
   Widget _buildDatePicker() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isSmallScreen = screenWidth < 360;
-
-    // Format date text
-    final dateText = isSmallScreen
-        ? '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}'
-        : 'Thứ ${_selectedDate.weekday == 7 ? 'CN' : _selectedDate.weekday + 1}, ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}';
-
-    return GestureDetector(
-      onTap: () async {
-        final DateTime? picked = await showDatePicker(
+    return OutlinedButton.icon(
+      onPressed: () async {
+        final picked = await showDatePicker(
           context: context,
           initialDate: _selectedDate,
           firstDate: DateTime(2000),
-          lastDate: DateTime(2100),
-          builder: (context, child) {
-            return Theme(
-              data: Theme.of(context).copyWith(
-                colorScheme: ColorScheme.light(primary: AppTheme.primaryTeal),
-              ),
-              child: child!,
-            );
-          },
+          lastDate: DateTime.now().add(Duration(days: 365)),
         );
         if (picked != null) {
-          setState(() {
-            _selectedDate = picked;
-          });
+          setState(() => _selectedDate = picked);
         }
       },
-      child: Row(
-        children: [
-          Icon(Icons.calendar_today_outlined, color: Colors.grey[400]),
-          SizedBox(width: 12),
-          Expanded(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.chevron_left, color: AppTheme.primaryTeal, size: 20),
-                SizedBox(width: 4),
-                Flexible(
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryTeal.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      dateText,
-                      style: TextStyle(
-                        color: AppTheme.primaryTeal,
-                        fontSize: isSmallScreen ? 12 : 14,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-                SizedBox(width: 4),
-                Icon(
-                  Icons.chevron_right,
-                  color: AppTheme.primaryTeal,
-                  size: 20,
-                ),
-              ],
-            ),
-          ),
-        ],
+      icon: Icon(Icons.calendar_today, color: AppTheme.primaryTeal),
+      label: Text(
+        '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+        style: TextStyle(color: AppTheme.primaryTeal),
+      ),
+      style: OutlinedButton.styleFrom(
+        side: BorderSide(color: Colors.grey.shade300),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
 
-  Widget _buildAddDetailsButton() {
-    return Center(
-      child: TextButton(
-        onPressed: () {
-          // TODO: Show more details
-        },
-        child: Text(
-          'THÊM CHI TIẾT',
-          style: TextStyle(
-            color: AppTheme.primaryTeal,
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-            letterSpacing: 0.5,
-          ),
-        ),
-      ),
-    );
-  }
+  // ================= SAVE =================
 
   Widget _buildSaveButton() {
-    // Check if amount is valid
-    bool isValid = _amount != '0' && _amount.isNotEmpty;
-
-    return Container(
+    return SizedBox(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 40),
       child: ElevatedButton(
-        onPressed: isValid ? _saveTransaction : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: isValid ? AppTheme.primaryTeal : Colors.grey[200],
-          foregroundColor: isValid ? Colors.white : Colors.grey[400],
-          elevation: 0,
-          padding: EdgeInsets.symmetric(vertical: 16),
+          backgroundColor: AppTheme.primaryTeal,
+          padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-        child: Text(
+        onPressed: _saveTransaction,
+        child: const Text(
           'Lưu',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
@@ -717,67 +485,32 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   Future<void> _saveTransaction() async {
-    try {
-      // Parse amount (remove commas)
-      final amountValue = double.parse(_amount.replaceAll(',', ''));
+    final amountValue = double.parse(_amount.replaceAll(',', ''));
 
-      // Determine transaction type
-      model.TransactionType type;
-      if (_selectedTab == 0) {
-        type = model.TransactionType.expense;
-      } else if (_selectedTab == 1) {
-        type = model.TransactionType.income;
-      } else {
-        type = model.TransactionType.loan;
-      }
+    final type = _selectedTab == 0
+        ? model.TransactionType.expense
+        : _selectedTab == 1
+        ? model.TransactionType.income
+        : model.TransactionType.loan;
 
-      // Get current user ID
-      final authService = Provider.of<AuthService>(context, listen: false);
-      final userId = authService.currentUser?.id ?? '';
+    final auth = context.read<AuthService>();
+    final userId = auth.currentUser?.id ?? '';
 
-      if (userId.isEmpty) {
-        throw Exception('User not logged in');
-      }
+    final tx = model.Transaction(
+      id: const Uuid().v4(),
+      amount: amountValue,
+      category: _selectedCategory,
+      note: _noteController.text,
+      date: _selectedDate,
+      type: type,
+      paymentMethod: _selectedPaymentMethod,
+      createdAt: DateTime.now(),
+      userId: userId,
+    );
 
-      // Create transaction
-      final transaction = model.Transaction(
-        id: Uuid().v4(),
-        amount: amountValue,
-        category: _selectedCategory,
-        note: _noteController.text.isEmpty ? null : _noteController.text,
-        date: _selectedDate,
-        type: type,
-        paymentMethod: _selectedPaymentMethod,
-        createdAt: DateTime.now(),
-        userId: userId,
-      );
+    await _transactionService.addTransaction(tx);
 
-      // Save to Hive
-      await _transactionService.addTransaction(transaction);
-
-      // Show success message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Đã lưu giao dịch thành công!'),
-            backgroundColor: AppTheme.primaryTeal,
-            duration: Duration(seconds: 2),
-          ),
-        );
-
-        // Go back
-        Navigator.pop(context, true); // Return true to indicate success
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Có lỗi xảy ra: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+    if (mounted) Navigator.pop(context, true);
   }
 
   Widget _buildQuickAmountButtons() {
@@ -789,28 +522,27 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       runSpacing: isSmallScreen ? 6 : 8,
       alignment: WrapAlignment.center,
       children: _quickAmounts.map((amount) {
-        return InkWell(
-          onTap: () {
-            setState(() {
-              _amount = amount;
-            });
-          },
-          child: Container(
+        return ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.grey.shade100,
+            foregroundColor: AppTheme.textPrimary,
             padding: EdgeInsets.symmetric(
               horizontal: isSmallScreen ? 12 : 16,
-              vertical: isSmallScreen ? 6 : 8,
+              vertical: isSmallScreen ? 8 : 10,
             ),
-            decoration: BoxDecoration(
-              color: Colors.grey[200],
-              borderRadius: BorderRadius.circular(8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Text(
-              amount,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: isSmallScreen ? 12 : 14,
-              ),
-            ),
+            elevation: 0,
+          ),
+          onPressed: () {
+            setState(() {
+              _amount = _formatNumber(amount.replaceAll(',', ''));
+            });
+          },
+          child: Text(
+            amount,
+            style: TextStyle(fontSize: isSmallScreen ? 12 : 14),
           ),
         );
       }).toList(),
@@ -1032,7 +764,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               leading: Container(
                 padding: EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryTeal.withOpacity(0.1),
+                  color: AppTheme.primaryTeal.withAlpha((0.1 * 255).round()),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(Icons.camera_alt, color: AppTheme.primaryTeal),
@@ -1049,7 +781,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               leading: Container(
                 padding: EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryTeal.withOpacity(0.1),
+                  color: AppTheme.primaryTeal.withAlpha((0.1 * 255).round()),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(Icons.photo_library, color: AppTheme.primaryTeal),
@@ -1130,7 +862,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     setState(() {
       // Update amount
       if (data.amount > 0) {
-        _amount = data.amount.toStringAsFixed(0);
+        // Round and format with separators
+        _amount = _formatNumber(data.amount.round().toString());
       }
 
       // Update date
@@ -1150,9 +883,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
       final vietnameseCategory =
           categoryMapping[data.category] ?? data.category;
-      final currentCategories = _categories[_selectedTab] ?? [];
-      if (currentCategories.any((cat) => cat['name'] == vietnameseCategory)) {
+      // _categories is a flat list of CategoryGroup; check by name
+      if (_categories.any((cat) => cat.name == vietnameseCategory)) {
         _selectedCategory = vietnameseCategory;
+      } else if (_categories.isNotEmpty && _selectedCategory.isEmpty) {
+        _selectedCategory = _categories.first.name;
       }
 
       // Build note from merchant and items

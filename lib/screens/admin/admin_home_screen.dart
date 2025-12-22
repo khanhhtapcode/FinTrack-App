@@ -5,6 +5,7 @@ import '../../services/auth_service.dart';
 import '../debug/debug_screen.dart';
 import '../auth/login_screen.dart';
 import 'user_management_screen.dart';
+import '../../utils/category_seed.dart';
 
 class AdminHomeScreen extends StatelessWidget {
   const AdminHomeScreen({super.key});
@@ -36,7 +37,7 @@ class AdminHomeScreen extends StatelessWidget {
           children: [
             // Welcome card
             Card(
-              color: AppTheme.primaryTeal.withOpacity(0.1),
+              color: AppTheme.primaryTeal.withAlpha((0.1 * 255).round()),
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -147,6 +148,18 @@ class AdminHomeScreen extends StatelessWidget {
               },
             ),
 
+            SizedBox(height: 12),
+
+            // Seed System Categories (Admin)
+            _buildMenuCard(
+              context,
+              icon: Icons.settings_backup_restore,
+              title: 'Seed danh mục hệ thống',
+              subtitle: 'Thêm các danh mục hệ thống mặc định',
+              color: Colors.purple,
+              onTap: () => _confirmAndSeed(context),
+            ),
+
             SizedBox(height: 32),
 
             // Logout Button
@@ -195,6 +208,102 @@ class AdminHomeScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _confirmAndSeed(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Seed danh mục hệ thống'),
+        content: Text('Bạn có muốn thêm các danh mục hệ thống mặc định không?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Tiếp tục'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    // Show loading
+    final navigator = Navigator.of(context);
+    // ignore: use_build_context_synchronously
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final added = await CategorySeed.seedIfNeeded();
+      if (!context.mounted) return;
+      navigator.pop(); // remove loading
+
+      if (added.isEmpty) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Hoàn tất'),
+            content: Text(
+              'Không có danh mục mới nào cần thêm. Hệ thống đã được cập nhật.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Đóng'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        final content = SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Đã thêm ${added.length} danh mục:'),
+              SizedBox(height: 8),
+              ...added.map((n) => Text('• $n')),
+            ],
+          ),
+        );
+
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Hoàn tất'),
+            content: content,
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Đóng'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      navigator.pop(); // remove loading
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Lỗi'),
+          content: Text('Không thể seed danh mục: $e'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Đóng'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
   Widget _buildMenuCard(
     BuildContext context, {
     required IconData icon,
@@ -217,7 +326,7 @@ class AdminHomeScreen extends StatelessWidget {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withAlpha((0.1 * 255).round()),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: color, size: 28),

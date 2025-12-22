@@ -258,7 +258,9 @@ class _OTPScreenState extends State<OTPScreen> {
       width: boxSize,
       height: boxSize,
       decoration: BoxDecoration(
-        border: Border.all(color: AppTheme.textSecondary.withOpacity(0.3)),
+        border: Border.all(
+          color: AppTheme.textSecondary.withAlpha((0.3 * 255).round()),
+        ),
         borderRadius: BorderRadius.circular(12),
       ),
       child: TextField(

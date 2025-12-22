@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../../config/constants.dart';
 import '../../../../config/theme.dart';
+import '../../utils/category_icon_mapper.dart';
 
 class RecentTransactionsWidget extends StatelessWidget {
   final List<Map<String, dynamic>> transactions;
@@ -14,26 +15,43 @@ class RecentTransactionsWidget extends StatelessWidget {
     return '$sign${formatter.format(amount)} ${AppConstants.currencySymbol}';
   }
 
-  Widget _buildIcon(String? iconPath) {
-    if (iconPath == null || iconPath.isEmpty) {
+  // Prefer asset iconPath when available; otherwise use CategoryIconMapper by iconKey
+  Widget _buildIcon(String? iconPath, String? iconKey) {
+    if (iconPath != null && iconPath.isNotEmpty) {
+      return Image.asset(
+        iconPath,
+        width: AppConstants.iconMedium,
+        height: AppConstants.iconMedium,
+        errorBuilder: (context, error, stackTrace) {
+          // fallback to key if asset fails
+          if (iconKey != null && iconKey.isNotEmpty) {
+            return Icon(
+              CategoryIconMapper.fromKey(iconKey),
+              color: Colors.white,
+              size: AppConstants.iconMedium,
+            );
+          }
+          return Icon(
+            Icons.receipt,
+            color: Colors.white,
+            size: AppConstants.iconMedium,
+          );
+        },
+      );
+    }
+
+    if (iconKey != null && iconKey.isNotEmpty) {
       return Icon(
-        Icons.receipt,
+        CategoryIconMapper.fromKey(iconKey),
         color: Colors.white,
         size: AppConstants.iconMedium,
       );
     }
 
-    return Image.asset(
-      iconPath,
-      width: AppConstants.iconMedium,
-      height: AppConstants.iconMedium,
-      errorBuilder: (context, error, stackTrace) {
-        return Icon(
-          Icons.receipt,
-          color: Colors.white,
-          size: AppConstants.iconMedium,
-        );
-      },
+    return Icon(
+      Icons.receipt,
+      color: Colors.white,
+      size: AppConstants.iconMedium,
     );
   }
 
@@ -93,12 +111,15 @@ class RecentTransactionsWidget extends StatelessWidget {
       padding: EdgeInsets.all(AppConstants.paddingMedium),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppTheme.primaryTeal.withOpacity(0.8), AppTheme.primaryTeal],
+          colors: [
+            AppTheme.primaryTeal.withAlpha((0.8 * 255).round()),
+            AppTheme.primaryTeal,
+          ],
         ),
         borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryTeal.withOpacity(0.3),
+            color: AppTheme.primaryTeal.withAlpha((0.3 * 255).round()),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -110,10 +131,12 @@ class RecentTransactionsWidget extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(AppConstants.radiusSmall),
+              color: Colors.white.withAlpha((0.2 * 255).round()),
             ),
-            child: _buildIcon(transaction['iconPath'] as String?),
+            child: _buildIcon(
+              transaction['iconPath'] as String?,
+              transaction['iconKey'] as String?,
+            ),
           ),
 
           SizedBox(width: AppConstants.paddingMedium),
@@ -134,7 +157,7 @@ class RecentTransactionsWidget extends StatelessWidget {
                 Text(
                   transaction['subtitle'] as String,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withAlpha((0.8 * 255).round()),
                   ),
                 ),
               ],
@@ -156,7 +179,7 @@ class RecentTransactionsWidget extends StatelessWidget {
               Text(
                 transaction['date'] as String,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withAlpha((0.8 * 255).round()),
                 ),
               ),
             ],

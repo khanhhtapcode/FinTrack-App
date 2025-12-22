@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../../config/theme.dart';
-import '../onboarding/onboarding_screen.dart'; // Import đúng onboarding
+import '../onboarding/onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -20,14 +21,28 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+
+    // ✅ System UI setup (OK)
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+      ),
+    );
+
     _initializeAnimations();
     _startAnimations();
-    _navigateToOnboarding();
+
+    // ✅ FIX MÀN HÌNH ĐEN – RẤT QUAN TRỌNG
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _navigateToOnboarding();
+    });
   }
 
   void _initializeAnimations() {
     _scaleController = AnimationController(
-      duration: Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
 
@@ -36,7 +51,7 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     _fadeController = AnimationController(
-      duration: Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
 
@@ -49,7 +64,7 @@ class _SplashScreenState extends State<SplashScreen>
   void _startAnimations() {
     _scaleController.forward();
 
-    Future.delayed(Duration(milliseconds: 500), () {
+    Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
         _fadeController.forward();
       }
@@ -57,21 +72,18 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _navigateToOnboarding() {
-    Future.delayed(Duration(seconds: 3), () {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                OnboardingScreen(), // Navigate to NEW onboarding screen
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-                  return FadeTransition(opacity: animation, child: child);
-                },
-            transitionDuration: Duration(milliseconds: 500),
-          ),
-        );
-      }
+    Future.delayed(const Duration(seconds: 3), () {
+      if (!mounted) return;
+
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (_, animation, __) => const OnboardingScreen(),
+          transitionsBuilder: (_, animation, __, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 500),
+        ),
+      );
     });
   }
 
@@ -98,19 +110,21 @@ class _SplashScreenState extends State<SplashScreen>
                         end: Alignment.bottomRight,
                         colors: [
                           AppTheme.primaryTeal,
-                          AppTheme.primaryTeal.withOpacity(0.8),
+                          AppTheme.primaryTeal.withAlpha((0.8 * 255).round()),
                         ],
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.primaryTeal.withOpacity(0.3),
+                          color: AppTheme.primaryTeal.withAlpha(
+                            (0.3 * 255).round(),
+                          ),
                           blurRadius: 30,
                           spreadRadius: 5,
-                          offset: Offset(0, 10),
+                          offset: const Offset(0, 10),
                         ),
                       ],
                     ),
-                    child: Center(
+                    child: const Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -143,9 +157,7 @@ class _SplashScreenState extends State<SplashScreen>
                 );
               },
             ),
-
-            SizedBox(height: 40),
-
+            const SizedBox(height: 40),
             FadeTransition(
               opacity: _fadeAnimation,
               child: Text(
@@ -158,20 +170,13 @@ class _SplashScreenState extends State<SplashScreen>
                 textAlign: TextAlign.center,
               ),
             ),
-
-            SizedBox(height: 60),
-
+            const SizedBox(height: 60),
             FadeTransition(
               opacity: _fadeAnimation,
-              child: SizedBox(
+              child: const SizedBox(
                 width: 30,
                 height: 30,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    AppTheme.primaryTeal,
-                  ),
-                ),
+                child: CircularProgressIndicator(strokeWidth: 2),
               ),
             ),
           ],

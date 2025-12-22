@@ -45,11 +45,14 @@ class TransactionGridView extends StatelessWidget {
       itemBuilder: (context, index) {
         final tx = transactions[index];
         final isIncome = tx.type == model.TransactionType.income;
-        final amountText = (isIncome ? '+' : '-') + currencyFormat.format(tx.amount.abs());
+        final amountText =
+            (isIncome ? '+' : '-') + currencyFormat.format(tx.amount.abs());
         final dateStr = DateFormat('dd/MM/yyyy').format(tx.date);
 
         return Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           elevation: 2,
           color: AppTheme.cardColor,
           child: Padding(
@@ -63,8 +66,8 @@ class TransactionGridView extends StatelessWidget {
                     CircleAvatar(
                       radius: 18,
                       backgroundColor: isIncome
-                          ? AppTheme.accentGreen.withOpacity(0.12)
-                          : Colors.red.withOpacity(0.12),
+                          ? AppTheme.accentGreen.withAlpha((0.12 * 255).round())
+                          : Colors.red.withAlpha((0.12 * 255).round()),
                       child: Icon(
                         isIncome ? Icons.arrow_downward : Icons.arrow_upward,
                         color: isIncome ? AppTheme.accentGreen : Colors.red,
@@ -79,9 +82,7 @@ class TransactionGridView extends StatelessWidget {
                             tx.category,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -114,18 +115,26 @@ class TransactionGridView extends StatelessWidget {
                     style: TextStyle(color: Colors.grey[700]),
                   ),
                 ],
-                if (tx.paymentMethod != null && tx.paymentMethod!.isNotEmpty) ...[
+                if (tx.paymentMethod != null &&
+                    tx.paymentMethod!.isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      Icon(Icons.account_balance_wallet, size: 14, color: Colors.grey[600]),
+                      Icon(
+                        Icons.account_balance_wallet,
+                        size: 14,
+                        color: Colors.grey[600],
+                      ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           tx.paymentMethod!,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: Colors.grey[700], fontSize: 12),
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                     ],

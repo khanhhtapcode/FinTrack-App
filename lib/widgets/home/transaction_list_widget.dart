@@ -89,7 +89,7 @@ class _TransactionListWidgetState extends State<TransactionListWidget> {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: amountColor.withOpacity(0.1),
+            color: amountColor.withAlpha((0.1 * 255).round()),
             shape: BoxShape.circle,
           ),
           child: Icon(_getIconForType(transaction.type), color: amountColor),
@@ -126,7 +126,7 @@ class _TransactionListWidgetState extends State<TransactionListWidget> {
           '$prefix${_currencyFormat.format(transaction.amount)} ₫',
           style: TextStyle(
             color: amountColor,
-            fontWeight: FontWeight.bold,  
+            fontWeight: FontWeight.bold,
             fontSize: 16,
           ),
         ),

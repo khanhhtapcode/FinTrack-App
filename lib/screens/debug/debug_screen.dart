@@ -101,7 +101,7 @@ class _DebugScreenState extends State<DebugScreen> {
     return Container(
       padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       decoration: BoxDecoration(
-        color: AppTheme.primaryTeal.withOpacity(0.1),
+        color: AppTheme.primaryTeal.withAlpha((0.1 * 255).round()),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
@@ -290,6 +290,7 @@ class _DebugScreenState extends State<DebugScreen> {
       ),
     );
 
+    if (!mounted) return;
     if (confirm == true) {
       final userBox = await Hive.openBox<User>('users');
       await userBox.delete(user.id);
@@ -307,6 +308,7 @@ class _DebugScreenState extends State<DebugScreen> {
     final confirm = await _showConfirmDialog(
       'Xóa tất cả ${_users.length} tài khoản?',
     );
+    if (!mounted) return;
     if (confirm) {
       final userBox = await Hive.openBox<User>('users');
       await userBox.clear();
@@ -324,6 +326,7 @@ class _DebugScreenState extends State<DebugScreen> {
     final confirm = await _showConfirmDialog(
       'Xóa tất cả ${_transactions.length} giao dịch?',
     );
+    if (!mounted) return;
     if (confirm) {
       final transactionBox = await Hive.openBox<model.Transaction>(
         'transactions',
@@ -341,6 +344,7 @@ class _DebugScreenState extends State<DebugScreen> {
 
   Future<void> _clearSession() async {
     final confirm = await _showConfirmDialog('Xóa session data?');
+    if (!mounted) return;
     if (confirm) {
       final sessionBox = await Hive.openBox('session');
       await sessionBox.clear();

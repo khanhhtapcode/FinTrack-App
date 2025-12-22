@@ -96,7 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: Colors.white,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
+                        color: Colors.black.withAlpha((0.15 * 255).round()),
                         blurRadius: 30,
                         offset: Offset(0, 8),
                       ),
@@ -407,7 +407,7 @@ class _LoginScreenState extends State<LoginScreen> {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withAlpha((0.08 * 255).round()),
               blurRadius: 6,
               offset: Offset(0, 2),
             ),
@@ -429,7 +429,7 @@ class _LoginScreenState extends State<LoginScreen> {
             end: Alignment.bottomRight,
             colors: <Color>[
               AppTheme.primaryTeal,
-              AppTheme.primaryTeal.withOpacity(0.85),
+              AppTheme.primaryTeal.withAlpha((0.85 * 255).round()),
             ],
           ),
         ),

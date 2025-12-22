@@ -16,7 +16,8 @@ class TransactionDetailScreen extends StatefulWidget {
   });
 
   @override
-  State<TransactionDetailScreen> createState() => _TransactionDetailScreenState();
+  State<TransactionDetailScreen> createState() =>
+      _TransactionDetailScreenState();
 }
 
 class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
@@ -34,45 +35,50 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
           'Xóa giao dịch này?',
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
-        content: const Text(
-          'Không thể hoàn tác sau khi xóa.',
-        ),
+        content: const Text('Không thể hoàn tác sau khi xóa.'),
         actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: Text(
               'KHÔNG',
-              style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: Text(
               'ĐỒNG Ý',
-              style: TextStyle(color: AppTheme.accentGreen, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                color: AppTheme.accentGreen,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
       ),
     );
 
+    if (!mounted) return;
     if (confirm != true) return;
 
     setState(() => _isDeleting = true);
     try {
       await _transactionService.deleteTransaction(widget.transaction.id);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đã xóa giao dịch')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Đã xóa giao dịch')));
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
       }
     } finally {
       if (mounted) setState(() => _isDeleting = false);
@@ -81,10 +87,15 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final categoryColor = CategoryHelper.getCategoryColor(widget.transaction.category);
-    final categoryIcon = CategoryHelper.getCategoryIcon(widget.transaction.category);
+    final categoryColor = CategoryHelper.getCategoryColor(
+      widget.transaction.category,
+    );
+    final categoryIcon = CategoryHelper.getCategoryIcon(
+      widget.transaction.category,
+    );
     final isIncome = widget.transaction.type == model.TransactionType.income;
-    final amountText = (isIncome ? '+' : '-') +
+    final amountText =
+        (isIncome ? '+' : '-') +
         widget.currencyFormat.format(widget.transaction.amount.abs());
     final dateStr = DateFormat('dd/MM/yyyy').format(widget.transaction.date);
     final timeStr = DateFormat('HH:mm').format(widget.transaction.date);
@@ -110,7 +121,9 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
             onPressed: () {
               // TODO: Implement edit transaction
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Chức năng chỉnh sửa sẽ được phát triển')),
+                const SnackBar(
+                  content: Text('Chức năng chỉnh sửa sẽ được phát triển'),
+                ),
               );
             },
           ),
@@ -135,7 +148,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withAlpha((0.05 * 255).round()),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -145,7 +158,9 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                       children: [
                         CircleAvatar(
                           radius: 24,
-                          backgroundColor: categoryColor.withOpacity(0.12),
+                          backgroundColor: categoryColor.withAlpha(
+                            (0.12 * 255).round(),
+                          ),
                           child: Icon(categoryIcon, color: categoryColor),
                         ),
                         const SizedBox(width: 16),
@@ -179,7 +194,9 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
-                                color: isIncome ? AppTheme.accentGreen : Colors.red,
+                                color: isIncome
+                                    ? AppTheme.accentGreen
+                                    : Colors.red,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -201,8 +218,8 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                   Text(
                     'Chi tiết',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 12),
 
@@ -232,8 +249,9 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                   _buildDetailRow(
                     icon: Icons.schedule,
                     label: 'Ngày tạo',
-                    value: DateFormat('dd/MM/yyyy · HH:mm')
-                        .format(widget.transaction.createdAt),
+                    value: DateFormat(
+                      'dd/MM/yyyy · HH:mm',
+                    ).format(widget.transaction.createdAt),
                   ),
                 ],
               ),

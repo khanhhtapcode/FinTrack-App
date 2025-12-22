@@ -6,9 +6,12 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../config/constants.dart';
 import '../../config/theme.dart';
+import 'package:hive/hive.dart';
 import '../../services/auth_service.dart';
 import '../../services/transaction_service.dart';
 import '../../models/transaction.dart' as model;
+import '../../models/category_group.dart';
+import '../../utils/category_icon_mapper.dart';
 import '../transaction/add_transaction_screen.dart';
 import '../auth/login_screen.dart';
 import '../transaction/transactions_screen.dart';
@@ -81,7 +84,31 @@ class _HomeScreenState extends State<HomeScreen> {
       final recentList = _allTransactions.toList()
         ..sort((a, b) => b.date.compareTo(a.date));
 
+      // Resolve icon path and color from linked CategoryGroup when possible
+      final categoryBox = Hive.box<CategoryGroup>('category_groups');
+
       _recentTransactions = recentList.take(5).map((t) {
+        // Try to find group by id then by name
+        CategoryGroup? group;
+        if (t.categoryId != null && t.categoryId!.isNotEmpty) {
+          group = categoryBox.get(t.categoryId);
+        }
+        group ??= categoryBox.values.firstWhere(
+          (g) => g.name.trim().toLowerCase() == t.category.trim().toLowerCase(),
+          orElse: () => CategoryGroup(
+            id: '',
+            name: t.category,
+            type: t.type == model.TransactionType.expense
+                ? CategoryType.expense
+                : CategoryType.income,
+            iconKey: 'other',
+            colorValue: 0xFF9E9E9E,
+            createdAt: DateTime.now(),
+          ),
+        );
+
+        final asset = CategoryIconMapper.assetForKey(group.iconKey);
+
         return {
           'id': t.id,
           'title': t.category,
@@ -90,15 +117,16 @@ class _HomeScreenState extends State<HomeScreen> {
               ? -t.amount
               : t.amount,
           'date': DateFormat('dd/MM/yyyy').format(t.date),
-          'iconPath': _getCategoryIcon(t.category),
-          'color': _getCategoryColor(t.category),
+          'iconPath': asset,
+          'iconKey': group.iconKey,
+          'color': Color(group.colorValue),
         };
       }).toList();
 
       // Calculate monthly expenses for chart (current year)
       _calculateMonthlyExpenses();
     } catch (e) {
-      print('Error loading data: $e');
+      debugPrint('Error loading data: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -181,6 +209,8 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
     );
+
+    if (!mounted) return;
   }
 
   void _onItemTapped(int index) {
@@ -241,7 +271,7 @@ class _HomeScreenState extends State<HomeScreen> {
         // Avatar
         CircleAvatar(
           radius: 24,
-          backgroundColor: AppTheme.primaryTeal.withOpacity(0.2),
+          backgroundColor: AppTheme.primaryTeal.withAlpha((0.2 * 255).round()),
           child: Text(
             userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
             style: TextStyle(
@@ -353,7 +383,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryTeal.withOpacity(0.2),
+                  color: AppTheme.primaryTeal.withAlpha((0.2 * 255).round()),
                   borderRadius: BorderRadius.circular(AppConstants.radiusSmall),
                 ),
                 child: Row(
@@ -485,9 +515,11 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Container(
             padding: EdgeInsets.all(AppConstants.paddingMedium),
             decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.1),
+              color: Colors.green.withAlpha((0.1 * 255).round()),
               borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
-              border: Border.all(color: Colors.green.withOpacity(0.3)),
+              border: Border.all(
+                color: Colors.green.withAlpha((0.3 * 255).round()),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -518,7 +550,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   AppConstants.currencySymbol,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.green.withOpacity(0.7),
+                    color: Colors.green.withAlpha((0.7 * 255).round()),
                   ),
                 ),
               ],
@@ -531,9 +563,11 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Container(
             padding: EdgeInsets.all(AppConstants.paddingMedium),
             decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.1),
+              color: Colors.red.withAlpha((0.1 * 255).round()),
               borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
-              border: Border.all(color: Colors.red.withOpacity(0.3)),
+              border: Border.all(
+                color: Colors.red.withAlpha((0.3 * 255).round()),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -564,7 +598,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   AppConstants.currencySymbol,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.red.withOpacity(0.7),
+                    color: Colors.red.withAlpha((0.7 * 255).round()),
                   ),
                 ),
               ],
@@ -585,7 +619,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Icon(
             Icons.receipt_long_outlined,
             size: 80,
-            color: AppTheme.textSecondary.withOpacity(0.5),
+            color: AppTheme.textSecondary.withAlpha((0.5 * 255).round()),
           ),
           SizedBox(height: AppConstants.paddingMedium),
           Text(

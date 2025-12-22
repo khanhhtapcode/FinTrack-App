@@ -49,7 +49,9 @@ class TransactionCalendarView extends StatelessWidget {
 
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             elevation: 2,
             color: AppTheme.cardColor,
             child: Padding(
@@ -75,7 +77,8 @@ class TransactionCalendarView extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           _buildChip(
-                            label: '-${currencyFormat.format(expenseTotal.abs())}',
+                            label:
+                                '-${currencyFormat.format(expenseTotal.abs())}',
                             color: Colors.red,
                           ),
                         ],
@@ -86,7 +89,9 @@ class TransactionCalendarView extends StatelessWidget {
                   Column(
                     children: entry.value.take(4).map((tx) {
                       final isIncome = tx.type == model.TransactionType.income;
-                      final amountText = (isIncome ? '+' : '-') + currencyFormat.format(tx.amount.abs());
+                      final amountText =
+                          (isIncome ? '+' : '-') +
+                          currencyFormat.format(tx.amount.abs());
                       final timeStr = DateFormat('HH:mm').format(tx.date);
 
                       return ListTile(
@@ -94,10 +99,14 @@ class TransactionCalendarView extends StatelessWidget {
                         leading: CircleAvatar(
                           radius: 18,
                           backgroundColor: isIncome
-                              ? AppTheme.accentGreen.withOpacity(0.12)
-                              : Colors.red.withOpacity(0.12),
+                              ? AppTheme.accentGreen.withAlpha(
+                                  (0.12 * 255).round(),
+                                )
+                              : Colors.red.withAlpha((0.12 * 255).round()),
                           child: Icon(
-                            isIncome ? Icons.arrow_downward : Icons.arrow_upward,
+                            isIncome
+                                ? Icons.arrow_downward
+                                : Icons.arrow_upward,
                             color: isIncome ? AppTheme.accentGreen : Colors.red,
                           ),
                         ),
@@ -121,7 +130,10 @@ class TransactionCalendarView extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       '+${entry.value.length - 4} giao dịch nữa',
-                      style: TextStyle(color: Colors.grey[700], fontStyle: FontStyle.italic),
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
                   ],
                 ],
@@ -137,7 +149,7 @@ class TransactionCalendarView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withAlpha((0.12 * 255).round()),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(

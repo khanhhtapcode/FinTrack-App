@@ -1,26 +1,44 @@
 {
   "project_info": {
-    "project_number": "41331845655",
-    "project_id": "fintracker-1372d",
-    "storage_bucket": "fintracker-1372d.firebasestorage.app"
+    "project_number": "440553800866",
+    "project_id": "fintracker-dev-d9003",
+    "storage_bucket": "fintracker-dev-d9003.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:41331845655:android:8b49b0af6057322d800a52",
+        "mobilesdk_app_id": "1:440553800866:android:333674ba07fd98c9ce03fb",
         "android_client_info": {
           "package_name": "com.example.expense_tracker_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "440553800866-cg1gg1051j3u57jufm4ar31vv02mrg7g.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.expense_tracker_app",
+            "certificate_hash": "716a0863ce4dce6c149d20d109479467f9878808"
+          }
+        },
+        {
+          "client_id": "440553800866-rfm2murav0nqap8ovchbm7t3rka71546.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyDPIMDTu4GwgFcHg9q0Iy36Ckpb_cydOyo"
+          "current_key": "AIzaSyB9lU-jNvi5gbf_vqbrQcvXF23cFfp7fOQ"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "440553800866-rfm2murav0nqap8ovchbm7t3rka71546.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

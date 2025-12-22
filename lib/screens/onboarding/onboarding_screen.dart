@@ -332,7 +332,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 decoration: BoxDecoration(
                   color: _currentIndex == index
                       ? _pages[_currentIndex]['color']
-                      : Color(0xFF7F8C8D).withOpacity(0.3),
+                      : Color(0xFF7F8C8D).withAlpha((0.3 * 255).round()),
                   borderRadius: BorderRadius.circular(isSmallScreen ? 3 : 4),
                 ),
               );

@@ -27,7 +27,7 @@ class BalanceCardWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppConstants.radiusLarge),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryTeal.withOpacity(0.3),
+            color: AppTheme.primaryTeal.withAlpha((0.3 * 255).round()),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -39,7 +39,7 @@ class BalanceCardWidget extends StatelessWidget {
           Text(
             'Số dư ví',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withAlpha((0.9 * 255).round()),
               fontWeight: FontWeight.w500,
             ),
           ),

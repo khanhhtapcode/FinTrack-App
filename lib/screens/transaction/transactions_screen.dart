@@ -31,7 +31,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   double _totalIncome = 0;
   double _totalExpense = 0;
   double _balance = 0;
-  
+
   Map<String, List<model.Transaction>> _groupedTransactions = {};
   Map<String, List<model.Transaction>> _groupedByCategory = {};
   bool _isLoadingTransactions = false;
@@ -42,7 +42,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     'Ngân hàng',
     'Ví điện tử',
   ];
-  
+
   // Time period filter - Month is default
   final ScrollController _monthScrollController = ScrollController();
 
@@ -76,7 +76,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           final quarterMonth = ((now.month - 1) ~/ 3) * 3 + 1 + i * 3;
           _availableTimePeriods.add(DateTime(now.year, quarterMonth, 1));
         }
-        _selectedTimePeriod = _availableTimePeriods[_availableTimePeriods.length ~/ 2];
+        _selectedTimePeriod =
+            _availableTimePeriods[_availableTimePeriods.length ~/ 2];
         break;
       case 'Năm':
         for (int i = -3; i <= 1; i++) {
@@ -178,7 +179,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -240,9 +240,11 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                       size: 20,
                     ),
                     const SizedBox(width: 12),
-                    Text(_viewMode == ViewMode.categoryGroup
-                        ? 'Xem theo giao dịch'
-                        : 'Xem theo nhóm'),
+                    Text(
+                      _viewMode == ViewMode.categoryGroup
+                          ? 'Xem theo giao dịch'
+                          : 'Xem theo nhóm',
+                    ),
                   ],
                 ),
               ),
@@ -316,7 +318,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     final userName = authService.currentUser?.fullName ?? 'User';
     return CircleAvatar(
       radius: 20,
-      backgroundColor: Colors.white.withOpacity(0.3),
+      backgroundColor: Colors.white.withAlpha((0.3 * 255).round()),
       child: Text(
         userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
         style: const TextStyle(
@@ -401,7 +403,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withAlpha((0.04 * 255).round()),
             blurRadius: 8,
             offset: Offset(0, 2),
           ),
@@ -428,10 +430,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   fontWeight: FontWeight.w500,
                 ),
                 items: _wallets.map((wallet) {
-                  return DropdownMenuItem(
-                    value: wallet,
-                    child: Text(wallet),
-                  );
+                  return DropdownMenuItem(value: wallet, child: Text(wallet));
                 }).toList(),
                 onChanged: (value) {
                   if (value != null) {
@@ -457,9 +456,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           decoration: InputDecoration(
             hintText: 'Nhập tên giao dịch hoặc số tiền...',
             prefixIcon: Icon(Icons.search),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
           onChanged: (value) {
             // TODO: Implement search logic
@@ -529,7 +526,11 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   _timeRangeType = value!;
                   _generateTimePeriodsList();
                   // Set selected period to first day of this month
-                  _selectedTimePeriod = DateTime(DateTime.now().year, DateTime.now().month, 1);
+                  _selectedTimePeriod = DateTime(
+                    DateTime.now().year,
+                    DateTime.now().month,
+                    1,
+                  );
                 });
                 Navigator.pop(context);
                 _loadSummary();
@@ -650,14 +651,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       ),
     );
   }
-
-
-
 }
 
-enum ViewMode {
-  list,
-  grid,
-  calendar,
-  categoryGroup,
-}
+enum ViewMode { list, grid, calendar, categoryGroup }

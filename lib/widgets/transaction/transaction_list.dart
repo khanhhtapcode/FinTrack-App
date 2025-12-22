@@ -25,9 +25,7 @@ class TransactionListWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     if (isLoading) {
       return Center(
-        child: CircularProgressIndicator(
-          color: AppTheme.primaryTeal,
-        ),
+        child: CircularProgressIndicator(color: AppTheme.primaryTeal),
       );
     }
 
@@ -47,7 +45,7 @@ class TransactionListWidget extends StatelessWidget {
           final transactions = entry.value;
           final groupBg = index.isEven
               ? AppTheme.cardColor
-              : AppTheme.primaryTeal.withOpacity(0.04);
+              : AppTheme.primaryTeal.withAlpha((0.04 * 255).round());
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -68,7 +66,7 @@ class TransactionListWidget extends StatelessWidget {
                       color: AppTheme.primaryTeal,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
+                          color: Colors.black.withAlpha((0.04 * 255).round()),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -81,7 +79,7 @@ class TransactionListWidget extends StatelessWidget {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.18),
+                            color: Colors.white.withAlpha((0.18 * 255).round()),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Center(
@@ -119,7 +117,7 @@ class TransactionListWidget extends StatelessWidget {
                   ),
                 ),
               ),
-              
+
               // Transactions for this date
               Container(
                 decoration: BoxDecoration(
@@ -129,15 +127,17 @@ class TransactionListWidget extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 child: Column(
                   children: transactions
-                      .map((transaction) => TransactionItemWidget(
-                            transaction: transaction,
-                            currencyFormat: currencyFormat,
-                            onTap: () => onTransactionTapped?.call(transaction),
-                          ))
+                      .map(
+                        (transaction) => TransactionItemWidget(
+                          transaction: transaction,
+                          currencyFormat: currencyFormat,
+                          onTap: () => onTransactionTapped?.call(transaction),
+                        ),
+                      )
                       .toList(),
                 ),
               ),
-              
+
               const SizedBox(height: 4),
             ],
           );
@@ -170,10 +170,7 @@ class TransactionListWidget extends StatelessWidget {
             SizedBox(height: 8),
             Text(
               'Chưa có giao dịch trong khoảng thời gian này',
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey[500],
-              ),
+              style: TextStyle(fontSize: 13, color: Colors.grey[500]),
               textAlign: TextAlign.center,
             ),
           ],
@@ -183,7 +180,10 @@ class TransactionListWidget extends StatelessWidget {
   }
 
   /// Extract day or month label from date label
-  String _getDayOrMonthLabel(String dateLabel, model.Transaction firstTransaction) {
+  String _getDayOrMonthLabel(
+    String dateLabel,
+    model.Transaction firstTransaction,
+  ) {
     // Check if it's a month-based label (contains "Tháng")
     if (dateLabel.contains('Tháng')) {
       // Return month and year abbreviation

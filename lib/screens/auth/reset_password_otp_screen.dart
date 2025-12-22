@@ -171,7 +171,7 @@ class _ResetPasswordOtpScreenState extends State<ResetPasswordOtpScreen> {
                   height: 100,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppTheme.primaryTeal.withOpacity(0.1),
+                    color: AppTheme.primaryTeal.withAlpha((0.1 * 255).round()),
                   ),
                   child: Icon(
                     Icons.mark_email_read_outlined,

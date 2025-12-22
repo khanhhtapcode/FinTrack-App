@@ -67,7 +67,7 @@ class ChartWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withAlpha((0.05 * 255).round()),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -111,7 +111,9 @@ class ChartWidget extends StatelessWidget {
                           ? LinearGradient(
                               colors: [
                                 AppTheme.primaryTeal,
-                                AppTheme.primaryTeal.withOpacity(0.6),
+                                AppTheme.primaryTeal.withAlpha(
+                                  (0.6 * 255).round(),
+                                ),
                               ],
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
@@ -119,7 +121,9 @@ class ChartWidget extends StatelessWidget {
                           : null,
                       color: isCurrentMonth
                           ? null
-                          : AppTheme.textSecondary.withOpacity(0.3),
+                          : AppTheme.textSecondary.withAlpha(
+                              (0.3 * 255).round(),
+                            ),
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),

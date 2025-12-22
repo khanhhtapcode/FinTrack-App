@@ -42,12 +42,15 @@ class TransactionCategoryView extends StatelessWidget {
           final txs = entry.value;
           final total = _totalAmount(txs);
           final isPositive = total >= 0;
-          final totalText = (isPositive ? '+' : '-') + currencyFormat.format(total.abs());
+          final totalText =
+              (isPositive ? '+' : '-') + currencyFormat.format(total.abs());
           final subtitle = '${txs.length} giao dịch';
 
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             elevation: 2,
             color: AppTheme.cardColor,
             child: Padding(
@@ -62,9 +65,9 @@ class TransactionCategoryView extends StatelessWidget {
                         children: [
                           CircleAvatar(
                             radius: 18,
-                            backgroundColor: CategoryHelper
-                                .getCategoryColor(entry.key)
-                                .withOpacity(0.12),
+                            backgroundColor: CategoryHelper.getCategoryColor(
+                              entry.key,
+                            ).withAlpha((0.12 * 255).round()),
                             child: Icon(
                               CategoryHelper.getCategoryIcon(entry.key),
                               color: CategoryHelper.getCategoryColor(entry.key),
@@ -84,7 +87,10 @@ class TransactionCategoryView extends StatelessWidget {
                               const SizedBox(height: 4),
                               Text(
                                 subtitle,
-                                style: TextStyle(color: Colors.grey[700], fontSize: 12),
+                                style: TextStyle(
+                                  color: Colors.grey[700],
+                                  fontSize: 12,
+                                ),
                               ),
                             ],
                           ),
@@ -104,7 +110,9 @@ class TransactionCategoryView extends StatelessWidget {
                   Column(
                     children: txs.take(4).map((tx) {
                       final isIncome = tx.type == model.TransactionType.income;
-                      final amountText = (isIncome ? '+' : '-') + currencyFormat.format(tx.amount.abs());
+                      final amountText =
+                          (isIncome ? '+' : '-') +
+                          currencyFormat.format(tx.amount.abs());
                       final dateLabel = _dateLabel(tx.date);
 
                       return ListTile(
@@ -137,7 +145,10 @@ class TransactionCategoryView extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       '+${txs.length - 4} giao dịch nữa',
-                      style: TextStyle(color: Colors.grey[700], fontStyle: FontStyle.italic),
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
                   ],
                 ],
