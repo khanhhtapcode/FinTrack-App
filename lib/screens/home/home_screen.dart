@@ -11,6 +11,7 @@ import '../../services/transaction_service.dart';
 import '../../models/transaction.dart' as model;
 import '../transaction/add_transaction_screen.dart';
 import '../auth/login_screen.dart';
+import '../transaction/transactions_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -179,23 +180,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onItemTapped(int index) {
+    // Middle slot reserved for the FAB; open add flow instead of switching
+    if (index == 2) {
+      _openAddTransaction();
+      return;
+    }
+
     setState(() {
       _selectedIndex = index;
     });
-
-    // Navigation logic - implement later
-    // switch (index) {
-    //   case 0: // Home
-    //     break;
-    //   case 1: // Transactions
-    //     break;
-    //   case 2: // Add (middle button)
-    //     break;
-    //   case 3: // Reports
-    //     break;
-    //   case 4: // Account
-    //     break;
-    // }
   }
 
   @override
@@ -208,72 +201,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      body: _isLoading
-          ? Center(
-              child: CircularProgressIndicator(color: AppTheme.primaryTeal),
-            )
-          : SafeArea(
-              child: RefreshIndicator(
-                onRefresh: _loadData,
-                color: AppTheme.primaryTeal,
-                child: SingleChildScrollView(
-                  physics: AlwaysScrollableScrollPhysics(),
-                  child: Padding(
-                    padding: EdgeInsets.all(padding),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header with avatar, name, notification
-                        _buildHeader(),
-
-                        SizedBox(height: spacing),
-
-                        // Balance Card with real data
-                        BalanceCardWidget(balance: _totalBalance),
-
-                        SizedBox(height: padding),
-
-                        // Income & Expense Summary
-                        _buildSummaryCards(),
-
-                        SizedBox(height: spacing),
-
-                        // Chart Section
-                        _buildChartSection(),
-
-                        SizedBox(height: spacing),
-
-                        // Recent Transactions
-                        _recentTransactions.isEmpty
-                            ? Center(child: _buildEmptyState())
-                            : RecentTransactionsWidget(
-                                transactions: _recentTransactions,
-                              ),
-
-                        SizedBox(height: 80), // Space for FAB
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: [
+          _buildHomeTab(padding, spacing),
+          const TransactionsScreen(),
+          const SizedBox.shrink(), // placeholder for FAB slot
+          _buildReportsPlaceholder(),
+          _buildAccountPlaceholder(),
+        ],
+      ),
 
       // Bottom Navigation Bar
       bottomNavigationBar: _buildBottomNavBar(),
 
       // Floating Action Button (Add button)
       floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => AddTransactionScreen()),
-          );
-
-          // Refresh data if transaction was saved
-          if (result == true && mounted) {
-            _loadData();
-          }
-        },
+        onPressed: _openAddTransaction,
         backgroundColor: AppTheme.primaryTeal,
         child: Icon(Icons.add, size: 32),
       ),
@@ -433,6 +377,61 @@ class _HomeScreenState extends State<HomeScreen> {
         // Chart Widget with real data
         ChartWidget(monthlyData: _monthlyExpenses),
       ],
+    );
+  }
+
+  // Home tab content wrapped so it can live inside IndexedStack
+  Widget _buildHomeTab(double padding, double spacing) {
+    if (_isLoading) {
+      return Center(
+        child: CircularProgressIndicator(color: AppTheme.primaryTeal),
+      );
+    }
+
+    return SafeArea(
+      child: RefreshIndicator(
+        onRefresh: _loadData,
+        color: AppTheme.primaryTeal,
+        child: SingleChildScrollView(
+          physics: AlwaysScrollableScrollPhysics(),
+          child: Padding(
+            padding: EdgeInsets.all(padding),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with avatar, name, notification
+                _buildHeader(),
+
+                SizedBox(height: spacing),
+
+                // Balance Card with real data
+                BalanceCardWidget(balance: _totalBalance),
+
+                SizedBox(height: padding),
+
+                // Income & Expense Summary
+                _buildSummaryCards(),
+
+                SizedBox(height: spacing),
+
+                // Chart Section
+                _buildChartSection(),
+
+                SizedBox(height: spacing),
+
+                // Recent Transactions
+                _recentTransactions.isEmpty
+                    ? Center(child: _buildEmptyState())
+                    : RecentTransactionsWidget(
+                        transactions: _recentTransactions,
+                      ),
+
+                SizedBox(height: 80), // Space for FAB
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -599,6 +598,47 @@ class _HomeScreenState extends State<HomeScreen> {
             textAlign: TextAlign.center,
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _openAddTransaction() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => AddTransactionScreen()),
+    );
+
+    if (result == true && mounted) {
+      _loadData();
+    }
+  }
+
+  Widget _buildReportsPlaceholder() {
+    return SafeArea(
+      child: Center(
+        child: Text(
+          'Ngân sách / Báo cáo (đang cập nhật)',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAccountPlaceholder() {
+    return SafeArea(
+      child: Center(
+        child: Text(
+          'Tài khoản (đang cập nhật)',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+          textAlign: TextAlign.center,
+        ),
       ),
     );
   }

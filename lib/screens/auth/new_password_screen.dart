@@ -25,7 +25,6 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
   bool _hasUpperCase = false;
   bool _hasLowerCase = false;
   bool _hasDigit = false;
-  bool _hasSpecialChar = false;
 
   @override
   void initState() {
@@ -40,7 +39,6 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
       _hasUpperCase = password.contains(RegExp(r'[A-Z]'));
       _hasLowerCase = password.contains(RegExp(r'[a-z]'));
       _hasDigit = password.contains(RegExp(r'[0-9]'));
-      _hasSpecialChar = password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
     });
   }
 
