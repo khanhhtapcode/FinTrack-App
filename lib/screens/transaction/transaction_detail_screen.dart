@@ -4,6 +4,8 @@ import '../../config/theme.dart';
 import '../../models/transaction.dart' as model;
 import '../../utils/category_helper.dart';
 import '../../services/transaction_service.dart';
+import '../../services/wallet_service.dart';
+import '../../models/wallet.dart';
 
 class TransactionDetailScreen extends StatefulWidget {
   final model.Transaction transaction;
@@ -23,6 +25,25 @@ class TransactionDetailScreen extends StatefulWidget {
 class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
   final TransactionService _transactionService = TransactionService();
   bool _isDeleting = false;
+  String _walletName = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWalletName();
+  }
+
+  Future<void> _loadWalletName() async {
+    final wid = widget.transaction.walletId;
+    if (wid == null || wid.isEmpty) return;
+    final service = WalletService();
+    await service.init();
+    final wallet = await service.getById(wid);
+    if (!mounted) return;
+    setState(() {
+      _walletName = wallet?.name ?? '';
+    });
+  }
 
   Future<void> _deleteTransaction() async {
     final confirm = await showDialog<bool>(
@@ -223,13 +244,12 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Payment method
-                  if (widget.transaction.paymentMethod != null &&
-                      widget.transaction.paymentMethod!.isNotEmpty) ...[
+                  // Wallet
+                  if (_walletName.isNotEmpty) ...[
                     _buildDetailRow(
                       icon: Icons.account_balance_wallet,
-                      label: 'Phương thức thanh toán',
-                      value: widget.transaction.paymentMethod ?? '',
+                      label: 'Ví',
+                      value: _walletName,
                     ),
                     const SizedBox(height: 12),
                   ],

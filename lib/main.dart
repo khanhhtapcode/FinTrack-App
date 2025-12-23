@@ -14,6 +14,9 @@ import 'services/app_settings_provider.dart';
 import 'models/user.dart';
 import 'models/transaction.dart';
 import 'models/category_group.dart';
+import 'models/wallet.dart';
+import 'services/wallet_service.dart';
+import 'services/transaction_service.dart';
 import 'utils/category_seed.dart';
 
 Future<void> main() async {
@@ -29,18 +32,48 @@ Future<void> main() async {
   Hive.registerAdapter(TransactionTypeAdapter());
   Hive.registerAdapter(CategoryGroupAdapter());
   Hive.registerAdapter(CategoryTypeAdapter());
+  // Wallet adapters
+  Hive.registerAdapter(WalletAdapter());
+  Hive.registerAdapter(WalletTypeAdapter());
 
   await Hive.openBox<User>('users');
   await Hive.openBox<CategoryGroup>('category_groups');
+  await Hive.openBox<Wallet>('wallets');
   await Hive.openBox('session');
   await Hive.openBox('preferences');
 
-  // Seed system categories (idempotent)
-  try {
-    await CategorySeed.seedIfNeeded();
-  } catch (e) {
-    debugPrint('Category seeding failed: $e');
-  }
+  // Seed system categories in background (idempotent) to avoid blocking UI.
+  Future.microtask(() async {
+    try {
+      await CategorySeed.seedIfNeeded();
+      debugPrint('✅ Category seeding complete');
+    } catch (e) {
+      debugPrint('Category seeding failed: $e');
+    }
+  });
+
+  // Initialize wallet storage and run migration in background.
+  Future.microtask(() async {
+    try {
+      final walletService = WalletService();
+      await walletService.init();
+      final all = await walletService.getAll();
+      debugPrint(
+        '✅ Wallets initialized: ${all.length} wallets (user-scoped wallets are seeded on first login)',
+      );
+
+      try {
+        final txService = TransactionService();
+        await txService.init();
+        await walletService.assignDefaultWalletToTransactions(txService);
+        debugPrint('✅ Wallet migration complete');
+      } catch (e) {
+        debugPrint('Wallet migration failed: $e');
+      }
+    } catch (e) {
+      debugPrint('Wallet seeding/init failed: $e');
+    }
+  });
 
   // ================== MOBILE ONLY ==================
   if (!kIsWeb) {

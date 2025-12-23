@@ -14,6 +14,8 @@ import '../../widgets/transaction/transaction_calendar_view.dart';
 import '../../widgets/transaction/transaction_category_view.dart';
 import 'transaction_day_detail_screen.dart';
 import 'transaction_detail_screen.dart';
+import '../../services/wallet_service.dart';
+import '../../models/wallet.dart';
 
 class TransactionsScreen extends StatefulWidget {
   const TransactionsScreen({super.key});
@@ -25,6 +27,7 @@ class TransactionsScreen extends StatefulWidget {
 class _TransactionsScreenState extends State<TransactionsScreen> {
   final TransactionService _transactionService = TransactionService();
   final NumberFormat _currencyFormat = NumberFormat('#,###', 'vi_VN');
+  final WalletService _walletService = WalletService();
 
   ViewMode _viewMode = ViewMode.list;
 
@@ -35,13 +38,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   Map<String, List<model.Transaction>> _groupedTransactions = {};
   Map<String, List<model.Transaction>> _groupedByCategory = {};
   bool _isLoadingTransactions = false;
-  String _selectedWallet = 'Tổng cộng';
-  final List<String> _wallets = [
-    'Tổng cộng',
-    'Tiền mặt',
-    'Ngân hàng',
-    'Ví điện tử',
-  ];
+  String _selectedWalletId = 'all';
+  List<Wallet> _wallets = [];
 
   // Time period filter - Month is default
   final ScrollController _monthScrollController = ScrollController();
@@ -55,7 +53,19 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   void initState() {
     super.initState();
     _generateTimePeriodsList();
-    _loadSummary();
+    _loadWallets().then((_) => _loadSummary());
+  }
+
+  Future<void> _loadWallets() async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final userId = authService.currentUser?.id;
+    await _walletService.init();
+    if (userId != null && userId.isNotEmpty) {
+      final ws = await _walletService.getByUser(userId);
+      setState(() {
+        _wallets = ws;
+      });
+    }
   }
 
   void _generateTimePeriodsList() {
@@ -108,10 +118,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       userId: userId,
     );
 
-    // Wallet filter
-    if (_selectedWallet != 'Tổng cộng') {
+    // Wallet filter by walletId
+    if (_selectedWalletId != 'all') {
       transactions = transactions
-          .where((t) => (t.paymentMethod ?? '') == _selectedWallet)
+          .where((t) => (t.walletId ?? '') == _selectedWalletId)
           .toList();
     }
 
@@ -420,7 +430,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           Expanded(
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
-                value: _selectedWallet,
+                value: _selectedWalletId,
                 isExpanded: true,
                 dropdownColor: AppTheme.cardColor,
                 icon: Icon(Icons.arrow_drop_down, color: AppTheme.primaryTeal),
@@ -429,12 +439,18 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   fontSize: isSmallScreen ? 14 : 15,
                   fontWeight: FontWeight.w500,
                 ),
-                items: _wallets.map((wallet) {
-                  return DropdownMenuItem(value: wallet, child: Text(wallet));
-                }).toList(),
+                items: [
+                  const DropdownMenuItem(
+                    value: 'all',
+                    child: Text('Tổng cộng'),
+                  ),
+                  ..._wallets.map(
+                    (w) => DropdownMenuItem(value: w.id, child: Text(w.name)),
+                  ),
+                ],
                 onChanged: (value) {
                   if (value != null) {
-                    setState(() => _selectedWallet = value);
+                    setState(() => _selectedWalletId = value);
                     _loadSummary(); // Reload with filter
                   }
                 },

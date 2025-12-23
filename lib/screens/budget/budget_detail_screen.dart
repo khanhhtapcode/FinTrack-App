@@ -1,8 +1,8 @@
+import 'package:expense_tracker_app/models/category_group.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../../utils/budget_categories.dart';
 import '../../models/budget.dart';
 import '../../config/constants.dart';
 import '../../services/category_group_service.dart';
@@ -14,7 +14,6 @@ import '../../services/transaction_service.dart';
 import '../../services/budget_progress.dart';
 import '../../models/transaction.dart' as model;
 import '../budget/_progress_bar.dart';
-import 'create_budget_screen.dart';
 import 'edit_budget_screen.dart';
 
 class BudgetDetailScreen extends StatefulWidget {
@@ -41,6 +40,9 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
     _loadData();
   }
 
+  // Cached groups for rendering
+  List<CategoryGroup> _categories = [];
+
   Future<void> _loadData() async {
     // Reload budget object from service
     await _budgetService.init();
@@ -66,6 +68,10 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
 
     final spent = filtered.fold<double>(0, (sum, t) => sum + t.amount);
 
+    // load categories for icon lookup
+    final catService = CategoryGroupService();
+    _categories = await catService.getAll();
+
     if (mounted) {
       setState(() {
         _currentBudget = updatedBudget;
@@ -79,8 +85,21 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
     await _loadData();
   }
 
-  IconData _getCategoryIcon(String categoryName) =>
-      iconForCategory(categoryName);
+  IconData _getCategoryIcon(String categoryName) {
+    final match = _categories.firstWhere(
+      (c) => c.name == categoryName,
+      orElse: () => CategoryGroup(
+        id: '',
+        name: '',
+        type: CategoryType.expense,
+        iconKey: 'other',
+        colorValue: 0xFF9E9E9E,
+        createdAt: DateTime.now(),
+      ),
+    );
+
+    return CategoryIconMapper.fromKey(match.iconKey);
+  }
 
   void _showDeleteConfirmation() {
     showDialog(

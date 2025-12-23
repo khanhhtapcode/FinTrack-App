@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:math';
 import '../models/user.dart';
 import 'email_service.dart';
+import 'wallet_service.dart';
 
 class AuthService extends ChangeNotifier {
   static const String _userBoxName = 'users';
@@ -116,6 +117,16 @@ class AuthService extends ChangeNotifier {
         await user.save();
         _currentUser = user;
         await _saveSession(user);
+
+        // Seed default wallets for this user (idempotent)
+        try {
+          if (_currentUser!.id != 'admin') {
+            final ws = WalletService();
+            await ws.seedDefaultWallets(_currentUser!.id);
+          }
+        } catch (e) {
+          debugPrint('Wallet seeding failed for user ${user.id}: $e');
+        }
       }
 
       // Clear OTP
@@ -195,6 +206,17 @@ class AuthService extends ChangeNotifier {
       await user.save();
       _currentUser = user;
       await _saveSession(user);
+
+      // Seed default wallets for this user (idempotent)
+      try {
+        if (_currentUser!.id != 'admin') {
+          final ws = WalletService();
+          await ws.seedDefaultWallets(_currentUser!.id);
+        }
+      } catch (e) {
+        debugPrint('Wallet seeding failed for user ${user.id}: $e');
+      }
+
       notifyListeners();
 
       return {
@@ -224,6 +246,21 @@ class AuthService extends ChangeNotifier {
       final userBox = await Hive.openBox<User>(_userBoxName);
       _currentUser = userBox.get(userEmail);
       notifyListeners();
+
+      // Seed default wallets in background (do not block startup)
+      if (_currentUser != null && _currentUser!.id != 'admin') {
+        Future.microtask(() async {
+          try {
+            final ws = WalletService();
+            await ws.seedDefaultWallets(_currentUser!.id);
+            debugPrint(
+              'Wallet seeding on session restore complete for ${_currentUser!.id}',
+            );
+          } catch (e) {
+            debugPrint('Wallet seeding on session restore failed: $e');
+          }
+        });
+      }
     }
   }
 

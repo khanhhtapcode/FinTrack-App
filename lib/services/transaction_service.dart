@@ -1,5 +1,6 @@
 import 'package:hive/hive.dart';
 import '../models/transaction.dart';
+import 'wallet_service.dart';
 
 class TransactionService {
   static const String _boxName = 'transactions';
@@ -20,7 +21,19 @@ class TransactionService {
   // ================= ADD =================
   Future<void> addTransaction(Transaction transaction) async {
     await init();
+    final walletService = WalletService();
+
+    // Ensure transaction has walletId (assign default if missing)
+    if (transaction.walletId == null || transaction.walletId!.isEmpty) {
+      await walletService.init();
+      final def = await walletService.getDefaultWallet();
+      if (def != null) transaction.walletId = def.id;
+    }
+
     await _box!.put(transaction.id, transaction);
+
+    // Apply to wallet balances
+    await walletService.applyTransaction(transaction);
   }
 
   // ================= GET ALL (OPTIMIZED) =================
@@ -84,12 +97,33 @@ class TransactionService {
   // ================= UPDATE =================
   Future<void> updateTransaction(Transaction transaction) async {
     await init();
+    final walletService = WalletService();
+
+    final old = _box!.get(transaction.id);
+    if (old != null) {
+      await walletService.revertTransaction(old);
+    }
+
+    // Ensure walletId exists
+    if (transaction.walletId == null || transaction.walletId!.isEmpty) {
+      await walletService.init();
+      final def = await walletService.getDefaultWallet();
+      if (def != null) transaction.walletId = def.id;
+    }
+
     await _box!.put(transaction.id, transaction);
+
+    await walletService.applyTransaction(transaction);
   }
 
   // ================= DELETE =================
   Future<void> deleteTransaction(String id) async {
     await init();
+    final walletService = WalletService();
+    final tx = _box!.get(id);
+    if (tx != null) {
+      await walletService.revertTransaction(tx);
+    }
     await _box!.delete(id);
   }
 

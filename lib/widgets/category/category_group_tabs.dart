@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../models/category_group.dart';
 
 class CategoryGroupTabs extends StatelessWidget {
   final TabController controller;

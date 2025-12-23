@@ -35,7 +35,7 @@ class CategorySeed {
       ),
       CategoryGroup(
         id: uuid.v4(),
-        name: 'Di chuyển',
+        name: 'Đi lại',
         type: CategoryType.expense,
         iconKey: 'car',
         colorValue: 0xFFFF9800,
@@ -44,7 +44,7 @@ class CategorySeed {
       ),
       CategoryGroup(
         id: uuid.v4(),
-        name: 'Nhà ở',
+        name: 'Nhà cửa',
         type: CategoryType.expense,
         iconKey: 'home',
         colorValue: 0xFF8BC34A,
@@ -53,7 +53,7 @@ class CategorySeed {
       ),
       CategoryGroup(
         id: uuid.v4(),
-        name: 'Hóa đơn & Tiện ích',
+        name: 'Hóa đơn',
         type: CategoryType.expense,
         iconKey: 'bill',
         colorValue: 0xFFFF5722,
@@ -62,25 +62,7 @@ class CategorySeed {
       ),
       CategoryGroup(
         id: uuid.v4(),
-        name: 'Mua sắm',
-        type: CategoryType.expense,
-        iconKey: 'shopping',
-        colorValue: 0xFF9C27B0,
-        isSystem: true,
-        createdAt: DateTime.now(),
-      ),
-      CategoryGroup(
-        id: uuid.v4(),
-        name: 'Quần áo & Phụ kiện',
-        type: CategoryType.expense,
-        iconKey: 'clothing',
-        colorValue: 0xFFE91E63,
-        isSystem: true,
-        createdAt: DateTime.now(),
-      ),
-      CategoryGroup(
-        id: uuid.v4(),
-        name: 'Y tế & Sức khỏe',
+        name: 'Y tế',
         type: CategoryType.expense,
         iconKey: 'health',
         colorValue: 0xFF4DD0E1,
@@ -107,6 +89,24 @@ class CategorySeed {
       ),
       CategoryGroup(
         id: uuid.v4(),
+        name: 'Mua sắm',
+        type: CategoryType.expense,
+        iconKey: 'shopping',
+        colorValue: 0xFF9C27B0,
+        isSystem: true,
+        createdAt: DateTime.now(),
+      ),
+      CategoryGroup(
+        id: uuid.v4(),
+        name: 'Quần áo',
+        type: CategoryType.expense,
+        iconKey: 'clothing',
+        colorValue: 0xFFE91E63,
+        isSystem: true,
+        createdAt: DateTime.now(),
+      ),
+      CategoryGroup(
+        id: uuid.v4(),
         name: 'Làm đẹp',
         type: CategoryType.expense,
         iconKey: 'beauty',
@@ -116,7 +116,7 @@ class CategorySeed {
       ),
       CategoryGroup(
         id: uuid.v4(),
-        name: 'Thể thao & Fitness',
+        name: 'Thể thao',
         type: CategoryType.expense,
         iconKey: 'fitness',
         colorValue: 0xFF00BCD4,
@@ -125,7 +125,7 @@ class CategorySeed {
       ),
       CategoryGroup(
         id: uuid.v4(),
-        name: 'Du lịch & Nghỉ dưỡng',
+        name: 'Du lịch',
         type: CategoryType.expense,
         iconKey: 'travel',
         colorValue: 0xFF03A9F4,
@@ -134,7 +134,7 @@ class CategorySeed {
       ),
       CategoryGroup(
         id: uuid.v4(),
-        name: 'Gia đình & Trẻ em',
+        name: 'Gia đình',
         type: CategoryType.expense,
         iconKey: 'family',
         colorValue: 0xFF795548,
@@ -181,46 +181,10 @@ class CategorySeed {
       ),
       CategoryGroup(
         id: uuid.v4(),
-        name: 'Làm thêm / Freelance',
-        type: CategoryType.income,
-        iconKey: 'freelance',
-        colorValue: 0xFF8BC34A,
-        isSystem: true,
-        createdAt: DateTime.now(),
-      ),
-      CategoryGroup(
-        id: uuid.v4(),
-        name: 'Kinh doanh / Bán hàng',
-        type: CategoryType.income,
-        iconKey: 'business',
-        colorValue: 0xFFFF9800,
-        isSystem: true,
-        createdAt: DateTime.now(),
-      ),
-      CategoryGroup(
-        id: uuid.v4(),
         name: 'Đầu tư',
         type: CategoryType.income,
         iconKey: 'investment',
         colorValue: 0xFF673AB7,
-        isSystem: true,
-        createdAt: DateTime.now(),
-      ),
-      CategoryGroup(
-        id: uuid.v4(),
-        name: 'Hoàn tiền / Cashback',
-        type: CategoryType.income,
-        iconKey: 'cashback',
-        colorValue: 0xFF4CAF50,
-        isSystem: true,
-        createdAt: DateTime.now(),
-      ),
-      CategoryGroup(
-        id: uuid.v4(),
-        name: 'Quà tặng',
-        type: CategoryType.income,
-        iconKey: 'gift',
-        colorValue: 0xFFFFC107,
         isSystem: true,
         createdAt: DateTime.now(),
       ),
@@ -287,5 +251,26 @@ class CategorySeed {
     }
 
     return added;
+  }
+
+  /// Reset system categories (DEV only): delete and reseed.
+  /// Returns list of names that were removed and re-added.
+  static Future<List<String>> resetSystemCategoriesForDev([
+    CategoryGroupService? service,
+  ]) async {
+    final svc = service ?? CategoryGroupService();
+    final existing = await svc.getAll();
+    final removed = existing
+        .where((e) => e.isSystem)
+        .map((e) => e.name)
+        .toList();
+
+    // Delete system categories
+    await svc.deleteSystemCategories();
+
+    // Reseed
+    final added = await seedIfNeeded(svc);
+
+    return removed..addAll(added);
   }
 }

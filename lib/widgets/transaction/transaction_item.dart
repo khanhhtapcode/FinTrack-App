@@ -62,7 +62,7 @@ class TransactionItemWidget extends StatelessWidget {
             ),
             SizedBox(width: 12),
 
-            // Category name and payment method
+            // Category name and optional note
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -76,11 +76,12 @@ class TransactionItemWidget extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 2),
-                  Text(
-                    transaction.paymentMethod ?? 'Không có phương thức',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  if (transaction.note != null && transaction.note!.isNotEmpty)
+                    Text(
+                      transaction.note!,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                 ],
               ),
             ),
