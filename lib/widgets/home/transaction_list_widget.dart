@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/transaction.dart' as model;
-import '../../services/transaction_service.dart';
+import '../../services/data/transaction_service.dart';
 
 class TransactionListWidget extends StatefulWidget {
   const TransactionListWidget({super.key});

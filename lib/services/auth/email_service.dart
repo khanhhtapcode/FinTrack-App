@@ -4,7 +4,8 @@ class EmailService {
   // Development mode: true = mock email, false = real email via Firebase
   // Set to TRUE for emulator testing (Firebase doesn't work well on emulator)
   // Set to FALSE when testing on real device
-  static const bool _isDevelopmentMode = true;
+  static const bool _isDevelopmentMode =
+      false; // ✅ PRODUCTION - Gửi email thật qua Firebase
 
   static Future<bool> sendOTP(String recipientEmail, String otp) async {
     try {
@@ -31,7 +32,10 @@ class EmailService {
       print('To: $recipientEmail');
       print('OTP: $otp');
 
-      final callable = FirebaseFunctions.instance.httpsCallable('sendOTP');
+      // Specify region where function is deployed
+      final callable = FirebaseFunctions.instanceFor(
+        region: 'us-central1',
+      ).httpsCallable('sendOTP');
       final result = await callable.call({'email': recipientEmail, 'otp': otp});
 
       print('✅ Firebase Functions response: ${result.data}');

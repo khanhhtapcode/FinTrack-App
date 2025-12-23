@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../config/theme.dart';
-import '../../services/transaction_service.dart';
-import '../../services/transaction_grouping_service.dart';
-import '../../services/auth_service.dart';
+import '../../services/data/transaction_service.dart';
+import '../../services/data/transaction_grouping_service.dart';
+import '../../services/auth/auth_service.dart';
 import '../../models/transaction.dart' as model;
 import '../../widgets/transaction/transaction_list.dart';
 import '../../widgets/transaction/month_tabs.dart';
@@ -15,7 +15,7 @@ import '../../widgets/transaction/transaction_category_view.dart';
 import 'transaction_day_detail_screen.dart';
 import 'transaction_month_detail_screen.dart';
 import 'transaction_detail_screen.dart';
-import '../../services/wallet_service.dart';
+import '../../services/data/wallet_service.dart';
 import '../../models/wallet.dart';
 
 class TransactionsScreen extends StatefulWidget {

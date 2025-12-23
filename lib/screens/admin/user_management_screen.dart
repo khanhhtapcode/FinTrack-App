@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import '../../config/theme.dart';
 import '../../models/user.dart';
 import '../../models/transaction.dart' as model;
-import '../../services/transaction_service.dart';
+import '../../services/data/transaction_service.dart';
 import 'user_detail_screen.dart';
 
 class UserManagementScreen extends StatefulWidget {

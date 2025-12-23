@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
-import '../../services/auth_service.dart';
+import '../../services/auth/auth_service.dart';
 import 'favorites_screen.dart';
 
 class OTPScreen extends StatefulWidget {

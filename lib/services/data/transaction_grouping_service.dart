@@ -1,5 +1,5 @@
 import 'package:intl/intl.dart';
-import '../models/transaction.dart' as model;
+import '../../models/transaction.dart' as model;
 
 /// Service để group và format transactions
 class TransactionGroupingService {

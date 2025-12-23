@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import '../models/receipt_data.dart';
+import '../../models/receipt_data.dart';
 import 'gemini_ocr_service.dart';
 
 /// OCR service using Gemini Vision API

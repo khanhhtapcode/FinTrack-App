@@ -4,12 +4,12 @@ import 'package:hive/hive.dart';
 
 import '../../config/theme.dart';
 import '../../models/transaction.dart' as model;
-import '../../services/transaction_service.dart';
-import '../../services/auth_service.dart';
+import '../../services/data/transaction_service.dart';
+import '../../services/auth/auth_service.dart';
 import '../../models/category_group.dart';
 import '../../utils/category_icon_mapper.dart';
 import '../../models/wallet.dart';
-import '../../services/wallet_service.dart';
+import '../../services/data/wallet_service.dart';
 
 class EditTransactionScreen extends StatefulWidget {
   final model.Transaction transaction;

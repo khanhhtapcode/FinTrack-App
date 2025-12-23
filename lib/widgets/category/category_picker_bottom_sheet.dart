@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/category_group.dart';
-import '../../services/category_group_service.dart';
+import '../../services/data/category_group_service.dart';
 import '../../utils/category_icon_mapper.dart';
 
 class CategoryPickerBottomSheet extends StatelessWidget {

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
-import '../../services/app_localization.dart';
-import '../../services/app_settings_provider.dart';
+import '../../services/core/app_localization.dart';
+import '../../services/core/app_settings_provider.dart';
 
 // ============================================================================
 // ABOUT SCREEN - Information about the app

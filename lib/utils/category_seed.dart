@@ -1,6 +1,6 @@
 import 'package:uuid/uuid.dart';
 import '../models/category_group.dart';
-import '../services/category_group_service.dart';
+import '../services/data/category_group_service.dart';
 
 class CategorySeed {
   /// Seeds system category groups if they are missing.

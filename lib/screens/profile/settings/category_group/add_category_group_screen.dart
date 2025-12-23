@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../models/category_group.dart';
-import '../../../../services/category_group_service.dart';
+import '../../../../services/data/category_group_service.dart';
 
 class AddCategoryGroupScreen extends StatefulWidget {
   const AddCategoryGroupScreen({super.key});

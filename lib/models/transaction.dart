@@ -34,6 +34,15 @@ class Transaction extends HiveObject {
   @HiveField(10)
   String? walletId; // 🔗 liên kết với Wallet
 
+  @HiveField(11)
+  bool isSynced; // ✅ Đã sync lên Firebase chưa
+
+  @HiveField(12)
+  DateTime updatedAt; // ✅ Last modified time
+
+  @HiveField(13)
+  String? paymentMethod; // Phương thức thanh toán (cash, card, etc.)
+
   Transaction({
     required this.id,
     required this.amount,
@@ -45,7 +54,11 @@ class Transaction extends HiveObject {
     required this.type,
     required this.createdAt,
     required this.userId,
-  });
+    bool? isSynced,
+    DateTime? updatedAt,
+    this.paymentMethod,
+  }) : isSynced = isSynced ?? false,
+       updatedAt = updatedAt ?? DateTime.now();
 
   Map<String, dynamic> toJson() {
     return {
@@ -54,27 +67,36 @@ class Transaction extends HiveObject {
       'category': category,
       'note': note,
       'date': date.toIso8601String(),
-      'type': type.toString(),
+      'type': type.toString().split('.').last,
       'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
       'userId': userId,
       'categoryId': categoryId,
+      'walletId': walletId,
+      'paymentMethod': paymentMethod,
     };
   }
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
     return Transaction(
       id: json['id'],
-      amount: json['amount'],
+      amount: (json['amount'] as num).toDouble(),
       category: json['category'],
       note: json['note'],
       date: DateTime.parse(json['date']),
       type: TransactionType.values.firstWhere(
-        (e) => e.toString() == json['type'],
+        (e) => e.toString().split('.').last == json['type'],
+        orElse: () => TransactionType.expense,
       ),
       createdAt: DateTime.parse(json['createdAt']),
-      userId: json['userId'] ?? '', // Fallback cho data cũ
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'])
+          : null,
+      userId: json['userId'] ?? '',
       categoryId: json['categoryId'],
       walletId: json['walletId'],
+      paymentMethod: json['paymentMethod'],
+      isSynced: json['isSynced'] ?? false,
     );
   }
 }

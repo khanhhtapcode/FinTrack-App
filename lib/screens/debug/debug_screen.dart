@@ -3,6 +3,7 @@ import 'package:hive/hive.dart';
 import '../../config/theme.dart';
 import '../../models/user.dart';
 import '../../models/transaction.dart' as model;
+import '../../services/debug/hive_debug_service.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -238,6 +239,26 @@ class _DebugScreenState extends State<DebugScreen> {
   Widget _buildActionsSection() {
     return Column(
       children: [
+        // 🗑️ XÓA TOÀN BỘ DATA
+        ElevatedButton.icon(
+          onPressed: _deleteAllData,
+          icon: Icon(Icons.delete_forever, size: 28),
+          label: Text(
+            '🗑️ XÓA TOÀN BỘ DATA (RESET APP)',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red[700],
+            foregroundColor: Colors.white,
+            minimumSize: Size(double.infinity, 60),
+          ),
+        ),
+        SizedBox(height: 16),
+
+        // Divider
+        Divider(thickness: 2),
+        SizedBox(height: 8),
+
         ElevatedButton.icon(
           onPressed: _clearAllUsers,
           icon: Icon(Icons.person_remove),
@@ -335,10 +356,131 @@ class _DebugScreenState extends State<DebugScreen> {
       _loadData();
 
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Đã xóa tất cả giao dịch')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Đã xóa tất cả giao dịch')),
+        );
       }
+    }
+  }
+
+  /// 🗑️ XÓA TOÀN BỘ DATA (RESET APP)
+  Future<void> _deleteAllData() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: Colors.red, size: 32),
+            SizedBox(width: 8),
+            Text('⚠️ CẢNH BÁO!'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Bạn có chắc chắn muốn XÓA TOÀN BỘ DATA?',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            SizedBox(height: 12),
+            Text('✅ Sẽ xóa:'),
+            Text('  • ${_users.length} tài khoản'),
+            Text('  • ${_transactions.length} giao dịch'),
+            Text('  • Tất cả wallets, budgets, categories'),
+            Text('  • Session data'),
+            SizedBox(height: 12),
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                border: Border.all(color: Colors.orange),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '📝 Lưu ý:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    'Chỉ xóa LOCAL data (Hive).\nFirebase cloud data KHÔNG bị xóa.',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('HỦY BỎ'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('XÓA TẤT CẢ'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || confirm != true) return;
+
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Đang xóa data...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Delete all local data
+      await HiveDebugService.deleteAllLocalData();
+
+      // Reload UI
+      await _loadData();
+
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+
+      // Show success
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✅ Đã xóa TOÀN BỘ local data! App đã reset.'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Lỗi khi xóa data: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 

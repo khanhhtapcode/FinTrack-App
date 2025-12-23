@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../config/theme.dart';
-import '../../services/auth_service.dart';
+import '../../services/auth/auth_service.dart';
 
 import '../../screens/profile/settings/category_group/category_group_screen.dart';
 import '../../screens/profile/account/account_management_screen.dart';

@@ -3,9 +3,11 @@ import 'package:hive/hive.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
 import 'dart:math';
-import '../models/user.dart';
+import '../../models/user.dart';
 import 'email_service.dart';
-import 'wallet_service.dart';
+import '../data/wallet_service.dart';
+import '../firebase/sync_service.dart';
+import '../firebase/firebase_user_repository.dart';
 
 class AuthService extends ChangeNotifier {
   static const String _userBoxName = 'users';
@@ -16,6 +18,8 @@ class AuthService extends ChangeNotifier {
   String? _pendingEmail; // Email waiting for OTP verification
   String? _resetPasswordEmail; // Email for password reset
   String? _resetOTP; // OTP for password reset
+  final SyncService _syncService = SyncService();
+  final FirebaseUserRepository _firebaseRepo = FirebaseUserRepository();
 
   // Admin credentials (hardcoded)
   static const String ADMIN_EMAIL = 'admin@fintracker.com';
@@ -118,6 +122,11 @@ class AuthService extends ChangeNotifier {
         _currentUser = user;
         await _saveSession(user);
 
+        // 🌐 CLOUD SYNC: Save user profile to Firebase
+        _firebaseRepo.saveUser(user).catchError((e) {
+          print('⚠️ [Auth] Cloud user sync failed: $e');
+        });
+
         // Seed default wallets for this user (idempotent)
         try {
           if (_currentUser!.id != 'admin') {
@@ -217,6 +226,15 @@ class AuthService extends ChangeNotifier {
         debugPrint('Wallet seeding failed for user ${user.id}: $e');
       }
 
+      // 🌐 CLOUD SYNC: Download user's data from cloud on login
+      try {
+        await _syncService.fullSync(user.id);
+        _syncService.startAutoSync(user.id);
+        debugPrint('✅ Cloud sync completed for user ${user.id}');
+      } catch (e) {
+        debugPrint('⚠️ Cloud sync failed (offline mode): $e');
+      }
+
       notifyListeners();
 
       return {
@@ -266,6 +284,17 @@ class AuthService extends ChangeNotifier {
 
   // Logout
   Future<void> logout() async {
+    // 🌐 CLOUD SYNC: Ensure pending changes are synced before logout
+    try {
+      if (_currentUser != null && _currentUser!.id != 'admin') {
+        await _syncService.syncAllPendingTransactions();
+        _syncService.stopAutoSync();
+        debugPrint('✅ Sync completed before logout');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error during logout sync: $e');
+    }
+
     final sessionBox = await Hive.openBox(_sessionBoxName);
     await sessionBox.clear();
     _currentUser = null;

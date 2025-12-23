@@ -8,15 +8,15 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'config/theme.dart';
 import 'screens/splash/splash_screen.dart';
-import 'services/auth_service.dart';
-import 'services/app_settings_provider.dart';
+import 'services/auth/auth_service.dart';
+import 'services/core/app_settings_provider.dart';
 
 import 'models/user.dart';
 import 'models/transaction.dart';
 import 'models/category_group.dart';
 import 'models/wallet.dart';
-import 'services/wallet_service.dart';
-import 'services/transaction_service.dart';
+import 'services/data/wallet_service.dart';
+import 'services/data/transaction_service.dart';
 import 'utils/category_seed.dart';
 
 Future<void> main() async {

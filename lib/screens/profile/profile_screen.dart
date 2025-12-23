@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../config/theme.dart';
-import '../../services/auth_service.dart';
-import '../../services/app_localization.dart';
-import '../../services/app_settings_provider.dart';
+import '../../services/auth/auth_service.dart';
+import '../../services/core/app_localization.dart';
+import '../../services/core/app_settings_provider.dart';
 
 import '../../widgets/profile/profile_header.dart';
 import '../../widgets/profile/profile_menu_section.dart';

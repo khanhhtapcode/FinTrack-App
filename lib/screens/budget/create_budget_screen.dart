@@ -3,8 +3,8 @@ import 'package:intl/intl.dart';
 import '../../config/constants.dart';
 import '../../config/theme.dart';
 import '../../models/budget.dart';
-import '../../services/budget_service.dart';
-import '../../services/category_group_service.dart';
+import '../../services/data/budget_service.dart';
+import '../../services/data/category_group_service.dart';
 import '../../models/category_group.dart';
 import '../../widgets/category/category_picker_bottom_sheet.dart';
 import '../../utils/category_icon_mapper.dart';
@@ -13,8 +13,8 @@ import 'package:uuid/uuid.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/wallet.dart';
-import '../../services/wallet_service.dart';
-import '../../services/auth_service.dart';
+import '../../services/data/wallet_service.dart';
+import '../../services/auth/auth_service.dart';
 
 class CreateBudgetScreen extends StatefulWidget {
   const CreateBudgetScreen({super.key});

@@ -4,8 +4,8 @@ import 'package:provider/provider.dart';
 
 import '../../config/theme.dart';
 import '../../models/wallet.dart';
-import '../../services/wallet_service.dart';
-import '../../services/auth_service.dart';
+import '../../services/data/wallet_service.dart';
+import '../../services/auth/auth_service.dart';
 
 // ============================================================================
 // MY WALLET SCREEN - Manage user wallets and accounts

@@ -3,8 +3,8 @@ import 'package:intl/intl.dart';
 import '../../config/theme.dart';
 import '../../models/transaction.dart' as model;
 import '../../utils/category_helper.dart';
-import '../../services/transaction_service.dart';
-import '../../services/wallet_service.dart';
+import '../../services/data/transaction_service.dart';
+import '../../services/data/wallet_service.dart';
 import 'edit_transaction_screen.dart';
 
 class TransactionDetailScreen extends StatefulWidget {

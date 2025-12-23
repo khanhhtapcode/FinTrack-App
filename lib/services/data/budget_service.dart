@@ -1,12 +1,15 @@
 import 'package:hive/hive.dart';
-import '../models/budget.dart';
-import '../services/transaction_service.dart';
-import '../models/transaction.dart' as model;
+import '../../models/budget.dart';
+import '../data/transaction_service.dart';
+import '../../models/transaction.dart' as model;
+import '../firebase/firebase_budget_repository.dart';
 
 class BudgetService {
   BudgetService._();
   static final BudgetService _instance = BudgetService._();
   factory BudgetService() => _instance;
+
+  final FirebaseBudgetRepository _firebaseRepo = FirebaseBudgetRepository();
 
   late Box<Map> _budgetsBox;
   bool _initialized = false;
@@ -58,7 +61,7 @@ class BudgetService {
     );
   }
 
-  Future<void> addBudget(Budget budget) async {
+  Future<void> addBudget(Budget budget, {String? userId}) async {
     // Reject budgets that end in the past (date-only comparison)
     final today = DateTime.now();
     final todayDate = DateTime(today.year, today.month, today.day);
@@ -82,15 +85,31 @@ class BudgetService {
       );
     }
     if (!_initialized) await init();
+
+    // 🔥 HYBRID: Save locally first
     await _budgetsBox.put(budget.id, _budgetToMap(budget));
+
+    // 🌐 CLOUD SYNC: Upload to Firebase asynchronously
+    if (userId != null) {
+      _firebaseRepo.saveBudget(userId, budget).catchError((e) {
+        print('⚠️ [Budget] Cloud sync failed, will retry later: $e');
+      });
+    }
   }
 
-  Future<void> deleteBudget(String budgetId) async {
+  Future<void> deleteBudget(String budgetId, {String? userId}) async {
     if (!_initialized) await init();
     await _budgetsBox.delete(budgetId);
+
+    // 🌐 CLOUD SYNC: Delete from Firebase
+    if (userId != null) {
+      _firebaseRepo.deleteBudget(userId, budgetId).catchError((e) {
+        print('⚠️ [Budget] Cloud delete failed: $e');
+      });
+    }
   }
 
-  Future<void> updateBudget(Budget budget) async {
+  Future<void> updateBudget(Budget budget, {String? userId}) async {
     // Reject budgets that end in the past (date-only comparison)
     final today = DateTime.now();
     final todayDate = DateTime(today.year, today.month, today.day);
@@ -119,7 +138,16 @@ class BudgetService {
     }
 
     if (!_initialized) await init();
+
+    // 🔥 HYBRID: Save locally first
     await _budgetsBox.put(budget.id, _budgetToMap(budget));
+
+    // 🌐 CLOUD SYNC: Upload to Firebase asynchronously
+    if (userId != null) {
+      _firebaseRepo.saveBudget(userId, budget).catchError((e) {
+        print('⚠️ [Budget] Cloud sync failed: $e');
+      });
+    }
   }
 
   Map<String, dynamic> _budgetToMap(Budget b) {

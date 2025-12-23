@@ -1,11 +1,13 @@
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
-import '../models/wallet.dart';
-import '../models/transaction.dart' show TransactionType;
+import '../../models/wallet.dart';
+import '../../models/transaction.dart' show TransactionType;
 import 'transaction_service.dart';
+import '../firebase/firebase_wallet_repository.dart';
 
 class WalletService {
   static const _boxName = 'wallets';
+  final FirebaseWalletRepository _firebaseRepo = FirebaseWalletRepository();
 
   Future<void> init() async {
     // ensure box is open
@@ -58,10 +60,10 @@ class WalletService {
     }
 
     // Validate userId
-    if (wallet.userId == null || wallet.userId.trim().isEmpty) {
+    if (wallet.userId.trim().isEmpty) {
       throw ArgumentError('wallet.userId must be set');
     }
-    final userId = wallet.userId!.trim();
+    final userId = wallet.userId.trim();
 
     // Normalize and validate name
     final name = wallet.name.trim();
@@ -95,7 +97,14 @@ class WalletService {
     wallet.name = name;
     // Small yield so progress indicator can render before disk IO
     await Future.delayed(const Duration(milliseconds: 1));
+
+    // 🔥 HYBRID: Save locally first
     await _box.put(wallet.id, wallet);
+
+    // 🌐 CLOUD SYNC: Upload to Firebase asynchronously
+    _firebaseRepo.saveWallet(wallet).catchError((e) {
+      print('⚠️ [Wallet] Cloud sync failed, will retry later: $e');
+    });
   }
 
   Future<void> update(Wallet wallet, {bool force = false}) async {
@@ -105,10 +114,10 @@ class WalletService {
     if (wallet.id.trim().isEmpty) {
       throw ArgumentError('wallet.id must be set for update');
     }
-    if (wallet.userId == null || wallet.userId!.trim().isEmpty) {
+    if (wallet.userId.trim().isEmpty) {
       throw ArgumentError('wallet.userId must be set');
     }
-    final userId = wallet.userId!.trim();
+    final userId = wallet.userId.trim();
 
     // Ensure the wallet exists in the box
     final existing = _box.get(wallet.id);
@@ -166,7 +175,14 @@ class WalletService {
     // Yield slightly before final save to allow UI update
     await Future.delayed(const Duration(milliseconds: 1));
     // Use _box.put so detached instances (not previously opened from Hive) are persisted correctly
+
+    // 🔥 HYBRID: Save locally first
     await _box.put(wallet.id, wallet);
+
+    // 🌐 CLOUD SYNC: Upload to Firebase asynchronously
+    _firebaseRepo.saveWallet(wallet).catchError((e) {
+      print('⚠️ [Wallet] Cloud update failed: $e');
+    });
   }
 
   /// Delete a wallet safely.
@@ -250,6 +266,11 @@ class WalletService {
 
     // Finally delete the wallet
     await _box.delete(id);
+
+    // 🌐 CLOUD SYNC: Delete from Firebase
+    _firebaseRepo.deleteWallet(uid, id).catchError((e) {
+      print('⚠️ [Wallet] Cloud delete failed: $e');
+    });
 
     // Recompute balances for user's wallets if we handled transactions
     if (txService != null) {

@@ -1,8 +1,10 @@
 import 'package:hive/hive.dart';
-import '../models/category_group.dart';
+import '../../models/category_group.dart';
+import '../firebase/firebase_category_repository.dart';
 
 class CategoryGroupService {
   static const _boxName = 'category_groups';
+  final FirebaseCategoryRepository _firebaseRepo = FirebaseCategoryRepository();
 
   Box<CategoryGroup> get _box => Hive.box<CategoryGroup>(_boxName);
 
@@ -13,7 +15,7 @@ class CategoryGroupService {
     return list.where((e) => e.type == type).toList();
   }
 
-  Future<void> add(CategoryGroup group) async {
+  Future<void> add(CategoryGroup group, {String? userId}) async {
     final nameNorm = group.name.trim().toLowerCase();
 
     // Disallow adding a user category that duplicates an existing system category (same type)
@@ -36,7 +38,15 @@ class CategoryGroupService {
       throw ArgumentError('Nhóm danh mục đã tồn tại');
     }
 
+    // 🔥 HYBRID: Save locally first
     await _box.put(group.id, group);
+
+    // 🌐 CLOUD SYNC: Upload to Firebase asynchronously
+    if (userId != null) {
+      _firebaseRepo.saveCategory(userId, group).catchError((e) {
+        print('⚠️ [Category] Cloud sync failed, will retry later: $e');
+      });
+    }
   }
 
   /// Update an existing CategoryGroup.
@@ -47,6 +57,7 @@ class CategoryGroupService {
   Future<void> update(
     CategoryGroup group, {
     bool allowSystemEdit = false,
+    String? userId,
   }) async {
     final existing = _box.get(group.id);
     if (existing == null) {
@@ -77,17 +88,33 @@ class CategoryGroupService {
       throw ArgumentError('Tên nhóm trùng với danh mục hệ thống');
     }
 
+    // 🔥 HYBRID: Save locally first
     await _box.put(group.id, group);
+
+    // 🌐 CLOUD SYNC: Upload to Firebase asynchronously
+    if (userId != null) {
+      _firebaseRepo.saveCategory(userId, group).catchError((e) {
+        print('⚠️ [Category] Cloud update failed: $e');
+      });
+    }
   }
 
-  Future<void> delete(String id) async {
+  Future<void> delete(String id, {String? userId}) async {
     final group = _box.get(id);
     if (group == null) return;
     if (group.isSystem) {
       throw ArgumentError('Không thể xóa danh mục hệ thống');
     }
 
+    // 🔥 HYBRID: Delete locally first
     await _box.delete(id);
+
+    // 🌐 CLOUD SYNC: Delete from Firebase
+    if (userId != null) {
+      _firebaseRepo.deleteCategory(userId, id).catchError((e) {
+        print('⚠️ [Category] Cloud delete failed: $e');
+      });
+    }
   }
 
   /// Delete all system categories (DEV only). Use with caution.

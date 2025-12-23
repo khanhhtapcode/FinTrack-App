@@ -1,10 +1,12 @@
 import 'package:hive/hive.dart';
-import '../models/transaction.dart';
+import '../../models/transaction.dart';
 import 'wallet_service.dart';
+import '../firebase/sync_service.dart';
 
 class TransactionService {
   static const String _boxName = 'transactions';
   Box<Transaction>? _box;
+  final SyncService _syncService = SyncService();
 
   // ================= SINGLETON =================
   static final TransactionService _instance = TransactionService._internal();
@@ -30,10 +32,16 @@ class TransactionService {
       if (def != null) transaction.walletId = def.id;
     }
 
+    // 🔥 HYBRID: Save locally first (offline-first approach)
+    transaction.isSynced = false;
+    transaction.updatedAt = DateTime.now();
     await _box!.put(transaction.id, transaction);
 
     // Apply to wallet balances
     await walletService.applyTransaction(transaction);
+
+    // 🌐 CLOUD SYNC: Upload to Firebase asynchronously
+    _syncService.syncAllPendingTransactions();
   }
 
   // ================= GET ALL (OPTIMIZED) =================
@@ -111,9 +119,15 @@ class TransactionService {
       if (def != null) transaction.walletId = def.id;
     }
 
+    // 🔥 HYBRID: Update locally with sync flag
+    transaction.isSynced = false;
+    transaction.updatedAt = DateTime.now();
     await _box!.put(transaction.id, transaction);
 
     await walletService.applyTransaction(transaction);
+
+    // 🌐 CLOUD SYNC: Upload changes to Firebase
+    _syncService.syncAllPendingTransactions();
   }
 
   // ================= DELETE =================
@@ -123,6 +137,9 @@ class TransactionService {
     final tx = _box!.get(id);
     if (tx != null) {
       await walletService.revertTransaction(tx);
+
+      // 🌐 CLOUD SYNC: Delete from Firebase asynchronously
+      _syncService.deleteFromCloud(tx);
     }
     await _box!.delete(id);
   }

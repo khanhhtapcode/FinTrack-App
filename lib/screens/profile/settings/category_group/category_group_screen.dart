@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../models/category_group.dart';
-import '../../../../services/category_group_service.dart';
+import '../../../../services/data/category_group_service.dart';
 import '../../../../widgets/category/category_group_tile.dart';
 import 'add_category_group_screen.dart';
 

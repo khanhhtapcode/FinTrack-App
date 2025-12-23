@@ -6,8 +6,8 @@ import 'package:provider/provider.dart';
 import 'dart:convert';
 import '../../../config/theme.dart';
 import '../../../models/user.dart';
-import '../../../services/app_localization.dart';
-import '../../../services/app_settings_provider.dart';
+import '../../../services/core/app_localization.dart';
+import '../../../services/core/app_settings_provider.dart';
 import '../../auth/login_screen.dart';
 
 // ============================================================================

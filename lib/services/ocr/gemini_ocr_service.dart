@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
-import '../models/receipt_data.dart';
+import '../../models/receipt_data.dart';
 
 class GeminiOcrService {
   static const String _apiUrl = 'https://api-ocr-production.up.railway.app';
