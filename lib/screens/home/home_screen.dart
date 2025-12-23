@@ -251,7 +251,11 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: _buildBottomNavBar(),
 
       // Floating Action Button (Add button)
-      floatingActionButton: _selectedIndex == 0 || _selectedIndex == 1
+      // Keep FAB visible on Home, Transactions, Budget, and Accounts tabs
+      floatingActionButton: (_selectedIndex == 0 ||
+              _selectedIndex == 1 ||
+              _selectedIndex == 3 ||
+              _selectedIndex == 4)
           ? FloatingActionButton(
               onPressed: _openAddTransaction,
               backgroundColor: AppTheme.primaryTeal,

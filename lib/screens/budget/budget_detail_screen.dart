@@ -186,7 +186,12 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
     );
 
     final totalDays = end.difference(start).inDays + 1;
-    final maxY = _currentBudget.limit * 1.2;
+    
+    // Điều chỉnh trục tung: nếu vượt hạn mức thì lấy chi tiêu làm điểm cao nhất, 
+    // nếu chưa vượt thì lấy hạn mức làm điểm cao nhất
+    final maxY = _totalSpent >= _currentBudget.limit
+        ? _totalSpent * 1.1 // Vượt mức: chi tiêu + 10% để có khoảng trống
+        : _currentBudget.limit * 1.2; // Chưa vượt: hạn mức + 20%
 
     // Check if budget is completed
     final isBudgetCompleted = end.isBefore(today);
@@ -527,7 +532,7 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    // Total budget amount
+                    // Totals summary
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -548,7 +553,7 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Đời chi',
+                          'Còn lại',
                           style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(color: AppTheme.textSecondary),
                         ),
