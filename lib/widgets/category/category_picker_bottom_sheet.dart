@@ -54,7 +54,11 @@ class CategoryPickerBottomSheet extends StatelessWidget {
                     return const Center(child: CircularProgressIndicator());
                   }
 
-                  final items = snapshot.data!;
+                    // Khử trùng lặp theo (type, name) để tránh hiện lặp danh mục
+                    final seen = <String>{};
+                    final items = snapshot.data!
+                      .where((c) => seen.add('${c.type.index}-${c.name.trim().toLowerCase()}'))
+                      .toList();
 
                   if (items.isEmpty) {
                     return const Center(child: Text('Chưa có danh mục'));

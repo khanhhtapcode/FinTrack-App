@@ -66,11 +66,20 @@ class _CategoryGroupScreenState extends State<CategoryGroupScreen>
           return const Center(child: CircularProgressIndicator());
         }
 
-        final items = snapshot.data ?? [];
+        var items = snapshot.data ?? [];
 
         if (items.isEmpty) {
           return const Center(child: Text('Chưa có nhóm danh mục'));
         }
+
+        // Sắp xếp alphabetical, "Khác" ở cuối
+        items.sort((a, b) {
+          final aIsOther = a.name.contains('Khác');
+          final bIsOther = b.name.contains('Khác');
+          if (aIsOther && !bIsOther) return 1;
+          if (!aIsOther && bIsOther) return -1;
+          return a.name.compareTo(b.name);
+        });
 
         return ListView.separated(
           padding: const EdgeInsets.all(12),

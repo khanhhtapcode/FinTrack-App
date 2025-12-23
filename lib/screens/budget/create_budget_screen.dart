@@ -54,7 +54,22 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
 
   Future<void> _loadCategories() async {
     final service = CategoryGroupService();
-    final cats = await service.getAll(type: CategoryType.expense);
+    final catsRaw = await service.getAll(type: CategoryType.expense);
+    // Khử trùng lặp theo (type, name)
+    final seen = <String>{};
+    var cats = catsRaw
+        .where((c) => seen.add('${c.type.index}-${c.name.trim().toLowerCase()}'))
+        .toList();
+
+    // Sắp xếp alphabetical, "Khác" ở cuối
+    cats.sort((a, b) {
+      final aIsOther = a.name.contains('Khác');
+      final bIsOther = b.name.contains('Khác');
+      if (aIsOther && !bIsOther) return 1;
+      if (!aIsOther && bIsOther) return -1;
+      return a.name.compareTo(b.name);
+    });
+
     if (!mounted) return;
     setState(() {
       _categories = cats;
