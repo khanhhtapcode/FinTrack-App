@@ -64,7 +64,7 @@ class _AddCategoryGroupScreenState extends State<AddCategoryGroupScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<CategoryType>(
-              initialValue: _type,
+              value: _type,
               items: const [
                 DropdownMenuItem(
                   value: CategoryType.expense,
