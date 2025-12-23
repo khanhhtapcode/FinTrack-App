@@ -47,8 +47,24 @@ Future<void> main() async {
     try {
       await CategorySeed.seedIfNeeded();
       debugPrint('✅ Category seeding complete');
+      
+      // Remove duplicate categories (if any from old data)
+      await CategorySeed.deduplicateCategories();
+      debugPrint('✅ Category deduplication complete');
+      
+      // Clean up invalid income categories
+      final cleanedIncomeCount = await CategorySeed.cleanupInvalidIncomeCategories();
+      if (cleanedIncomeCount > 0) {
+        debugPrint('✅ Removed $cleanedIncomeCount invalid income categories');
+      }
+      
+      // Clean up invalid expense categories
+      final cleanedExpenseCount = await CategorySeed.cleanupInvalidExpenseCategories();
+      if (cleanedExpenseCount > 0) {
+        debugPrint('✅ Removed $cleanedExpenseCount invalid expense categories');
+      }
     } catch (e) {
-      debugPrint('Category seeding failed: $e');
+      debugPrint('Category seeding/cleanup failed: $e');
     }
   });
 

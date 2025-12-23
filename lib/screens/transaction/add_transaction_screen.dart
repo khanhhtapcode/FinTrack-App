@@ -82,9 +82,21 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         ? CategoryType.income
         : null;
 
-    final items = box.values
-        .where((c) => type == null || c.type == type)
-        .toList();
+    // Khử trùng lặp theo (type, name) để tránh lặp danh mục hiển thị
+    final seen = <String>{};
+    var items = box.values
+      .where((c) => type == null || c.type == type)
+      .where((c) => seen.add('${c.type.index}-${c.name.trim().toLowerCase()}'))
+      .toList();
+
+    // Sắp xếp alphabetical, "Khác" ở cuối
+    items.sort((a, b) {
+      final aIsOther = a.name.contains('Khác');
+      final bIsOther = b.name.contains('Khác');
+      if (aIsOther && !bIsOther) return 1; // a (Khác) xuống cuối
+      if (!aIsOther && bIsOther) return -1; // b (Khác) xuống cuối
+      return a.name.compareTo(b.name); // Cả hai Khác hoặc không Khác: sort alphabetical
+    });
 
     setState(() {
       _categories = items;
