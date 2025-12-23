@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../config/constants.dart';
+import '../../utils/budget_categories.dart';
+import '../../services/category_group_service.dart';
+import '../../utils/category_icon_mapper.dart';
 import '../../config/theme.dart';
 import '../../models/budget.dart';
 import '../../services/auth_service.dart';
@@ -28,37 +31,19 @@ class _CompletedBudgetsScreenState extends State<CompletedBudgetsScreen> {
     _budgetService.init();
   }
 
-  IconData _getCategoryIcon(String categoryName) {
-    const categoryIcons = {
-      'Ăn uống': Icons.restaurant,
-      'Xăng xe': Icons.local_gas_station,
-      'Shopping': Icons.shopping_bag,
-      'Giải trí': Icons.movie,
-      'Y tế': Icons.medical_services,
-      'Giáo dục': Icons.school,
-      'Hóa đơn': Icons.receipt,
-      'Điện nước': Icons.bolt,
-      'Nhà cửa': Icons.home,
-      'Quần áo': Icons.checkroom,
-      'Làm đẹp': Icons.face,
-      'Thể thao': Icons.fitness_center,
-      'Du lịch': Icons.flight,
-      'Điện thoại': Icons.phone_android,
-      'Internet': Icons.wifi,
-      'Khác': Icons.more_horiz,
-    };
-    return categoryIcons[categoryName] ?? Icons.category;
-  }
+  IconData _getCategoryIcon(String categoryName) =>
+      iconForCategory(categoryName);
 
   List<Budget> _getCompletedBudgets() {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    
+
     return _budgetService.getAllBudgets().where((b) {
       final endDate = DateTime(b.endDate.year, b.endDate.month, b.endDate.day);
       return endDate.isBefore(today);
-    }).toList()
-      ..sort((a, b) => b.endDate.compareTo(a.endDate)); // Mới nhất trước
+    }).toList()..sort(
+      (a, b) => b.endDate.compareTo(a.endDate),
+    ); // Mới nhất trước
   }
 
   Future<void> _onRefresh() async {
@@ -119,7 +104,9 @@ class _CompletedBudgetsScreenState extends State<CompletedBudgetsScreen> {
                       padding: const EdgeInsets.all(AppConstants.paddingMedium),
                       decoration: BoxDecoration(
                         color: AppTheme.cardColor,
-                        borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.radiusMedium,
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.04),
@@ -136,8 +123,13 @@ class _CompletedBudgetsScreenState extends State<CompletedBudgetsScreen> {
                         ),
                         builder: (context, snapshot) {
                           final spent = snapshot.data ?? 0;
-                          final remaining = (b.limit - spent).clamp(-double.infinity, double.infinity);
-                          final percent = b.limit > 0 ? (spent / b.limit).clamp(0, 10) : 0.0;
+                          final remaining = (b.limit - spent).clamp(
+                            -double.infinity,
+                            double.infinity,
+                          );
+                          final percent = b.limit > 0
+                              ? (spent / b.limit).clamp(0, 10)
+                              : 0.0;
                           Color barColor;
                           if (percent >= 1.0) {
                             barColor = Colors.red;
@@ -150,25 +142,28 @@ class _CompletedBudgetsScreenState extends State<CompletedBudgetsScreen> {
                           final dateFormat = DateFormat('dd/MM/yyyy');
                           final startStr = dateFormat.format(b.startDate);
                           final endStr = dateFormat.format(b.endDate);
-                          final timePercent = BudgetProgress.computeTimeProgressPercent(
-                            b.startDate,
-                            b.endDate,
-                            DateTime.now(),
-                          );
+                          final timePercent =
+                              BudgetProgress.computeTimeProgressPercent(
+                                b.startDate,
+                                b.endDate,
+                                DateTime.now(),
+                              );
 
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               // Header: Category Icon + Name & Limit
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Expanded(
                                     child: Row(
                                       children: [
                                         CircleAvatar(
                                           radius: 18,
-                                          backgroundColor: Colors.grey.withOpacity(0.12),
+                                          backgroundColor: Colors.grey
+                                              .withOpacity(0.12),
                                           child: Icon(
                                             _getCategoryIcon(b.category),
                                             color: Colors.grey,
@@ -179,7 +174,10 @@ class _CompletedBudgetsScreenState extends State<CompletedBudgetsScreen> {
                                         Expanded(
                                           child: Text(
                                             b.category,
-                                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleMedium
+                                                ?.copyWith(
                                                   fontWeight: FontWeight.w600,
                                                 ),
                                           ),
@@ -189,7 +187,10 @@ class _CompletedBudgetsScreenState extends State<CompletedBudgetsScreen> {
                                   ),
                                   Text(
                                     '${NumberFormat('#,##0').format(b.limit)} VND',
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
                                           color: AppTheme.textSecondary,
                                           fontWeight: FontWeight.w500,
                                         ),
@@ -200,17 +201,25 @@ class _CompletedBudgetsScreenState extends State<CompletedBudgetsScreen> {
                               // Date range + Completed badge
                               Row(
                                 children: [
-                                  Icon(Icons.calendar_today, size: 14, color: AppTheme.textSecondary),
+                                  Icon(
+                                    Icons.calendar_today,
+                                    size: 14,
+                                    color: AppTheme.textSecondary,
+                                  ),
                                   const SizedBox(width: 4),
                                   Text(
                                     '$startStr → $endStr',
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
                                           color: AppTheme.textSecondary,
                                         ),
                                   ),
                                   const SizedBox(width: 8),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: Colors.grey.shade200,
                                       borderRadius: BorderRadius.circular(12),
@@ -229,16 +238,22 @@ class _CompletedBudgetsScreenState extends State<CompletedBudgetsScreen> {
                               const SizedBox(height: 10),
                               // Spent & Remaining
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     'Đã chi: ${NumberFormat('#,##0').format(spent)}',
-                                    style: Theme.of(context).textTheme.bodySmall,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
                                   ),
                                   Text(
                                     'Còn lại: ${NumberFormat('#,##0').format(remaining)}',
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                          color: remaining < 0 ? Colors.red : AppTheme.textSecondary,
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: remaining < 0
+                                              ? Colors.red
+                                              : AppTheme.textSecondary,
                                         ),
                                   ),
                                 ],
@@ -279,17 +294,17 @@ class _CompletedBudgetsScreenState extends State<CompletedBudgetsScreen> {
           Text(
             'Danh sách ngân sách đã kết thúc trống',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: AppTheme.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: AppTheme.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppConstants.paddingSmall),
           Text(
             'Các ngân sách đã kết thúc sẽ xuất hiện tại đây',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
             textAlign: TextAlign.center,
           ),
         ],

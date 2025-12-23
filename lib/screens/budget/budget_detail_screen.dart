@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../../utils/budget_categories.dart';
 import '../../models/budget.dart';
 import '../../config/constants.dart';
+import '../../services/category_group_service.dart';
+import '../../utils/category_icon_mapper.dart';
 import '../../config/theme.dart';
 import '../../services/auth_service.dart';
 import '../../services/budget_service.dart';
@@ -46,23 +49,23 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
       (b) => b.id == widget.budget.id,
       orElse: () => widget.budget,
     );
-    
+
     final authService = Provider.of<AuthService>(context, listen: false);
     final userId = authService.currentUser?.id;
-    
+
     final txs = await _transactionService.getTransactionsByDateRange(
       updatedBudget.startDate,
       updatedBudget.endDate,
       userId: userId,
     );
-    
+
     final filtered = txs
         .where((t) => t.type == model.TransactionType.expense)
         .where((t) => t.category == updatedBudget.category)
         .toList();
-    
+
     final spent = filtered.fold<double>(0, (sum, t) => sum + t.amount);
-    
+
     if (mounted) {
       setState(() {
         _currentBudget = updatedBudget;
@@ -76,27 +79,8 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
     await _loadData();
   }
 
-  IconData _getCategoryIcon(String categoryName) {
-    const categoryIcons = {
-      'Ăn uống': Icons.restaurant,
-      'Xăng xe': Icons.local_gas_station,
-      'Shopping': Icons.shopping_bag,
-      'Giải trí': Icons.movie,
-      'Y tế': Icons.medical_services,
-      'Giáo dục': Icons.school,
-      'Hóa đơn': Icons.receipt,
-      'Điện nước': Icons.bolt,
-      'Nhà cửa': Icons.home,
-      'Quần áo': Icons.checkroom,
-      'Làm đẹp': Icons.face,
-      'Thể thao': Icons.fitness_center,
-      'Du lịch': Icons.flight,
-      'Điện thoại': Icons.phone_android,
-      'Internet': Icons.wifi,
-      'Khác': Icons.more_horiz,
-    };
-    return categoryIcons[categoryName] ?? Icons.category;
-  }
+  IconData _getCategoryIcon(String categoryName) =>
+      iconForCategory(categoryName);
 
   void _showDeleteConfirmation() {
     showDialog(
@@ -118,17 +102,26 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             style: TextButton.styleFrom(foregroundColor: AppTheme.textPrimary),
-            child: const Text('KHÔNG', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text(
+              'KHÔNG',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
           TextButton(
             onPressed: () async {
               await _budgetService.deleteBudget(_currentBudget.id);
               if (!mounted) return;
               Navigator.pop(context); // Close dialog
-              Navigator.pop(context, true); // Return to list with refresh signal
+              Navigator.pop(
+                context,
+                true,
+              ); // Return to list with refresh signal
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('XÓA', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text(
+              'XÓA',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -138,8 +131,12 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
   int _getDaysRemaining() {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final end = DateTime(_currentBudget.endDate.year, _currentBudget.endDate.month, _currentBudget.endDate.day);
-    
+    final end = DateTime(
+      _currentBudget.endDate.year,
+      _currentBudget.endDate.month,
+      _currentBudget.endDate.day,
+    );
+
     if (today.isAfter(end)) return 0;
     return end.difference(today).inDays + 1;
   }
@@ -153,10 +150,22 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
     }
 
     // Generate all dates in budget range
-    final start = DateTime(_currentBudget.startDate.year, _currentBudget.startDate.month, _currentBudget.startDate.day);
-    final end = DateTime(_currentBudget.endDate.year, _currentBudget.endDate.month, _currentBudget.endDate.day);
-    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-    
+    final start = DateTime(
+      _currentBudget.startDate.year,
+      _currentBudget.startDate.month,
+      _currentBudget.startDate.day,
+    );
+    final end = DateTime(
+      _currentBudget.endDate.year,
+      _currentBudget.endDate.month,
+      _currentBudget.endDate.day,
+    );
+    final today = DateTime(
+      DateTime.now().year,
+      DateTime.now().month,
+      DateTime.now().day,
+    );
+
     final totalDays = end.difference(start).inDays + 1;
     final maxY = _currentBudget.limit * 1.2;
 
@@ -164,12 +173,14 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
     final isBudgetCompleted = end.isBefore(today);
 
     // Find today's index for marker (only if budget not completed)
-    final todayIndex = today.isAfter(end) 
-        ? totalDays - 1 
+    final todayIndex = today.isAfter(end)
+        ? totalDays - 1
         : (today.isBefore(start) ? 0 : today.difference(start).inDays);
 
     // Only render the line up to today for active budgets, or to end for completed budgets
-    final endIndexForLine = isBudgetCompleted ? totalDays - 1 : todayIndex.clamp(0, totalDays - 1);
+    final endIndexForLine = isBudgetCompleted
+        ? totalDays - 1
+        : todayIndex.clamp(0, totalDays - 1);
 
     // Create line chart data points (cumulative spending) up to endIndexForLine
     final List<FlSpot> spots = [];
@@ -198,7 +209,10 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                   final date = start.add(Duration(days: spot.x.toInt()));
                   return LineTooltipItem(
                     '${DateFormat('dd/MM').format(date)}\n${NumberFormat('#,##0').format(spot.y)}',
-                    const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   );
                 }).toList();
               },
@@ -206,8 +220,12 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
           ),
           titlesData: FlTitlesData(
             show: true,
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
@@ -226,15 +244,17 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                 interval: 1,
                 getTitlesWidget: (value, meta) {
                   final index = value.toInt();
-                  if (index < 0 || index >= totalDays) return const SizedBox.shrink();
-                  
+                  if (index < 0 || index >= totalDays)
+                    return const SizedBox.shrink();
+
                   final date = start.add(Duration(days: index));
                   // Show labels for start, today, end, and some intermediate points
-                  final showLabel = date == start || 
-                                   date == end || 
-                                   date == today || 
-                                   (totalDays > 10 && index % (totalDays ~/ 5 + 1) == 0);
-                  
+                  final showLabel =
+                      date == start ||
+                      date == end ||
+                      date == today ||
+                      (totalDays > 10 && index % (totalDays ~/ 5 + 1) == 0);
+
                   if (showLabel) {
                     return Padding(
                       padding: const EdgeInsets.only(top: 4),
@@ -242,8 +262,12 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                         DateFormat('dd/MM').format(date),
                         style: TextStyle(
                           fontSize: 9,
-                          color: date == today ? AppTheme.primaryTeal : AppTheme.textSecondary,
-                          fontWeight: date == today ? FontWeight.bold : FontWeight.normal,
+                          color: date == today
+                              ? AppTheme.primaryTeal
+                              : AppTheme.textSecondary,
+                          fontWeight: date == today
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                         ),
                       ),
                     );
@@ -267,10 +291,7 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                   dashArray: [5, 5],
                 );
               }
-              return FlLine(
-                color: Colors.grey.shade300,
-                strokeWidth: 0.5,
-              );
+              return FlLine(color: Colors.grey.shade300, strokeWidth: 0.5);
             },
             horizontalInterval: maxY / 5,
             getDrawingHorizontalLine: (value) {
@@ -281,10 +302,7 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                   dashArray: [8, 4],
                 );
               }
-              return FlLine(
-                color: Colors.grey.shade300,
-                strokeWidth: 0.5,
-              );
+              return FlLine(color: Colors.grey.shade300, strokeWidth: 0.5);
             },
           ),
           borderData: FlBorderData(
@@ -345,7 +363,9 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
               ),
             ],
             verticalLines: [
-              if (!isBudgetCompleted && todayIndex >= 0 && todayIndex < totalDays)
+              if (!isBudgetCompleted &&
+                  todayIndex >= 0 &&
+                  todayIndex < totalDays)
                 VerticalLine(
                   x: todayIndex.toDouble(),
                   color: AppTheme.primaryTeal.withOpacity(0.3),
@@ -373,9 +393,14 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('dd/MM/yyyy');
-    final remaining = (_currentBudget.limit - _totalSpent).clamp(-double.infinity, double.infinity);
-    final percent = _currentBudget.limit > 0 ? (_totalSpent / _currentBudget.limit).clamp(0, 10) : 0.0;
-    
+    final remaining = (_currentBudget.limit - _totalSpent).clamp(
+      -double.infinity,
+      double.infinity,
+    );
+    final percent = _currentBudget.limit > 0
+        ? (_totalSpent / _currentBudget.limit).clamp(0, 10)
+        : 0.0;
+
     Color barColor;
     if (percent >= 1.0) {
       barColor = Colors.red;
@@ -415,7 +440,8 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
               final result = await Navigator.push<bool>(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => EditBudgetScreen(budget: _currentBudget),
+                  builder: (context) =>
+                      EditBudgetScreen(budget: _currentBudget),
                 ),
               );
               if (result == true && mounted) {
@@ -440,262 +466,13 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
             children: [
               // Header card
               Container(
-              margin: const EdgeInsets.all(AppConstants.paddingMedium),
-              padding: const EdgeInsets.all(AppConstants.paddingMedium),
-              decoration: BoxDecoration(
-                color: AppTheme.cardColor,
-                borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  // Category icon and name
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor: AppTheme.primaryTeal.withOpacity(0.12),
-                        child: Icon(
-                          _getCategoryIcon(_currentBudget.category),
-                          color: AppTheme.primaryTeal,
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          _currentBudget.category,
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  // Total budget amount
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Đã chi',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.textSecondary,
-                            ),
-                      ),
-                      Text(
-                        NumberFormat('#,##0').format(_totalSpent),
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Đời chi',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.textSecondary,
-                            ),
-                      ),
-                      Text(
-                        NumberFormat('#,##0').format(remaining),
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: remaining < 0 ? Colors.red : AppTheme.textPrimary,
-                            ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Hạn mức',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.textSecondary,
-                            ),
-                      ),
-                      Text(
-                        '${NumberFormat('#,##0').format(_currentBudget.limit)} VND',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.primaryTeal,
-                            ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  // Progress bar
-                  BudgetProgressBar(
-                    spendingPercent: _totalSpent / _currentBudget.limit,
-                    timePercent: timePercent,
-                    barColor: barColor,
-                  ),
-                ],
-              ),
-            ),
-
-            // Date and days remaining
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: AppConstants.paddingMedium),
-              padding: const EdgeInsets.all(AppConstants.paddingMedium),
-              decoration: BoxDecoration(
-                color: AppTheme.cardColor,
-                borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.calendar_today, size: 16, color: AppTheme.textSecondary),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${dateFormat.format(_currentBudget.startDate)} - ${dateFormat.format(_currentBudget.endDate)}',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(Icons.access_time, size: 16, color: AppTheme.textSecondary),
-                      const SizedBox(width: 8),
-                      Text(
-                        daysRemaining > 0
-                            ? 'Còn $daysRemaining ngày'
-                            : 'Đã kết thúc',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: daysRemaining > 0 ? AppTheme.textPrimary : Colors.red,
-                            ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: AppConstants.paddingMedium),
-
-            // Wallet type (for now, hardcoded as "Tổng cộng")
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: AppConstants.paddingMedium),
-              padding: const EdgeInsets.all(AppConstants.paddingMedium),
-              decoration: BoxDecoration(
-                color: AppTheme.cardColor,
-                borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.account_balance_wallet, size: 20, color: AppTheme.primaryTeal),
-                  const SizedBox(width: 12),
-                  const Text('Tổng cộng'),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: AppConstants.paddingMedium),
-
-            // Chart
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: AppConstants.paddingMedium),
-              decoration: BoxDecoration(
-                color: AppTheme.cardColor,
-                borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(AppConstants.paddingMedium),
-                    child: Text(
-                      'Biểu đồ chi tiêu',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                  ),
-                  _buildChart(),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: AppConstants.paddingMedium),
-
-            // Transaction list button
-            Padding(
-              padding: const EdgeInsets.all(AppConstants.paddingMedium),
-              child: ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    _showTransactions = !_showTransactions;
-                  });
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryTeal,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: AppConstants.paddingMedium),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text('Danh sách giao dịch'),
-                    const SizedBox(width: 8),
-                    Icon(
-                      _showTransactions ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                      size: 20,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Transaction list
-            if (_showTransactions)
-              Container(
-                margin: const EdgeInsets.fromLTRB(
-                  AppConstants.paddingMedium,
-                  0,
-                  AppConstants.paddingMedium,
-                  AppConstants.paddingMedium,
-                ),
+                margin: const EdgeInsets.all(AppConstants.paddingMedium),
+                padding: const EdgeInsets.all(AppConstants.paddingMedium),
                 decoration: BoxDecoration(
                   color: AppTheme.cardColor,
-                  borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
+                  borderRadius: BorderRadius.circular(
+                    AppConstants.radiusMedium,
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.04),
@@ -704,57 +481,344 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                     ),
                   ],
                 ),
-                child: _transactions.isEmpty
-                    ? Padding(
-                        padding: const EdgeInsets.all(AppConstants.paddingLarge),
-                        child: Center(
-                          child: Text(
-                            'Chưa có giao dịch nào',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: AppTheme.textSecondary,
-                                ),
+                child: Column(
+                  children: [
+                    // Category icon and name
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: AppTheme.primaryTeal.withOpacity(
+                            0.12,
+                          ),
+                          child: Icon(
+                            _getCategoryIcon(_currentBudget.category),
+                            color: AppTheme.primaryTeal,
+                            size: 28,
                           ),
                         ),
-                      )
-                    : ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _transactions.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
-                        itemBuilder: (context, index) {
-                          final tx = _transactions[index];
-                          return ListTile(
-                            leading: CircleAvatar(
-                              radius: 20,
-                              backgroundColor: Colors.red.shade50,
-                              child: Icon(
-                                _getCategoryIcon(tx.category),
-                                color: Colors.red,
-                                size: 20,
-                              ),
-                            ),
-                            title: Text(
-                              tx.category,
-                              style: const TextStyle(fontWeight: FontWeight.w500),
-                            ),
-                            subtitle: Text(
-                              DateFormat('dd/MM/yyyy').format(tx.date),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                            trailing: Text(
-                              '-${NumberFormat('#,##0').format(tx.amount)}',
-                              style: const TextStyle(
-                                color: Colors.red,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _currentBudget.category,
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // Total budget amount
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Đã chi',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: AppTheme.textSecondary),
+                        ),
+                        Text(
+                          NumberFormat('#,##0').format(_totalSpent),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Đời chi',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: AppTheme.textSecondary),
+                        ),
+                        Text(
+                          NumberFormat('#,##0').format(remaining),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
                                 fontWeight: FontWeight.w600,
+                                color: remaining < 0
+                                    ? Colors.red
+                                    : AppTheme.textPrimary,
                               ),
-                            ),
-                          );
-                        },
-                      ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Hạn mức',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: AppTheme.textSecondary),
+                        ),
+                        Text(
+                          '${NumberFormat('#,##0').format(_currentBudget.limit)} VND',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.primaryTeal,
+                              ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // Progress bar
+                    BudgetProgressBar(
+                      spendingPercent: _totalSpent / _currentBudget.limit,
+                      timePercent: timePercent,
+                      barColor: barColor,
+                    ),
+                  ],
+                ),
               ),
+
+              // Date and days remaining
+              Container(
+                margin: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.paddingMedium,
+                ),
+                padding: const EdgeInsets.all(AppConstants.paddingMedium),
+                decoration: BoxDecoration(
+                  color: AppTheme.cardColor,
+                  borderRadius: BorderRadius.circular(
+                    AppConstants.radiusMedium,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today,
+                          size: 16,
+                          color: AppTheme.textSecondary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${dateFormat.format(_currentBudget.startDate)} - ${dateFormat.format(_currentBudget.endDate)}',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time,
+                          size: 16,
+                          color: AppTheme.textSecondary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          daysRemaining > 0
+                              ? 'Còn $daysRemaining ngày'
+                              : 'Đã kết thúc',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: daysRemaining > 0
+                                    ? AppTheme.textPrimary
+                                    : Colors.red,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: AppConstants.paddingMedium),
+
+              // Wallet type (for now, hardcoded as "Tổng cộng")
+              Container(
+                margin: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.paddingMedium,
+                ),
+                padding: const EdgeInsets.all(AppConstants.paddingMedium),
+                decoration: BoxDecoration(
+                  color: AppTheme.cardColor,
+                  borderRadius: BorderRadius.circular(
+                    AppConstants.radiusMedium,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.account_balance_wallet,
+                      size: 20,
+                      color: AppTheme.primaryTeal,
+                    ),
+                    const SizedBox(width: 12),
+                    const Text('Tổng cộng'),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: AppConstants.paddingMedium),
+
+              // Chart
+              Container(
+                margin: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.paddingMedium,
+                ),
+                decoration: BoxDecoration(
+                  color: AppTheme.cardColor,
+                  borderRadius: BorderRadius.circular(
+                    AppConstants.radiusMedium,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(AppConstants.paddingMedium),
+                      child: Text(
+                        'Biểu đồ chi tiêu',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    _buildChart(),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: AppConstants.paddingMedium),
+
+              // Transaction list button
+              Padding(
+                padding: const EdgeInsets.all(AppConstants.paddingMedium),
+                child: ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _showTransactions = !_showTransactions;
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryTeal,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppConstants.paddingMedium,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('Danh sách giao dịch'),
+                      const SizedBox(width: 8),
+                      Icon(
+                        _showTransactions
+                            ? Icons.keyboard_arrow_up
+                            : Icons.keyboard_arrow_down,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Transaction list
+              if (_showTransactions)
+                Container(
+                  margin: const EdgeInsets.fromLTRB(
+                    AppConstants.paddingMedium,
+                    0,
+                    AppConstants.paddingMedium,
+                    AppConstants.paddingMedium,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.cardColor,
+                    borderRadius: BorderRadius.circular(
+                      AppConstants.radiusMedium,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: _transactions.isEmpty
+                      ? Padding(
+                          padding: const EdgeInsets.all(
+                            AppConstants.paddingLarge,
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Chưa có giao dịch nào',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(color: AppTheme.textSecondary),
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _transactions.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final tx = _transactions[index];
+                            return ListTile(
+                              leading: CircleAvatar(
+                                radius: 20,
+                                backgroundColor: Colors.red.shade50,
+                                child: Icon(
+                                  _getCategoryIcon(tx.category),
+                                  color: Colors.red,
+                                  size: 20,
+                                ),
+                              ),
+                              title: Text(
+                                tx.category,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              subtitle: Text(
+                                DateFormat('dd/MM/yyyy').format(tx.date),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                              trailing: Text(
+                                '-${NumberFormat('#,##0').format(tx.amount)}',
+                                style: const TextStyle(
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
             ],
           ),
         ),

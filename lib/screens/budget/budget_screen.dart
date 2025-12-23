@@ -1,23 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../../utils/budget_categories.dart';
 import '../../models/budget.dart';
 import '../../config/constants.dart';
 import '../../config/theme.dart';
 import '../../services/auth_service.dart';
 import '../../services/budget_service.dart';
 import '../../services/transaction_service.dart';
+import '../../services/category_group_service.dart';
 import '../../services/budget_progress.dart';
+import '../../utils/category_icon_mapper.dart';
 import '_progress_bar.dart';
 import 'create_budget_screen.dart';
 import 'budget_detail_screen.dart';
 import 'completed_budgets_screen.dart';
 
-enum BudgetSortOption {
-  startDateAsc,
-  endDateAsc,
-  limitDesc,
-}
+enum BudgetSortOption { startDateAsc, endDateAsc, limitDesc }
 
 class BudgetScreen extends StatefulWidget {
   final bool embedded;
@@ -37,7 +36,6 @@ class _BudgetScreenState extends State<BudgetScreen> {
   final BudgetService _budgetService = BudgetService();
   final TransactionService _transactionService = TransactionService();
   BudgetSortOption _sort = BudgetSortOption.startDateAsc;
-
 
   void _onNavItemTapped(int index) {
     setState(() {
@@ -82,10 +80,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
           label: 'Trang chủ',
         ),
         BottomNavigationBarItem(icon: Icon(Icons.sync_alt), label: 'Giao dịch'),
-        BottomNavigationBarItem(
-          icon: SizedBox.shrink(),
-          label: '',
-        ),
+        BottomNavigationBarItem(icon: SizedBox.shrink(), label: ''),
         BottomNavigationBarItem(
           icon: Icon(Icons.pie_chart_outline),
           activeIcon: Icon(Icons.pie_chart),
@@ -142,9 +137,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
             onPressed: () async {
               final result = await Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const CreateBudgetScreen(),
-                ),
+                MaterialPageRoute(builder: (_) => const CreateBudgetScreen()),
               );
               if (result == true && mounted) {
                 _markPeriodsWithNewBudget();
@@ -219,17 +212,17 @@ class _BudgetScreenState extends State<BudgetScreen> {
             Text(
               'Bạn chưa có ngân sách nào',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppTheme.textSecondary,
-                    fontWeight: FontWeight.w600,
-                  ),
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
               textAlign: TextAlign.center,
             ),
             SizedBox(height: AppConstants.paddingSmall),
             Text(
               'Hãy tạo ngân sách để kiểm soát chi tiêu hiệu quả hơn',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textSecondary,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
               textAlign: TextAlign.center,
             ),
             SizedBox(height: AppConstants.paddingLarge * 1.2),
@@ -237,9 +230,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
               onPressed: () async {
                 final result = await Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const CreateBudgetScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const CreateBudgetScreen()),
                 );
                 if (result == true && mounted) {
                   _markPeriodsWithNewBudget();
@@ -263,42 +254,29 @@ class _BudgetScreenState extends State<BudgetScreen> {
     );
   }
 
-  // Category to icon mapping (shared with CreateBudgetScreen)
-  IconData _getCategoryIcon(String categoryName) {
-    const categoryIcons = {
-      'Ăn uống': Icons.restaurant,
-      'Xăng xe': Icons.local_gas_station,
-      'Shopping': Icons.shopping_bag,
-      'Giải trí': Icons.movie,
-      'Y tế': Icons.medical_services,
-      'Giáo dục': Icons.school,
-      'Hóa đơn': Icons.receipt,
-      'Điện nước': Icons.bolt,
-      'Nhà cửa': Icons.home,
-      'Quần áo': Icons.checkroom,
-      'Làm đẹp': Icons.face,
-      'Thể thao': Icons.fitness_center,
-      'Du lịch': Icons.flight,
-      'Điện thoại': Icons.phone_android,
-      'Internet': Icons.wifi,
-      'Khác': Icons.more_horiz,
-    };
-    return categoryIcons[categoryName] ?? Icons.category;
-  }
+  IconData _getCategoryIcon(String categoryName) =>
+      iconForCategory(categoryName);
 
   Widget _buildBudgetsList(String userName) {
     final authService = Provider.of<AuthService>(context, listen: false);
     final userId = authService.currentUser?.id;
-    
+
     // Filter budgets overlapping the selected period range and not completed
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    
-    final budgets = _budgetService.getBudgetsOverlapping(_periodStart, _periodEnd).where((b) {
-      final endDate = DateTime(b.endDate.year, b.endDate.month, b.endDate.day);
-      return !endDate.isBefore(today); // Chỉ lấy ngân sách chưa kết thúc
-    }).toList();
-    
+
+    final budgets = _budgetService
+        .getBudgetsOverlapping(_periodStart, _periodEnd)
+        .where((b) {
+          final endDate = DateTime(
+            b.endDate.year,
+            b.endDate.month,
+            b.endDate.day,
+          );
+          return !endDate.isBefore(today); // Chỉ lấy ngân sách chưa kết thúc
+        })
+        .toList();
+
     budgets.sort((a, b) {
       switch (_sort) {
         case BudgetSortOption.startDateAsc:
@@ -339,13 +317,17 @@ class _BudgetScreenState extends State<BudgetScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.refresh, size: 48, color: AppTheme.textSecondary.withOpacity(0.5)),
+                  Icon(
+                    Icons.refresh,
+                    size: 48,
+                    color: AppTheme.textSecondary.withOpacity(0.5),
+                  ),
                   const SizedBox(height: 12),
                   Text(
                     'Kéo xuống để tải lại ngân sách',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
+                      color: AppTheme.textSecondary,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -398,8 +380,13 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 ),
                 builder: (context, snapshot) {
                   final spent = snapshot.data ?? 0;
-                  final remaining = (b.limit - spent).clamp(-double.infinity, double.infinity);
-                  final percent = b.limit > 0 ? (spent / b.limit).clamp(0, 10) : 0.0;
+                  final remaining = (b.limit - spent).clamp(
+                    -double.infinity,
+                    double.infinity,
+                  );
+                  final percent = b.limit > 0
+                      ? (spent / b.limit).clamp(0, 10)
+                      : 0.0;
                   Color barColor;
                   if (percent >= 1.0) {
                     barColor = Colors.red;
@@ -430,7 +417,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
                               children: [
                                 CircleAvatar(
                                   radius: 18,
-                                  backgroundColor: AppTheme.primaryTeal.withOpacity(0.12),
+                                  backgroundColor: AppTheme.primaryTeal
+                                      .withOpacity(0.12),
                                   child: Icon(
                                     _getCategoryIcon(b.category),
                                     color: AppTheme.primaryTeal,
@@ -441,9 +429,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                 Expanded(
                                   child: Text(
                                     b.category,
-                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.w600),
                                   ),
                                 ),
                               ],
@@ -451,7 +440,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
                           ),
                           Text(
                             '${NumberFormat('#,##0').format(b.limit)} VND',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
                                   color: AppTheme.textSecondary,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -462,13 +452,16 @@ class _BudgetScreenState extends State<BudgetScreen> {
                       // Date range
                       Row(
                         children: [
-                          Icon(Icons.calendar_today, size: 14, color: AppTheme.textSecondary),
+                          Icon(
+                            Icons.calendar_today,
+                            size: 14,
+                            color: AppTheme.textSecondary,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             '$startStr → $endStr',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppTheme.textSecondary,
-                                ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: AppTheme.textSecondary),
                           ),
                         ],
                       ),
@@ -483,8 +476,11 @@ class _BudgetScreenState extends State<BudgetScreen> {
                           ),
                           Text(
                             'Còn lại: ${NumberFormat('#,##0').format(remaining)}',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: remaining < 0 ? Colors.red : AppTheme.textSecondary,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: remaining < 0
+                                      ? Colors.red
+                                      : AppTheme.textSecondary,
                                 ),
                           ),
                         ],
@@ -505,7 +501,6 @@ class _BudgetScreenState extends State<BudgetScreen> {
       ),
     );
   }
-
 
   void _setPeriod(BudgetPeriodType type) {
     if (!_visiblePeriods.contains(type)) return;
@@ -601,7 +596,6 @@ class _BudgetScreenState extends State<BudgetScreen> {
         ..addAll(visible);
     });
   }
-
 }
 
 // Using BudgetPeriodType from models/budget.dart

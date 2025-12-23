@@ -4,6 +4,12 @@ import '../../config/constants.dart';
 import '../../config/theme.dart';
 import '../../models/budget.dart';
 import '../../services/budget_service.dart';
+import '../../services/category_group_service.dart';
+import '../../models/category_group.dart';
+import '../../widgets/category/category_picker_bottom_sheet.dart';
+import '../../utils/category_icon_mapper.dart';
+import 'package:uuid/uuid.dart';
+import '../../utils/budget_categories.dart';
 
 class EditBudgetScreen extends StatefulWidget {
   final Budget budget;
@@ -22,24 +28,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
   late DateTime _periodEnd;
   late BudgetPeriodType _periodType;
 
-  final List<Map<String, dynamic>> _expenseCategories = const [
-    {'name': 'Ăn uống', 'icon': Icons.restaurant},
-    {'name': 'Xăng xe', 'icon': Icons.local_gas_station},
-    {'name': 'Shopping', 'icon': Icons.shopping_bag},
-    {'name': 'Giải trí', 'icon': Icons.movie},
-    {'name': 'Y tế', 'icon': Icons.medical_services},
-    {'name': 'Giáo dục', 'icon': Icons.school},
-    {'name': 'Hóa đơn', 'icon': Icons.receipt},
-    {'name': 'Điện nước', 'icon': Icons.bolt},
-    {'name': 'Nhà cửa', 'icon': Icons.home},
-    {'name': 'Quần áo', 'icon': Icons.checkroom},
-    {'name': 'Làm đẹp', 'icon': Icons.face},
-    {'name': 'Thể thao', 'icon': Icons.fitness_center},
-    {'name': 'Du lịch', 'icon': Icons.flight},
-    {'name': 'Điện thoại', 'icon': Icons.phone_android},
-    {'name': 'Internet', 'icon': Icons.wifi},
-    {'name': 'Khác', 'icon': Icons.more_horiz},
-  ];
+  List<CategoryGroup> _categories = [];
 
   String _selectedWallet = 'Ví chính';
 
@@ -59,20 +48,46 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
     _periodStart = widget.budget.startDate;
     _periodEnd = widget.budget.endDate;
     _periodType = widget.budget.periodType;
+
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    final service = CategoryGroupService();
+    final cats = await service.getAll(type: CategoryType.expense);
+    if (!mounted) return;
+    setState(() {
+      _categories = cats;
+      // Keep existing budget category even if not present in seed; user can switch to seeded groups
+    });
   }
 
   IconData _getSelectedCategoryIcon() {
-    final match = _expenseCategories.firstWhere(
-      (cat) => cat['name'] == _selectedCategory,
-      orElse: () => {'name': _selectedCategory, 'icon': Icons.category},
+    final match = _categories.firstWhere(
+      (c) => c.name == _selectedCategory,
+      orElse: () => CategoryGroup(
+        id: '',
+        name: '',
+        type: CategoryType.expense,
+        iconKey: '',
+        colorValue: 0,
+        createdAt: DateTime.now(),
+      ),
     );
-    return match['icon'] as IconData;
+
+    if (match.id.isNotEmpty) {
+      return CategoryIconMapper.fromKey(match.iconKey);
+    }
+    return iconForCategory(_selectedCategory);
   }
 
   IconData _getSelectedWalletIcon() {
     final match = _wallets.firstWhere(
       (w) => w['name'] == _selectedWallet,
-      orElse: () => {'name': _selectedWallet, 'icon': Icons.account_balance_wallet},
+      orElse: () => {
+        'name': _selectedWallet,
+        'icon': Icons.account_balance_wallet,
+      },
     );
     return match['icon'] as IconData;
   }
@@ -110,52 +125,16 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                     'Chọn nhóm',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: AppConstants.paddingMedium),
                   Expanded(
-                    child: GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: 1,
-                      ),
-                      itemCount: _expenseCategories.length,
-                      itemBuilder: (context, index) {
-                        final cat = _expenseCategories[index];
-                        final isSelected = cat['name'] == _selectedCategory;
-                        return InkWell(
-                          onTap: () {
-                            setState(() => _selectedCategory = cat['name'] as String);
-                            Navigator.pop(context);
-                          },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? AppTheme.primaryTeal.withOpacity(0.1)
-                                  : Colors.grey[100],
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: isSelected ? AppTheme.primaryTeal : Colors.transparent,
-                                width: 2,
-                              ),
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(cat['icon'] as IconData, color: AppTheme.primaryTeal),
-                                const SizedBox(height: 8),
-                                Text(
-                                  cat['name'] as String,
-                                  textAlign: TextAlign.center,
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
+                    child: CategoryPickerBottomSheet(
+                      type: CategoryType.expense,
+                      onSelected: (group) {
+                        setState(() => _selectedCategory = group.name);
+                        Navigator.pop(context);
                       },
                     ),
                   ),
@@ -230,7 +209,9 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                       groupValue: tempType,
                       onChanged: (val) => setModalState(() => tempType = val!),
                       activeColor: AppTheme.primaryTeal,
-                      title: Text('Tháng này ${rangeLabel(monthStart, monthEnd)}'),
+                      title: Text(
+                        'Tháng này ${rangeLabel(monthStart, monthEnd)}',
+                      ),
                     ),
 
                     RadioListTile<BudgetPeriodType>(
@@ -238,7 +219,9 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                       groupValue: tempType,
                       onChanged: (val) => setModalState(() => tempType = val!),
                       activeColor: AppTheme.primaryTeal,
-                      title: Text('Quý này ${rangeLabel(quarterStart, quarterEnd)}'),
+                      title: Text(
+                        'Quý này ${rangeLabel(quarterStart, quarterEnd)}',
+                      ),
                     ),
 
                     RadioListTile<BudgetPeriodType>(
@@ -386,7 +369,9 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
+                  borderRadius: BorderRadius.circular(
+                    AppConstants.radiusMedium,
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.05),
@@ -408,8 +393,14 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                         ),
                       ),
                       title: const Text('Chọn nhóm'),
-                      subtitle: Text(_selectedCategory, style: TextStyle(color: AppTheme.primaryTeal)),
-                      trailing: Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+                      subtitle: Text(
+                        _selectedCategory,
+                        style: TextStyle(color: AppTheme.primaryTeal),
+                      ),
+                      trailing: Icon(
+                        Icons.chevron_right,
+                        color: AppTheme.textSecondary,
+                      ),
                       onTap: _showCategoryPicker,
                     ),
                     const Divider(height: 1),
@@ -423,7 +414,10 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                       child: Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.grey[200],
                               borderRadius: BorderRadius.circular(6),
@@ -433,7 +427,9 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: TextFormField(
-                              initialValue: NumberFormat('#,##0').format(_amount),
+                              initialValue: NumberFormat(
+                                '#,##0',
+                              ).format(_amount),
                               keyboardType: TextInputType.number,
                               decoration: const InputDecoration(
                                 border: InputBorder.none,
@@ -445,8 +441,12 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                                 color: Colors.green,
                               ),
                               onChanged: (value) {
-                                final clean = value.replaceAll('.', '').replaceAll(',', '');
-                                setState(() => _amount = double.tryParse(clean) ?? 0.0);
+                                final clean = value
+                                    .replaceAll('.', '')
+                                    .replaceAll(',', '');
+                                setState(
+                                  () => _amount = double.tryParse(clean) ?? 0.0,
+                                );
                               },
                             ),
                           ),
@@ -457,9 +457,15 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
 
                     // Period
                     ListTile(
-                      leading: Icon(Icons.calendar_today, color: AppTheme.textSecondary),
+                      leading: Icon(
+                        Icons.calendar_today,
+                        color: AppTheme.textSecondary,
+                      ),
                       title: Text(_periodLabel()),
-                      trailing: Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+                      trailing: Icon(
+                        Icons.chevron_right,
+                        color: AppTheme.textSecondary,
+                      ),
                       onTap: _showPeriodPicker,
                     ),
                     const Divider(height: 1),
@@ -475,8 +481,14 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                         ),
                       ),
                       title: const Text('Tổng cộng'),
-                      subtitle: Text(_selectedWallet, style: TextStyle(color: AppTheme.primaryTeal)),
-                      trailing: Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+                      subtitle: Text(
+                        _selectedWallet,
+                        style: TextStyle(color: AppTheme.primaryTeal),
+                      ),
+                      trailing: Icon(
+                        Icons.chevron_right,
+                        color: AppTheme.textSecondary,
+                      ),
                       onTap: () {
                         // Wallet picker disabled for edit
                       },
@@ -492,7 +504,9 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                 padding: const EdgeInsets.all(AppConstants.paddingMedium),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
+                  borderRadius: BorderRadius.circular(
+                    AppConstants.radiusMedium,
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.05),
@@ -509,9 +523,14 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                     labelText: 'Ghi chú (tùy chọn)',
                     border: const OutlineInputBorder(),
                     focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: AppTheme.primaryTeal, width: 2),
+                      borderSide: BorderSide(
+                        color: AppTheme.primaryTeal,
+                        width: 2,
+                      ),
                     ),
-                    labelStyle: TextStyle(color: AppTheme.primaryTeal.withOpacity(0.9)),
+                    labelStyle: TextStyle(
+                      color: AppTheme.primaryTeal.withOpacity(0.9),
+                    ),
                   ),
                   onChanged: (v) => setState(() => _note = v.trim()),
                 ),
@@ -526,13 +545,19 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                   onPressed: () async {
                     if (_amount <= 0) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Vui lòng nhập số tiền hợp lệ')),
+                        const SnackBar(
+                          content: Text('Vui lòng nhập số tiền hợp lệ'),
+                        ),
                       );
                       return;
                     }
                     if (_periodStart.isAfter(_periodEnd)) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc')),
+                        const SnackBar(
+                          content: Text(
+                            'Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc',
+                          ),
+                        ),
                       );
                       return;
                     }
@@ -548,6 +573,27 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                     );
 
                     try {
+                      // Ensure category exists in admin categories
+                      final catService = CategoryGroupService();
+                      final cats = await catService.getAll(
+                        type: CategoryType.expense,
+                      );
+                      if (!cats.any((c) => c.name == _selectedCategory)) {
+                        final newGroup = CategoryGroup(
+                          id: const Uuid().v4(),
+                          name: _selectedCategory,
+                          type: CategoryType.expense,
+                          iconKey: 'other',
+                          colorValue: 0xFF9E9E9E,
+                          isSystem: false,
+                          createdAt: DateTime.now(),
+                        );
+                        try {
+                          await catService.add(newGroup);
+                          await _loadCategories();
+                        } catch (_) {}
+                      }
+
                       final service = BudgetService();
                       await service.init();
                       await service.updateBudget(updatedBudget);
@@ -555,12 +601,15 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Đã cập nhật ngân sách')),
                       );
-                      Navigator.pop(context, true); // Return true to signal refresh
+                      Navigator.pop(
+                        context,
+                        true,
+                      ); // Return true to signal refresh
                     } catch (e) {
                       if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(e.toString())),
-                      );
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text(e.toString())));
                     }
                   },
                   style: ElevatedButton.styleFrom(
