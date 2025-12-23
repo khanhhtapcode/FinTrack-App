@@ -296,7 +296,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   void _showCategoryPicker() {
     showModalBottomSheet(
       context: context,
-      builder: (_) => GridView.builder(
+      builder: (sheetContext) => GridView.builder(
         padding: const EdgeInsets.all(16),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 3,
@@ -307,7 +307,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           return InkWell(
             onTap: () {
               setState(() => _selectedCategory = c.name);
-              Navigator.pop(context);
+              Navigator.pop(sheetContext);
             },
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -425,7 +425,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
               ),
-              builder: (_) {
+              builder: (sheetContext) {
                 return SafeArea(
                   child: FractionallySizedBox(
                     heightFactor: 0.6,
@@ -466,7 +466,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                         )
                                       : null,
                                   onTap: () {
-                                    Navigator.pop(context, w);
+                                    Navigator.pop(sheetContext, w);
                                   },
                                 );
                               },

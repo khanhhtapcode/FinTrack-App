@@ -176,8 +176,8 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                     child: CategoryPickerBottomSheet(
                       type: CategoryType.expense,
                       onSelected: (group) {
+                        // Chỉ cập nhật giá trị, bottom sheet tự đóng bên trong widget
                         setState(() => _selectedCategory = group.name);
-                        Navigator.pop(context);
                       },
                     ),
                   ),
