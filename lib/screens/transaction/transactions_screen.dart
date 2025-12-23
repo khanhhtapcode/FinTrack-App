@@ -13,6 +13,7 @@ import '../../widgets/transaction/transaction_grid_view.dart';
 import '../../widgets/transaction/transaction_calendar_view.dart';
 import '../../widgets/transaction/transaction_category_view.dart';
 import 'transaction_day_detail_screen.dart';
+import 'transaction_month_detail_screen.dart';
 import 'transaction_detail_screen.dart';
 import '../../services/wallet_service.dart';
 import '../../models/wallet.dart';
@@ -348,14 +349,23 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           currencyFormat: _currencyFormat,
           isLoading: _isLoadingTransactions,
           onDateTapped: (date, transactions) async {
+            // If grouped by month (Quý/Năm), open month detail; otherwise day detail
+            final bool isMonthGrouping =
+                _timeRangeType == 'Quý' || _timeRangeType == 'Năm';
             final deleted = await Navigator.push<bool>(
               context,
               MaterialPageRoute(
-                builder: (context) => TransactionDayDetailScreen(
-                  selectedDate: date,
-                  transactions: transactions,
-                  currencyFormat: _currencyFormat,
-                ),
+                builder: (context) => isMonthGrouping
+                    ? TransactionMonthDetailScreen(
+                        selectedMonth: DateTime(date.year, date.month, 1),
+                        transactions: transactions,
+                        currencyFormat: _currencyFormat,
+                      )
+                    : TransactionDayDetailScreen(
+                        selectedDate: date,
+                        transactions: transactions,
+                        currencyFormat: _currencyFormat,
+                      ),
               ),
             );
             if (deleted == true) {

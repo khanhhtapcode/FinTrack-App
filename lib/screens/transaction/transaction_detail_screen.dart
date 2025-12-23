@@ -5,7 +5,7 @@ import '../../models/transaction.dart' as model;
 import '../../utils/category_helper.dart';
 import '../../services/transaction_service.dart';
 import '../../services/wallet_service.dart';
-import '../../models/wallet.dart';
+import 'edit_transaction_screen.dart';
 
 class TransactionDetailScreen extends StatefulWidget {
   final model.Transaction transaction;
@@ -106,6 +106,22 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     }
   }
 
+  Future<void> _editTransaction() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditTransactionScreen(
+          transaction: widget.transaction,
+        ),
+      ),
+    );
+
+    // If edit was successful, pop back with result
+    if (result == true && mounted) {
+      Navigator.pop(context, true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final categoryColor = CategoryHelper.getCategoryColor(
@@ -139,14 +155,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.edit, color: Colors.white),
-            onPressed: () {
-              // TODO: Implement edit transaction
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Chức năng chỉnh sửa sẽ được phát triển'),
-                ),
-              );
-            },
+            onPressed: () => _editTransaction(),
           ),
           IconButton(
             icon: const Icon(Icons.delete, color: Colors.white),
