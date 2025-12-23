@@ -94,6 +94,15 @@ class CategoryPickerBottomSheet extends StatelessWidget {
                                         width: 28,
                                         height: 28,
                                         fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                              return Icon(
+                                                CategoryIconMapper.fromKey(
+                                                  group.iconKey,
+                                                ),
+                                                color: Colors.white,
+                                              );
+                                            },
                                       ),
                                     );
                                   }

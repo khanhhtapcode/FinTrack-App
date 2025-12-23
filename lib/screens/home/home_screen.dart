@@ -154,7 +154,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  String _getCategoryIcon(String category) {
+  String? _getCategoryIcon(String category) {
     // Map categories to icons
     const iconMap = {
       'Ăn uống': 'assets/icons/food.png',
@@ -167,7 +167,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'Thưởng': 'assets/icons/bonus.png',
       'Đầu tư': 'assets/icons/investment.png',
     };
-    return iconMap[category] ?? 'assets/icons/other.png';
+    return iconMap[category];
   }
 
   Color _getCategoryColor(String category) {

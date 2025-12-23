@@ -80,7 +80,6 @@ class CategoryIconMapper {
       'hospital': 'assets/icons/hospital.png',
       'position': 'assets/icons/position.png',
       'entertainment': 'assets/icons/cinema.png',
-      'other': 'assets/icons/other.png',
     };
 
     return map[key];
