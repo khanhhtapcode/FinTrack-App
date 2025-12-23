@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../services/auth_service.dart';
@@ -160,6 +161,19 @@ class AdminHomeScreen extends StatelessWidget {
               onTap: () => _confirmAndSeed(context),
             ),
 
+            const SizedBox(height: 12),
+
+            // Reset system categories (DEV only)
+            if (kDebugMode)
+              _buildMenuCard(
+                context,
+                icon: Icons.restart_alt,
+                title: 'Reset danh mục hệ thống (DEV)',
+                subtitle: 'Xóa và seed lại các danh mục hệ thống (chỉ DEV)',
+                color: Colors.redAccent,
+                onTap: () => _confirmAndReset(context),
+              ),
+
             SizedBox(height: 32),
 
             // Logout Button
@@ -237,6 +251,8 @@ class AdminHomeScreen extends StatelessWidget {
       barrierDismissible: false,
       builder: (context) => Center(child: CircularProgressIndicator()),
     );
+
+    // Nothing else to change; _confirmAndReset will handle reset flows if invoked separately.
 
     try {
       final added = await CategorySeed.seedIfNeeded();
@@ -386,5 +402,82 @@ class AdminHomeScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _confirmAndReset(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Reset danh mục hệ thống (DEV)'),
+        content: Text(
+          'Chỉ dùng trong môi trường DEV. Xóa và seed lại các danh mục hệ thống?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Tiếp tục'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    final navigator = Navigator.of(context);
+    // ignore: use_build_context_synchronously
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final removedAndAdded = await CategorySeed.resetSystemCategoriesForDev();
+      if (!context.mounted) return;
+      navigator.pop();
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Reset hoàn tất'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Đã xóa và seed lại các danh mục hệ thống.'),
+                const SizedBox(height: 8),
+                ...removedAndAdded.map((n) => Text('• $n')),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Đóng'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      navigator.pop();
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Lỗi'),
+          content: Text('Không thể reset danh mục: $e'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Đóng'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 }

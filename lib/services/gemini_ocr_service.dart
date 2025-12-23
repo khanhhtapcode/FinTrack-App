@@ -219,15 +219,11 @@ class GeminiOcrService {
       // Determine category based on items or default to Other
       String category = _determineCategoryFromItems(itemsList);
 
-      // Parse payment method and other fields for notes
-      final paymentMethod = data['payment_method'] as String? ?? '';
+      // Parse additional metadata for notes (excluding payment method)
       final invoiceNumber = data['invoice_number'] as String? ?? '';
       final address = data['address'] as String? ?? '';
 
       String notes = '';
-      if (paymentMethod.isNotEmpty) {
-        notes += 'Thanh toán: $paymentMethod';
-      }
       if (invoiceNumber.isNotEmpty) {
         if (notes.isNotEmpty) notes += '\n';
         notes += 'Số hóa đơn: $invoiceNumber';

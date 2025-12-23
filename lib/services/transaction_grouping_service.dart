@@ -70,7 +70,11 @@ class TransactionGroupingService {
   }
 
   /// Format date label (Hôm nay, Hôm qua, hoặc Thứ X - DD/MM/YYYY)
-  static String _getDateLabel(DateTime date, DateTime today, DateTime yesterday) {
+  static String _getDateLabel(
+    DateTime date,
+    DateTime today,
+    DateTime yesterday,
+  ) {
     if (date == today) {
       return 'Hôm nay';
     } else if (date == yesterday) {
@@ -87,7 +91,9 @@ class TransactionGroupingService {
         'Chủ nhật',
       ];
       final dayIndex = date.weekday - 1;
-      final dayName = dayIndex >= 0 && dayIndex < 7 ? dayOfWeek[dayIndex] : 'Unknown';
+      final dayName = dayIndex >= 0 && dayIndex < 7
+          ? dayOfWeek[dayIndex]
+          : 'Unknown';
       final dateStr = DateFormat('dd/MM/yyyy').format(date);
       return '$dayName - $dateStr';
     }
@@ -117,9 +123,11 @@ class TransactionGroupingService {
     final endOfMonth = DateTime(month.year, month.month + 1, 0);
 
     return transactions
-        .where((t) =>
-            t.date.isAfter(startOfMonth.subtract(Duration(days: 1))) &&
-            t.date.isBefore(endOfMonth.add(Duration(days: 1))))
+        .where(
+          (t) =>
+              t.date.isAfter(startOfMonth.subtract(Duration(days: 1))) &&
+              t.date.isBefore(endOfMonth.add(Duration(days: 1))),
+        )
         .toList();
   }
 
@@ -130,21 +138,23 @@ class TransactionGroupingService {
     DateTime end,
   ) {
     return transactions
-        .where((t) =>
-            t.date.isAfter(start.subtract(Duration(days: 1))) &&
-            t.date.isBefore(end.add(Duration(days: 1))))
+        .where(
+          (t) =>
+              t.date.isAfter(start.subtract(Duration(days: 1))) &&
+              t.date.isBefore(end.add(Duration(days: 1))),
+        )
         .toList();
   }
 
-  /// Filter transactions by wallet/payment method
+  /// Filter transactions by wallet id
   static List<model.Transaction> filterByWallet(
     List<model.Transaction> transactions,
-    String wallet,
+    String walletId,
   ) {
-    if (wallet == 'Tổng cộng') {
+    if (walletId == 'all' || walletId.isEmpty) {
       return transactions;
     }
-    return transactions.where((t) => t.paymentMethod == wallet).toList();
+    return transactions.where((t) => (t.walletId ?? '') == walletId).toList();
   }
 
   /// Sort transactions

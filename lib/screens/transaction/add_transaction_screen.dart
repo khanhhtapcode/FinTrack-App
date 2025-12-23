@@ -14,6 +14,8 @@ import '../../utils/category_icon_mapper.dart';
 import 'package:uuid/uuid.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import '../../models/wallet.dart';
+import '../../services/wallet_service.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   const AddTransactionScreen({super.key});
@@ -25,9 +27,12 @@ class AddTransactionScreen extends StatefulWidget {
 class _AddTransactionScreenState extends State<AddTransactionScreen> {
   int _selectedTab = 0; // 0: Khoản chi, 1: Khoản thu, 2: Vay/Nợ
   String _selectedCategory = '';
-  String _selectedPaymentMethod = 'Tiền mặt';
   String _amount = '0';
   DateTime _selectedDate = DateTime.now();
+
+  // Wallets
+  List<Wallet> _wallets = [];
+  String? _selectedWalletId;
 
   final TextEditingController _noteController = TextEditingController();
   final TransactionService _transactionService = TransactionService();
@@ -37,15 +42,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   /// 🔹 DANH MỤC TỪ HIVE
   List<CategoryGroup> _categories = [];
 
-  /// Payment methods (GIỮ NGUYÊN)
-  final List<Map<String, dynamic>> _paymentMethods = [
-    {'name': 'Tiền mặt', 'icon': Icons.money},
-    {'name': 'Thẻ tín dụng', 'icon': Icons.credit_card},
-    {'name': 'Thẻ ghi nợ', 'icon': Icons.payment},
-    {'name': 'Chuyển khoản', 'icon': Icons.account_balance},
-    {'name': 'Ví điện tử', 'icon': Icons.wallet},
-    {'name': 'Khác', 'icon': Icons.more_horiz},
-  ];
+  // Payment method removed – wallet now represents the source of funds.
 
   /// Quick amount buttons
   final List<String> _quickAmounts = [
@@ -61,6 +58,19 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     super.initState();
     _initializeOCR();
     _loadCategoriesFromHive();
+    _loadWallets();
+  }
+
+  Future<void> _loadWallets() async {
+    final service = WalletService();
+    await service.init();
+    final ws = await service.getAll();
+    if (ws.isNotEmpty) {
+      setState(() {
+        _wallets = ws;
+        _selectedWalletId = _wallets.first.id;
+      });
+    }
   }
 
   void _loadCategoriesFromHive() {
@@ -136,7 +146,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   const SizedBox(height: 20),
                   _buildAmountDisplay(),
                   const SizedBox(height: 16),
-                  _buildPaymentMethodSelector(),
+                  _buildWalletSelector(),
+                  const SizedBox(height: 12),
+                  // Payment method removed to avoid duplication with wallet
                   const SizedBox(height: 16),
                   _buildNoteField(),
                   const SizedBox(height: 16),
@@ -377,43 +389,124 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
-  Widget _buildPaymentMethodSelector() {
+  // Payment method selector removed
+
+  Widget _buildWalletSelector() {
+    final selected = _wallets.firstWhere(
+      (w) => w.id == _selectedWalletId,
+      orElse: () => _wallets.isNotEmpty
+          ? _wallets.first
+          : Wallet(
+              id: '',
+              userId: '',
+              name: 'Không có ví',
+              type: WalletType.cash,
+              balance: 0,
+              isDefault: false,
+              createdAt: DateTime.now(),
+            ),
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Text(
-          'Phương thức thanh toán',
+          'Chọn ví',
           style: TextStyle(fontSize: 12, color: Colors.grey),
         ),
         const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _paymentMethods.map((m) {
-            final name = m['name'] as String;
-            final icon = m['icon'] as IconData;
-            return ChoiceChip(
-              label: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: 16),
-                  const SizedBox(width: 6),
-                  Text(name),
-                ],
+        OutlinedButton(
+          onPressed: () async {
+            FocusScope.of(context).unfocus();
+            final chosen = await showModalBottomSheet<Wallet>(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.white,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
               ),
-              selectedColor: AppTheme.primaryTeal,
-              backgroundColor: Colors.grey.shade200,
-              labelStyle: TextStyle(
-                color: _selectedPaymentMethod == name
-                    ? Colors.white
-                    : AppTheme.textPrimary,
-              ),
-              selected: _selectedPaymentMethod == name,
-              onSelected: (selected) {
-                if (selected) setState(() => _selectedPaymentMethod = name);
+              builder: (_) {
+                return SafeArea(
+                  child: FractionallySizedBox(
+                    heightFactor: 0.6,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Center(
+                            child: Container(
+                              width: 40,
+                              height: 4,
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[300],
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          ),
+                          const Text(
+                            'Chọn ví',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 12),
+                          Expanded(
+                            child: ListView.builder(
+                              itemCount: _wallets.length,
+                              itemBuilder: (context, index) {
+                                final w = _wallets[index];
+                                return ListTile(
+                                  title: Text(w.name),
+                                  subtitle: Text('${w.balance} VND'),
+                                  trailing: w.id == _selectedWalletId
+                                      ? const Icon(
+                                          Icons.check,
+                                          color: Colors.green,
+                                        )
+                                      : null,
+                                  onTap: () {
+                                    Navigator.pop(context, w);
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
               },
             );
-          }).toList(),
+
+            if (chosen != null) setState(() => _selectedWalletId = chosen.id);
+          },
+          style: OutlinedButton.styleFrom(
+            side: BorderSide(color: Colors.grey.shade300),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.account_balance_wallet_outlined,
+                    color: AppTheme.primaryTeal,
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    selected.name,
+                    style: TextStyle(color: AppTheme.textPrimary),
+                  ),
+                ],
+              ),
+              const Icon(Icons.keyboard_arrow_down),
+            ],
+          ),
         ),
       ],
     );
@@ -503,9 +596,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       note: _noteController.text,
       date: _selectedDate,
       type: type,
-      paymentMethod: _selectedPaymentMethod,
       createdAt: DateTime.now(),
       userId: userId,
+      walletId: _selectedWalletId,
     );
 
     await _transactionService.addTransaction(tx);

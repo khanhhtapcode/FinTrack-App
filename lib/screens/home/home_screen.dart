@@ -113,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return {
           'id': t.id,
           'title': t.category,
-          'subtitle': t.paymentMethod ?? 'Không có phương thức',
+          'subtitle': DateFormat('dd/MM/yyyy').format(t.date),
           'amount': t.type == model.TransactionType.expense
               ? -t.amount
               : t.amount,

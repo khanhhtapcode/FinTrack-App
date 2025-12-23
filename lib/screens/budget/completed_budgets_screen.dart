@@ -1,8 +1,8 @@
+import 'package:expense_tracker_app/models/category_group.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../config/constants.dart';
-import '../../utils/budget_categories.dart';
 import '../../services/category_group_service.dart';
 import '../../utils/category_icon_mapper.dart';
 import '../../config/theme.dart';
@@ -25,14 +25,35 @@ class _CompletedBudgetsScreenState extends State<CompletedBudgetsScreen> {
   final BudgetService _budgetService = BudgetService();
   final TransactionService _transactionService = TransactionService();
 
+  // cached categories
+  List<CategoryGroup> _categories = [];
+
   @override
   void initState() {
     super.initState();
     _budgetService.init();
+    // preload categories
+    CategoryGroupService().getAll(type: CategoryType.expense).then((cats) {
+      _categories = cats;
+      if (mounted) setState(() {});
+    });
   }
 
-  IconData _getCategoryIcon(String categoryName) =>
-      iconForCategory(categoryName);
+  IconData _getCategoryIcon(String categoryName) {
+    final match = _categories.firstWhere(
+      (c) => c.name == categoryName,
+      orElse: () => CategoryGroup(
+        id: '',
+        name: '',
+        type: CategoryType.expense,
+        iconKey: 'other',
+        colorValue: 0xFF9E9E9E,
+        createdAt: DateTime.now(),
+      ),
+    );
+
+    return CategoryIconMapper.fromKey(match.iconKey);
+  }
 
   List<Budget> _getCompletedBudgets() {
     final now = DateTime.now();
@@ -54,7 +75,6 @@ class _CompletedBudgetsScreenState extends State<CompletedBudgetsScreen> {
   @override
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context, listen: false);
-    final userName = authService.currentUser?.fullName ?? 'User';
     final userId = authService.currentUser?.id;
     final completedBudgets = _getCompletedBudgets();
 

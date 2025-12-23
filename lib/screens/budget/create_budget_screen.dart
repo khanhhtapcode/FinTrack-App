@@ -9,7 +9,12 @@ import '../../models/category_group.dart';
 import '../../widgets/category/category_picker_bottom_sheet.dart';
 import '../../utils/category_icon_mapper.dart';
 import 'package:uuid/uuid.dart';
-import '../../utils/budget_categories.dart';
+
+import 'package:provider/provider.dart';
+
+import '../../models/wallet.dart';
+import '../../services/wallet_service.dart';
+import '../../services/auth_service.dart';
 
 class CreateBudgetScreen extends StatefulWidget {
   const CreateBudgetScreen({super.key});
@@ -37,12 +42,14 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
 
   List<CategoryGroup> _categories = [];
 
-  String _selectedWallet = 'Ví chính';
+  List<Wallet> _wallets = [];
+  String? _selectedWalletId;
 
   @override
   void initState() {
     super.initState();
     _loadCategories();
+    _loadWallets();
   }
 
   Future<void> _loadCategories() async {
@@ -54,6 +61,26 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
       if (_categories.isNotEmpty &&
           !_categories.any((c) => c.name == _selectedCategory)) {
         _selectedCategory = _categories.first.name;
+      }
+    });
+  }
+
+  Future<void> _loadWallets() async {
+    final ws = WalletService();
+    await ws.init();
+
+    final auth = Provider.of<AuthService>(context, listen: false);
+    final userId = auth.currentUser?.id ?? '';
+
+    // seed default wallets for this user (idempotent)
+    await ws.seedDefaultWallets(userId);
+
+    final wallets = await ws.getAll(userId: userId);
+    if (!mounted) return;
+    setState(() {
+      _wallets = wallets;
+      if (_wallets.isNotEmpty && _selectedWalletId == null) {
+        _selectedWalletId = wallets.first.id;
       }
     });
   }
@@ -80,24 +107,32 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
       return CategoryIconMapper.fromKey(match.iconKey);
     }
 
-    return iconForCategory(_selectedCategory);
+    return CategoryIconMapper.fromKey('other');
   }
 
-  final List<Map<String, dynamic>> _wallets = const [
-    {'name': 'Ví chính', 'icon': Icons.account_balance_wallet},
-    {'name': 'Ví tiết kiệm', 'icon': Icons.savings},
-    {'name': 'Ví hàng ngày', 'icon': Icons.shopping_bag},
-  ];
+  IconData walletIcon(WalletType type) {
+    switch (type) {
+      case WalletType.cash:
+        return Icons.money;
+      case WalletType.bank:
+        return Icons.account_balance;
+      case WalletType.ewallet:
+        return Icons.account_balance_wallet;
+      case WalletType.saving:
+        return Icons.savings;
+      case WalletType.investment:
+        return Icons.trending_up;
+    }
+  }
 
   IconData _getSelectedWalletIcon() {
-    final match = _wallets.firstWhere(
-      (w) => w['name'] == _selectedWallet,
-      orElse: () => {
-        'name': _selectedWallet,
-        'icon': Icons.account_balance_wallet,
-      },
+    if (_selectedWalletId == null || _wallets.isEmpty)
+      return Icons.account_balance_wallet;
+    final w = _wallets.firstWhere(
+      (w) => w.id == _selectedWalletId,
+      orElse: () => _wallets.first,
     );
-    return match['icon'] as IconData;
+    return walletIcon(w.type);
   }
 
   void _showCategoryPicker() {
@@ -197,16 +232,35 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                       itemCount: _wallets.length,
                       itemBuilder: (context, index) {
                         final wallet = _wallets[index];
-                        final isSelected = wallet['name'] == _selectedWallet;
+                        final isSelected = wallet.id == _selectedWalletId;
                         return ListTile(
-                          leading: Icon(
-                            wallet['icon'] as IconData,
-                            color: isSelected
-                                ? AppTheme.primaryTeal
-                                : AppTheme.textSecondary,
+                          leading: CircleAvatar(
+                            backgroundColor: AppTheme.primaryTeal.withOpacity(
+                              0.12,
+                            ),
+                            child: Icon(
+                              // show wallet-specific icon
+                              (() {
+                                switch (wallet.type) {
+                                  case WalletType.bank:
+                                    return Icons.account_balance;
+                                  case WalletType.ewallet:
+                                    return Icons.account_balance_wallet;
+                                  case WalletType.saving:
+                                    return Icons.savings;
+                                  case WalletType.investment:
+                                    return Icons.trending_up;
+                                  case WalletType.cash:
+                                    return Icons.money;
+                                }
+                              })(),
+                              color: isSelected
+                                  ? AppTheme.primaryTeal
+                                  : Colors.green,
+                            ),
                           ),
                           title: Text(
-                            wallet['name'] as String,
+                            wallet.name,
                             style: TextStyle(
                               color: isSelected
                                   ? AppTheme.primaryTeal
@@ -220,9 +274,7 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                               ? const Icon(Icons.check, color: Colors.green)
                               : null,
                           onTap: () {
-                            setState(
-                              () => _selectedWallet = wallet['name'] as String,
-                            );
+                            setState(() => _selectedWalletId = wallet.id);
                             Navigator.pop(context);
                           },
                         );
@@ -573,7 +625,21 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                       ),
                       title: const Text('Tổng cộng'),
                       subtitle: Text(
-                        _selectedWallet,
+                        // show wallet name if present
+                        _wallets
+                            .firstWhere(
+                              (w) => w.id == _selectedWalletId,
+                              orElse: () => Wallet(
+                                id: 'unknown',
+                                userId: '',
+                                name: 'Ví chính',
+                                type: WalletType.cash,
+                                balance: 0,
+                                isDefault: false,
+                                createdAt: DateTime.now(),
+                              ),
+                            )
+                            .name,
                         style: TextStyle(color: AppTheme.primaryTeal),
                       ),
                       trailing: Icon(
@@ -770,6 +836,7 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                       endDate: _periodEnd,
                       periodType: _periodType,
                       note: _note.isEmpty ? null : _note,
+                      walletId: _selectedWalletId,
                     );
                     try {
                       await service.addBudget(newBudget);

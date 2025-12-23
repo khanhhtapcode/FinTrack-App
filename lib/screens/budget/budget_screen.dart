@@ -1,7 +1,8 @@
+import 'package:expense_tracker_app/models/category_group.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../utils/budget_categories.dart';
+
 import '../../models/budget.dart';
 import '../../config/constants.dart';
 import '../../config/theme.dart';
@@ -37,6 +38,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
   final TransactionService _transactionService = TransactionService();
   BudgetSortOption _sort = BudgetSortOption.startDateAsc;
 
+  // Cached category groups for display (expense groups)
+  List<CategoryGroup> _categories = [];
+
   void _onNavItemTapped(int index) {
     setState(() {
       _selectedNavIndex = index;
@@ -59,6 +63,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
   Future<void> _initializeBudgetService() async {
     await _budgetService.init();
+    // Preload categories used by budget UI
+    final catService = CategoryGroupService();
+    _categories = await catService.getAll(type: CategoryType.expense);
     _refreshVisiblePeriods();
   }
 
@@ -254,8 +261,21 @@ class _BudgetScreenState extends State<BudgetScreen> {
     );
   }
 
-  IconData _getCategoryIcon(String categoryName) =>
-      iconForCategory(categoryName);
+  IconData _getCategoryIcon(String categoryName) {
+    final match = _categories.firstWhere(
+      (c) => c.name == categoryName,
+      orElse: () => CategoryGroup(
+        id: '',
+        name: '',
+        type: CategoryType.expense,
+        iconKey: 'other',
+        colorValue: 0xFF9E9E9E,
+        createdAt: DateTime.now(),
+      ),
+    );
+
+    return CategoryIconMapper.fromKey(match.iconKey);
+  }
 
   Widget _buildBudgetsList(String userName) {
     final authService = Provider.of<AuthService>(context, listen: false);
@@ -502,28 +522,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
     );
   }
 
-  void _setPeriod(BudgetPeriodType type) {
-    if (!_visiblePeriods.contains(type)) return;
-    final now = DateTime.now();
-    setState(() {
-      _periodType = type;
-      if (type == BudgetPeriodType.month) {
-        _periodStart = DateTime(now.year, now.month, 1);
-        _periodEnd = DateTime(now.year, now.month + 1, 0);
-      } else if (type == BudgetPeriodType.quarter) {
-        final qIndex = ((now.month - 1) ~/ 3); // 0..3
-        final qStartMonth = qIndex * 3 + 1;
-        final qEndMonth = qStartMonth + 2;
-        _periodStart = DateTime(now.year, qStartMonth, 1);
-        _periodEnd = DateTime(now.year, qEndMonth + 1, 0);
-      } else if (type == BudgetPeriodType.year) {
-        _periodStart = DateTime(now.year, 1, 1);
-        _periodEnd = DateTime(now.year, 12, 31);
-      } else if (type == BudgetPeriodType.custom) {
-        _openCustomRangePicker();
-      }
-    });
-  }
+  // NOTE: _setPeriod removed — unused in current UI. Leave logic in history if needed later.
 
   Future<void> _openCustomRangePicker() async {
     final now = DateTime.now();

@@ -9,7 +9,6 @@ import '../../models/category_group.dart';
 import '../../widgets/category/category_picker_bottom_sheet.dart';
 import '../../utils/category_icon_mapper.dart';
 import 'package:uuid/uuid.dart';
-import '../../utils/budget_categories.dart';
 
 class EditBudgetScreen extends StatefulWidget {
   final Budget budget;
@@ -78,7 +77,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
     if (match.id.isNotEmpty) {
       return CategoryIconMapper.fromKey(match.iconKey);
     }
-    return iconForCategory(_selectedCategory);
+    return CategoryIconMapper.fromKey('other');
   }
 
   IconData _getSelectedWalletIcon() {

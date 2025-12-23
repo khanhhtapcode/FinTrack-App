@@ -22,9 +22,6 @@ class Transaction extends HiveObject {
   @HiveField(5)
   TransactionType type;
 
-  @HiveField(6)
-  String? paymentMethod; // Tiền mặt, Thẻ, etc.
-
   @HiveField(7)
   DateTime createdAt;
 
@@ -34,15 +31,18 @@ class Transaction extends HiveObject {
   @HiveField(9)
   String? categoryId; // 🔗 liên kết với CategoryGroup
 
+  @HiveField(10)
+  String? walletId; // 🔗 liên kết với Wallet
+
   Transaction({
     required this.id,
     required this.amount,
     required this.category,
     this.note,
     this.categoryId,
+    this.walletId,
     required this.date,
     required this.type,
-    this.paymentMethod,
     required this.createdAt,
     required this.userId,
   });
@@ -55,7 +55,6 @@ class Transaction extends HiveObject {
       'note': note,
       'date': date.toIso8601String(),
       'type': type.toString(),
-      'paymentMethod': paymentMethod,
       'createdAt': createdAt.toIso8601String(),
       'userId': userId,
       'categoryId': categoryId,
@@ -72,10 +71,10 @@ class Transaction extends HiveObject {
       type: TransactionType.values.firstWhere(
         (e) => e.toString() == json['type'],
       ),
-      paymentMethod: json['paymentMethod'],
       createdAt: DateTime.parse(json['createdAt']),
       userId: json['userId'] ?? '', // Fallback cho data cũ
       categoryId: json['categoryId'],
+      walletId: json['walletId'],
     );
   }
 }

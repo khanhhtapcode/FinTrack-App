@@ -1,4 +1,3 @@
-
 enum BudgetPeriodType { month, quarter, year, custom }
 
 class Budget {
@@ -9,6 +8,7 @@ class Budget {
   final DateTime endDate;
   final BudgetPeriodType periodType;
   final String? note;
+  final String? walletId;
 
   const Budget({
     required this.id,
@@ -18,6 +18,7 @@ class Budget {
     required this.endDate,
     required this.periodType,
     this.note,
+    this.walletId,
   });
 
   bool overlaps(DateTime rangeStart, DateTime rangeEnd) {
