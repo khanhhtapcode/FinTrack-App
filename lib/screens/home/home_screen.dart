@@ -6,7 +6,6 @@ import 'package:expense_tracker_app/widgets/home/balance_card_widget.dart';
 import 'package:expense_tracker_app/widgets/home/chart_widget.dart';
 import 'package:expense_tracker_app/widgets/home/recent_transactions_widget.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../config/constants.dart';
 import '../../services/data/wallet_service.dart';
@@ -19,11 +18,9 @@ import '../../models/transaction.dart' as model;
 import '../../models/category_group.dart';
 import '../../utils/category_icon_mapper.dart';
 import '../transaction/add_transaction_screen.dart';
-import '../auth/login_screen.dart';
 import '../transaction/transactions_screen.dart';
 import '../budget/budget_screen.dart';
 import '../profile/profile_screen.dart';
-import '../profile/account/account_management_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -199,35 +196,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  String? _getCategoryIcon(String category) {
-    // Map categories to icons
-    const iconMap = {
-      'Ăn uống': 'assets/icons/food.png',
-      'Mua sắm': 'assets/icons/shopping.png',
-      'Giải trí': 'assets/icons/entertainment.png',
-      'Di chuyển': 'assets/icons/transport.png',
-      'Sức khỏe': 'assets/icons/health.png',
-      'Giáo dục': 'assets/icons/education.png',
-      'Lương': 'assets/icons/salary.png',
-      'Thưởng': 'assets/icons/bonus.png',
-      'Đầu tư': 'assets/icons/investment.png',
-    };
-    return iconMap[category];
-  }
-
-  Color _getCategoryColor(String category) {
-    // Map categories to colors
-    const colorMap = {
-      'Ăn uống': Colors.orange,
-      'Mua sắm': Colors.pink,
-      'Giải trí': Colors.purple,
-      'Di chuyển': Colors.blue,
-      'Sức khỏe': Colors.red,
-      'Giáo dục': Colors.green,
-    };
-    return colorMap[category] ?? AppTheme.primaryTeal;
-  }
-
   // YearPicker
   Future<void> _showYearPicker(BuildContext context) async {
     await showDialog(
@@ -395,38 +363,6 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         ),
       ],
-    );
-  }
-
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Đăng xuất'),
-        content: Text('Bạn có chắc muốn đăng xuất?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Hủy'),
-          ),
-          TextButton(
-            onPressed: () async {
-              final authService = Provider.of<AuthService>(
-                context,
-                listen: false,
-              );
-              await authService.logout();
-              if (context.mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => LoginScreen()),
-                  (route) => false,
-                );
-              }
-            },
-            child: Text('Đăng xuất', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
     );
   }
 
@@ -722,20 +658,5 @@ class _HomeScreenState extends State<HomeScreen> {
     if (result == true && mounted) {
       _loadData();
     }
-  }
-
-  Widget _buildReportsPlaceholder() {
-    return SafeArea(
-      child: Center(
-        child: Text(
-          'Ngân sách / Báo cáo (đang cập nhật)',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: AppTheme.textSecondary,
-            fontWeight: FontWeight.w600,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ),
-    );
   }
 }

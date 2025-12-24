@@ -28,45 +28,49 @@ class AppNotification {
   });
 
   AppNotification copyWith({bool? isRead}) => AppNotification(
-        id: id,
-        type: type,
-        level: level,
-        title: title,
-        message: message,
-        createdAt: createdAt,
-        isRead: isRead ?? this.isRead,
-        route: route,
-        params: params,
-        uniqueKey: uniqueKey,
-      );
+    id: id,
+    type: type,
+    level: level,
+    title: title,
+    message: message,
+    createdAt: createdAt,
+    isRead: isRead ?? this.isRead,
+    route: route,
+    params: params,
+    uniqueKey: uniqueKey,
+  );
 
   Map<String, dynamic> toMap() => {
-        'id': id,
-        'type': type.name,
-        'level': level.name,
-        'title': title,
-        'message': message,
-        'createdAt': createdAt.toIso8601String(),
-        'isRead': isRead,
-        'route': route,
-        'params': params,
-        'uniqueKey': uniqueKey,
-      };
+    'id': id,
+    'type': type.name,
+    'level': level.name,
+    'title': title,
+    'message': message,
+    'createdAt': createdAt.toIso8601String(),
+    'isRead': isRead,
+    'route': route,
+    'params': params,
+    'uniqueKey': uniqueKey,
+  };
 
   static AppNotification fromMap(Map<String, dynamic> map) => AppNotification(
-        id: map['id'] as String,
-        type: NotificationType.values
-            .firstWhere((e) => e.name == map['type'], orElse: () => NotificationType.system),
-        level: NotificationLevel.values
-            .firstWhere((e) => e.name == map['level'], orElse: () => NotificationLevel.info),
-        title: map['title'] as String,
-        message: map['message'] as String,
-        createdAt: DateTime.parse(map['createdAt'] as String),
-        isRead: (map['isRead'] as bool?) ?? false,
-        route: map['route'] as String?,
-        params: (map['params'] as Map?)?.cast<String, dynamic>(),
-        uniqueKey: map['uniqueKey'] as String?,
-      );
+    id: map['id'] as String,
+    type: NotificationType.values.firstWhere(
+      (e) => e.name == map['type'],
+      orElse: () => NotificationType.system,
+    ),
+    level: NotificationLevel.values.firstWhere(
+      (e) => e.name == map['level'],
+      orElse: () => NotificationLevel.info,
+    ),
+    title: map['title'] as String,
+    message: map['message'] as String,
+    createdAt: DateTime.parse(map['createdAt'] as String),
+    isRead: (map['isRead'] as bool?) ?? false,
+    route: map['route'] as String?,
+    params: (map['params'] as Map?)?.cast<String, dynamic>(),
+    uniqueKey: map['uniqueKey'] as String?,
+  );
 }
 
 enum NotificationType { budget, transaction, system }
@@ -80,7 +84,6 @@ IconData iconForNotification(NotificationType type) {
     case NotificationType.transaction:
       return Icons.receipt_long;
     case NotificationType.system:
-    default:
       return Icons.notifications_none;
   }
 }

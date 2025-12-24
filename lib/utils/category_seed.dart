@@ -403,6 +403,19 @@ class CategorySeed {
       'thể thao & fitness',
       'y tế & sức khỏe',
     };
+
+    for (final cat in expenseCategories) {
+      final normalized = cat.name.trim().toLowerCase();
+      if (invalidExpenseNames.contains(normalized)) {
+        try {
+          await svc.delete(cat.id, force: true);
+          deletedCount++;
+        } catch (_) {
+          // ignore
+        }
+      }
+    }
+
     return deletedCount;
   }
 

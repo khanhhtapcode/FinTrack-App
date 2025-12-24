@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth/user_provider.dart';
-import '../config/theme.dart';
 import '../screens/profile/account/account_management_screen.dart';
 
 /// Reusable avatar widget that syncs across all screens

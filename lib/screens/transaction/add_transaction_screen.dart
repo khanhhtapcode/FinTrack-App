@@ -6,7 +6,6 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../../config/theme.dart';
 import '../../models/transaction.dart' as model;
-import '../../services/data/transaction_service.dart';
 import '../../services/data/transaction_notifier.dart';
 import '../../services/ocr/ocr_service.dart';
 import '../../models/receipt_data.dart';
@@ -43,7 +42,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   String? _selectedWalletId;
 
   final TextEditingController _noteController = TextEditingController();
-  final TransactionService _transactionService = TransactionService();
   final OcrService _ocrService = OcrService();
   final ImagePicker _imagePicker = ImagePicker();
 
@@ -51,15 +49,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   List<CategoryGroup> _categories = [];
 
   // Payment method removed – wallet now represents the source of funds.
-
-  /// Quick amount buttons
-  final List<String> _quickAmounts = [
-    '100,000',
-    '200,000',
-    '500,000',
-    '1,000,000',
-    '2,000,000',
-  ];
 
   @override
   void initState() {
@@ -126,7 +115,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     // Khử trùng lặp theo (type, name) để tránh lặp danh mục hiển thị
     final seen = <String>{};
     var items = box.values
-        .where((c) => type == null || c.type == type)
+        .where((c) => c.type == type)
         .where(
           (c) => seen.add('${c.type.index}-${c.name.trim().toLowerCase()}'),
         )
@@ -677,42 +666,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
-  void _showNoteEditDialog() {
-    final controller = TextEditingController(text: _noteController.text);
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Ghi chú'),
-        content: TextField(
-          controller: controller,
-          maxLines: 4,
-          decoration: InputDecoration(
-            hintText: 'Nhập ghi chú...',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(foregroundColor: Colors.grey),
-            child: const Text('Hủy'),
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _noteController.text = controller.text;
-              });
-              Navigator.pop(context);
-            },
-            style: TextButton.styleFrom(foregroundColor: AppTheme.primaryTeal),
-            child: const Text('Lưu'),
-          ),
-        ],
-      ),
-    );
-  }
-
   // ================= DATE PICKER (COMPACT) =================
 
   Widget _buildDatePickerCompact() {
@@ -1032,13 +985,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     // Show success message with confidence
     final confidencePercent = (data.confidence * 100).toStringAsFixed(0);
     final confidenceEmoji = data.confidence >= 0.7 ? '✅' : '⚠️';
-    final confidenceText = data.confidence >= 0.7
-        ? 'Độ tin cậy: $confidencePercent%'
-        : 'Độ tin cậy thấp: $confidencePercent% - Vui lòng kiểm tra lại';
 
     final message = data.confidence >= 0.7
         ? '$confidenceEmoji Đã quét hóa đơn thành công'
-        : '$confidenceEmoji Đã quét hóa đơn (Độ tin cậy: ${(data.confidence * 100).toStringAsFixed(0)}%)';
+        : '$confidenceEmoji Đã quét hóa đơn (Độ tin cậy: $confidencePercent%)';
 
     if (data.confidence >= 0.7) {
       AppNotification.showSuccess(

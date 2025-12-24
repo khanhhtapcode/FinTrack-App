@@ -22,7 +22,7 @@ class BudgetService {
     // are considered 'system' (global) and will not be surfaced in per-user listings.
     final keys = _budgetsBox.keys.toList();
     for (final key in keys) {
-      final raw = _budgetsBox.get(key) as Map?;
+      final raw = _budgetsBox.get(key);
       if (raw == null) continue;
       if (!raw.containsKey('userId')) {
         raw['userId'] = 'system';
@@ -45,7 +45,7 @@ class BudgetService {
 
   Budget? getById(String id) {
     if (!_initialized) return null;
-    final raw = _budgetsBox.get(id) as Map?;
+    final raw = _budgetsBox.get(id);
     if (raw == null) return null;
     return _budgetFromMap(raw.cast<String, dynamic>());
   }
@@ -113,7 +113,7 @@ class BudgetService {
     if (!_initialized) await init();
 
     // Save locally with userId included
-    final mapped = _budgetToMap(budget).cast<String, dynamic>();
+    final mapped = _budgetToMap(budget);
     mapped['userId'] = userId;
     await _budgetsBox.put(budget.id, mapped);
 
@@ -164,7 +164,7 @@ class BudgetService {
     if (!_initialized) await init();
 
     // Save locally with userId
-    final mapped = _budgetToMap(budget).cast<String, dynamic>();
+    final mapped = _budgetToMap(budget);
     mapped['userId'] = userId;
     await _budgetsBox.put(budget.id, mapped);
 

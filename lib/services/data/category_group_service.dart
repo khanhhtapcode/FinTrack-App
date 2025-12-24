@@ -86,7 +86,6 @@ class CategoryGroupService {
   }
 
   Future<void> add(CategoryGroup group, {String? userId}) async {
-    final nameNorm = _normalize(group.name);
     final incomingCanonical = _canonicalName(group.name);
 
     // Disallow adding a user category that duplicates an existing system category (same type)

@@ -49,7 +49,7 @@ class NotificationService extends ChangeNotifier {
 
   Future<void> markRead(String id, {bool read = true}) async {
     if (!_initialized) return;
-    final map = _notifBox.get(id) as Map?;
+    final map = _notifBox.get(id);
     if (map == null) return;
     map['isRead'] = read;
     await _notifBox.put(id, map);
@@ -59,7 +59,7 @@ class NotificationService extends ChangeNotifier {
   Future<void> markAllRead() async {
     if (!_initialized) return;
     for (final k in _notifBox.keys) {
-      final map = _notifBox.get(k) as Map?;
+      final map = _notifBox.get(k);
       if (map == null) continue;
       map['isRead'] = true;
       await _notifBox.put(k, map);

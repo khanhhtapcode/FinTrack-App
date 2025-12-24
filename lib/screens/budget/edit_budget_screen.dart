@@ -240,7 +240,6 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
       case WalletType.investment:
         return Icons.trending_up;
       case WalletType.cash:
-      default:
         return Icons.account_balance_wallet;
     }
   }

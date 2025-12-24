@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import '../../config/theme.dart';
 import '../../models/transaction.dart' as model;
 import '../../utils/category_helper.dart';
-import '../../services/data/transaction_service.dart';
 import '../../services/data/transaction_notifier.dart';
 import '../../services/data/wallet_service.dart';
 import '../../utils/notification_helper.dart';
@@ -26,7 +25,6 @@ class TransactionDetailScreen extends StatefulWidget {
 }
 
 class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
-  final TransactionService _transactionService = TransactionService();
   bool _isDeleting = false;
   String _walletName = '';
 

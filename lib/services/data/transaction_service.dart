@@ -189,7 +189,7 @@ class TransactionService {
     final now = DateTime.now();
 
     for (final tx in List<Transaction>.from(_box!.values)) {
-      if ((tx.category?.trim().toLowerCase() ?? '') == normalizedFrom) {
+      if (tx.category.trim().toLowerCase() == normalizedFrom) {
         tx.category = toName;
         tx.isSynced = false;
         tx.updatedAt = now;

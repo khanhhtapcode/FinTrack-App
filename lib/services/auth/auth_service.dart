@@ -4,7 +4,6 @@ import 'package:crypto/crypto.dart';
 import 'dart:convert';
 import 'dart:math';
 import '../../models/user.dart';
-import '../../models/wallet.dart';
 import 'email_service.dart';
 import '../data/wallet_service.dart';
 import '../data/transaction_service.dart';

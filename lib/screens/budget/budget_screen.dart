@@ -18,7 +18,6 @@ import '_progress_bar.dart';
 import 'create_budget_screen.dart';
 import 'budget_detail_screen.dart';
 import 'completed_budgets_screen.dart';
-import '../profile/account/account_management_screen.dart';
 
 enum BudgetSortOption { startDateAsc, endDateAsc, limitDesc }
 
@@ -33,7 +32,6 @@ class BudgetScreen extends StatefulWidget {
 
 class _BudgetScreenState extends State<BudgetScreen> {
   int _selectedNavIndex = 3; // Budget tab
-  BudgetPeriodType _periodType = BudgetPeriodType.month;
   late DateTime _periodStart;
   late DateTime _periodEnd;
   final Set<BudgetPeriodType> _visiblePeriods = {};
@@ -541,40 +539,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
   // NOTE: _setPeriod removed — unused in current UI. Leave logic in history if needed later.
 
-  Future<void> _openCustomRangePicker() async {
-    final now = DateTime.now();
-    final initial = DateTimeRange(start: _periodStart, end: _periodEnd);
-    final picked = await showDateRangePicker(
-      context: context,
-      initialDateRange: initial,
-      firstDate: DateTime(now.year - 5, 1, 1),
-      lastDate: DateTime(now.year + 5, 12, 31),
-      helpText: 'Chọn khoảng thời gian',
-    );
-    if (picked != null && mounted) {
-      setState(() {
-        _periodType = BudgetPeriodType.custom;
-        _periodStart = picked.start;
-        _periodEnd = picked.end;
-        _visiblePeriods.add(BudgetPeriodType.custom);
-      });
-    } else {
-      // If canceled, revert selection to previous type (month)
-      if (_visiblePeriods.contains(BudgetPeriodType.month)) {
-        setState(() {
-          _periodType = BudgetPeriodType.month;
-          _periodStart = DateTime(now.year, now.month, 1);
-          _periodEnd = DateTime(now.year, now.month + 1, 0);
-        });
-      }
-    }
-  }
-
   void _markPeriodsWithNewBudget() {
     _refreshVisiblePeriods();
     final now = DateTime.now();
     setState(() {
-      _periodType = BudgetPeriodType.month;
       _periodStart = DateTime(now.year, now.month, 1);
       _periodEnd = DateTime(now.year, now.month + 1, 0);
     });
