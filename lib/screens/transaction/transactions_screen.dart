@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../config/theme.dart';
+import '../../widgets/user_avatar.dart';
 import '../../services/data/transaction_service.dart';
 import '../../services/data/transaction_notifier.dart';
 import '../../services/data/transaction_grouping_service.dart';
@@ -18,6 +19,7 @@ import 'transaction_month_detail_screen.dart';
 import 'transaction_detail_screen.dart';
 import '../../services/data/wallet_service.dart';
 import '../../models/wallet.dart';
+import '../profile/account/account_management_screen.dart';
 
 class TransactionsScreen extends StatefulWidget {
   const TransactionsScreen({super.key});
@@ -341,20 +343,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 
   Widget _buildLeadingAvatar() {
-    final authService = Provider.of<AuthService>(context, listen: false);
-    final userName = authService.currentUser?.fullName ?? 'User';
-    return CircleAvatar(
-      radius: 20,
-      backgroundColor: Colors.white.withAlpha((0.3 * 255).round()),
-      child: Text(
-        userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 18,
-        ),
-      ),
-    );
+    return const UserAvatar(radius: 20);
   }
 
   Widget _buildTransactionsContent() {

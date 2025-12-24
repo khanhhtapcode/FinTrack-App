@@ -9,6 +9,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'config/theme.dart';
 import 'screens/splash/splash_screen.dart';
 import 'services/auth/auth_service.dart';
+import 'services/auth/user_provider.dart';
 import 'services/core/app_settings_provider.dart';
 import 'services/data/transaction_notifier.dart';
 
@@ -120,6 +121,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AppSettingsProvider()),
         ChangeNotifierProvider(create: (_) => TransactionNotifier()),
         ChangeNotifierProvider(create: (_) => NotificationService()..init()),
+        ChangeNotifierProvider(create: (_) => UserProvider()..loadCurrentUser()),
       ],
       child: Consumer<AppSettingsProvider>(
         builder: (context, settings, _) {
