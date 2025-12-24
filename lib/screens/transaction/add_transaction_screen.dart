@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:hive/hive.dart';
 
@@ -30,6 +31,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   int _selectedTab = 0; // 0: Khoản chi, 1: Khoản thu, 2: Vay/Nợ
   String _selectedCategory = '';
   String _amount = '0';
+  final FocusNode _amountFocusNode = FocusNode();
+  final TextEditingController _amountController = TextEditingController(
+    text: '0',
+  );
   DateTime _selectedDate = DateTime.now();
 
   // Wallets
@@ -61,6 +66,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     _initializeOCR();
     _loadCategoriesFromHive();
     _loadWallets();
+    _amountFocusNode.addListener(() {
+      if (_amountFocusNode.hasFocus && _amountController.text == '0') {
+        _setAmount('');
+      }
+    });
   }
 
   Future<void> _loadWallets() async {
@@ -70,7 +80,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     if (ws.isNotEmpty) {
       setState(() {
         _wallets = ws;
-        _selectedWalletId = _wallets.first.id;
+        // Keep current selection if still valid; otherwise require user to pick.
+        if (_selectedWalletId != null &&
+            !_wallets.any((w) => w.id == _selectedWalletId)) {
+          _selectedWalletId = null;
+        }
       });
     }
   }
@@ -120,6 +134,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   @override
   void dispose() {
+    _amountFocusNode.dispose();
+    _amountController.dispose();
     _noteController.dispose();
     _ocrService.dispose();
     super.dispose();
@@ -131,9 +147,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
+        centerTitle: true,
         leading: IconButton(
           icon: Icon(Icons.close, color: AppTheme.textPrimary),
           onPressed: () => Navigator.pop(context),
@@ -143,6 +161,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           style: TextStyle(
             color: AppTheme.textPrimary,
             fontWeight: FontWeight.w600,
+            fontSize: 18,
           ),
         ),
         actions: [
@@ -152,92 +171,117 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           ),
         ],
       ),
-      body: Column(
+      body: SingleChildScrollView(
+        physics: const ClampingScrollPhysics(),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Tab selector
+              _buildTabSelector(),
+              const SizedBox(height: 20),
+
+              // Category button
+              Center(child: _buildCategorySelector()),
+              const SizedBox(height: 24),
+
+              // Amount input field (system numeric keyboard)
+              _buildAmountInput(),
+              const SizedBox(height: 20),
+
+              // Wallet selector
+              _buildWalletSelectorCompact(),
+              const SizedBox(height: 16),
+
+              // Note display
+              _buildNoteDisplay(),
+              const SizedBox(height: 16),
+
+              // Date picker
+              _buildDatePickerCompact(),
+              const SizedBox(height: 32),
+
+              // Save button
+              _buildSaveButton(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabSelector() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(26),
+      ),
+      child: Stack(
         children: [
-          _buildTabSelector(),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _buildCategorySelector(),
-                  const SizedBox(height: 20),
-                  _buildAmountDisplay(),
-                  const SizedBox(height: 16),
-                  _buildWalletSelector(),
-                  const SizedBox(height: 12),
-                  // Payment method removed to avoid duplication with wallet
-                  const SizedBox(height: 16),
-                  _buildNoteField(),
-                  const SizedBox(height: 16),
-                  _buildDatePicker(),
-                  const SizedBox(height: 20),
-                  _buildSaveButton(),
-                  const SizedBox(height: 20),
-                  _buildQuickAmountButtons(),
-                  const SizedBox(height: 20),
-                  _buildCustomNumpad(),
-                ],
+          // Animated selector background (inset pill)
+          AnimatedAlign(
+            alignment: _getTabAlignment(),
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            child: FractionallySizedBox(
+              widthFactor: 1 / 3,
+              child: Container(
+                height: 52,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryTeal,
+                  borderRadius: BorderRadius.circular(26),
+                ),
               ),
             ),
+          ),
+          // Tab buttons (on top)
+          Row(
+            children: [
+              _buildTab('Khoản chi', 0),
+              _buildTab('Khoản thu', 1),
+              _buildTab('Vay/Nợ', 2),
+            ],
           ),
         ],
       ),
     );
   }
 
-  // ================= TAB =================
-
-  Widget _buildTabSelector() {
-    return Row(
-      children: [
-        _buildTab('Khoản chi', 0),
-        _buildTab('Khoản thu', 1),
-        _buildTab('Vay/Nợ', 2),
-      ],
-    );
+  Alignment _getTabAlignment() {
+    switch (_selectedTab) {
+      case 0:
+        return Alignment.centerLeft;
+      case 1:
+        return Alignment.center;
+      case 2:
+        return Alignment.centerRight;
+      default:
+        return Alignment.centerLeft;
+    }
   }
 
   Widget _buildTab(String title, int index) {
     final isSelected = _selectedTab == index;
 
     return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () {
-            setState(() {
-              _selectedTab = index;
-              _loadCategoriesFromHive();
-            });
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-              color: isSelected ? AppTheme.primaryTeal : Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isSelected ? AppTheme.primaryTeal : Colors.grey.shade300,
-              ),
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: AppTheme.primaryTeal.withAlpha(
-                          (0.08 * 255).round(),
-                        ),
-                        blurRadius: 8,
-                        offset: Offset(0, 3),
-                      ),
-                    ]
-                  : null,
-            ),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          setState(() {
+            _selectedTab = index;
+            _loadCategoriesFromHive();
+          });
+        },
+        child: SizedBox(
+          height: 52,
+          child: Center(
             child: Text(
               title,
-              textAlign: TextAlign.center,
               style: TextStyle(
                 color: isSelected ? Colors.white : AppTheme.textPrimary,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                fontSize: 13,
               ),
             ),
           ),
@@ -264,7 +308,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: AppTheme.primaryTeal,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(26),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -314,263 +358,376 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   void _showCategoryPicker() {
     showModalBottomSheet(
       context: context,
-      builder: (sheetContext) => GridView.builder(
-        padding: const EdgeInsets.all(16),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      transitionAnimationController: AnimationController(
+        duration: const Duration(milliseconds: 400),
+        vsync: Navigator.of(context),
+      ),
+      builder: (sheetContext) => Container(
+        height: MediaQuery.of(context).size.height * 0.6,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        itemCount: _categories.length,
-        itemBuilder: (_, index) {
-          final c = _categories[index];
-          return InkWell(
-            onTap: () {
-              setState(() => _selectedCategory = c.name);
-              Navigator.pop(sheetContext);
-            },
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircleAvatar(
-                  backgroundColor: Color(c.colorValue),
-                  child: Builder(
-                    builder: (_) {
-                      final asset = CategoryIconMapper.assetForKey(c.iconKey);
-                      if (asset != null) {
-                        return ClipOval(
-                          child: Image.asset(
-                            asset,
-                            width: 28,
-                            height: 28,
-                            fit: BoxFit.cover,
-                          ),
-                        );
-                      }
-                      return Icon(
-                        CategoryIconMapper.fromKey(c.iconKey),
-                        color: Colors.white,
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(c.name, textAlign: TextAlign.center),
-              ],
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-          );
-        },
+            Expanded(
+              child: GridView.builder(
+                padding: const EdgeInsets.all(16),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                ),
+                itemCount: _categories.length,
+                itemBuilder: (_, index) {
+                  final c = _categories[index];
+                  return InkWell(
+                    onTap: () {
+                      setState(() => _selectedCategory = c.name);
+                      Navigator.pop(sheetContext);
+                    },
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: Color(c.colorValue),
+                          child: Builder(
+                            builder: (_) {
+                              final asset = CategoryIconMapper.assetForKey(
+                                c.iconKey,
+                              );
+                              if (asset != null) {
+                                return ClipOval(
+                                  child: Image.asset(
+                                    asset,
+                                    width: 28,
+                                    height: 28,
+                                    fit: BoxFit.cover,
+                                  ),
+                                );
+                              }
+                              return Icon(
+                                CategoryIconMapper.fromKey(c.iconKey),
+                                color: Colors.white,
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(c.name, textAlign: TextAlign.center),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  // ================= HELPERS =================
+  // ================= AMOUNT INPUT (SYSTEM NUMERIC KEYBOARD) =================
 
-  Widget _buildAmountDisplay() {
-    final displayAmount = _amount.isEmpty ? '0' : _amount;
+  Widget _buildAmountInput() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Số tiền',
-          style: TextStyle(fontSize: 12, color: Colors.grey),
-        ),
-        const SizedBox(height: 6),
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(12),
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w500,
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Flexible(
-                child: Text(
-                  displayAmount,
-                  textAlign: TextAlign.right,
-                  style: TextStyle(
-                    fontSize: 34,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '₫',
-                style: TextStyle(fontSize: 20, color: AppTheme.textPrimary),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  // Payment method selector removed
-
-  Widget _buildWalletSelector() {
-    final selected = _wallets.firstWhere(
-      (w) => w.id == _selectedWalletId,
-      orElse: () => _wallets.isNotEmpty
-          ? _wallets.first
-          : Wallet(
-              id: '',
-              userId: '',
-              name: 'Không có ví',
-              type: WalletType.cash,
-              balance: 0,
-              isDefault: false,
-              createdAt: DateTime.now(),
-            ),
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          'Chọn ví',
-          style: TextStyle(fontSize: 12, color: Colors.grey),
         ),
         const SizedBox(height: 8),
-        OutlinedButton(
-          onPressed: () async {
-            FocusScope.of(context).unfocus();
-            final chosen = await showModalBottomSheet<Wallet>(
-              context: context,
-              isScrollControlled: true,
-              backgroundColor: Colors.white,
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-              ),
-              builder: (sheetContext) {
-                return SafeArea(
-                  child: FractionallySizedBox(
-                    heightFactor: 0.6,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Center(
-                            child: Container(
-                              width: 40,
-                              height: 4,
-                              margin: const EdgeInsets.only(bottom: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[300],
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                          ),
-                          const Text(
-                            'Chọn ví',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          const SizedBox(height: 12),
-                          Expanded(
-                            child: ListView.builder(
-                              itemCount: _wallets.length,
-                              itemBuilder: (context, index) {
-                                final w = _wallets[index];
-                                return ListTile(
-                                  title: Text(w.name),
-                                  subtitle: Text('${w.balance} VND'),
-                                  trailing: w.id == _selectedWalletId
-                                      ? const Icon(
-                                          Icons.check,
-                                          color: Colors.green,
-                                        )
-                                      : null,
-                                  onTap: () {
-                                    Navigator.pop(sheetContext, w);
-                                  },
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            );
-
-            if (chosen != null) setState(() => _selectedWalletId = chosen.id);
-          },
-          style: OutlinedButton.styleFrom(
-            side: BorderSide(color: Colors.grey.shade300),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+        Theme(
+          data: Theme.of(context).copyWith(
+            textSelectionTheme: TextSelectionThemeData(
+              cursorColor: AppTheme.primaryTeal,
+              selectionColor: AppTheme.primaryTeal.withOpacity(0.25),
+              selectionHandleColor: AppTheme.primaryTeal,
             ),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.account_balance_wallet_outlined,
-                    color: AppTheme.primaryTeal,
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    selected.name,
-                    style: TextStyle(color: AppTheme.textPrimary),
-                  ),
-                ],
+          child: TextField(
+            focusNode: _amountFocusNode,
+            controller: _amountController,
+            keyboardType: const TextInputType.numberWithOptions(
+              decimal: true,
+              signed: false,
+            ),
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            textAlign: TextAlign.right,
+            cursorColor: AppTheme.primaryTeal,
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textPrimary,
+            ),
+            decoration: InputDecoration(
+              prefixText: 'VND ',
+              prefixStyle: TextStyle(
+                fontSize: 14,
+                color: AppTheme.primaryTeal,
+                fontWeight: FontWeight.w500,
               ),
-              const Icon(Icons.keyboard_arrow_down),
-            ],
+              suffix: Text(
+                '₫',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: AppTheme.textPrimary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              border: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: AppTheme.primaryTeal, width: 2),
+              ),
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 12,
+                horizontal: 0,
+              ),
+            ),
+            onChanged: (value) {
+              setState(() {
+                _amount = value.isEmpty ? '0' : value;
+              });
+            },
           ),
         ),
       ],
     );
   }
 
-  Widget _buildNoteField() {
-    return TextField(
-      controller: _noteController,
-      maxLines: 3,
-      decoration: InputDecoration(
-        prefixIcon: Icon(Icons.note, size: 20),
-        hintText: 'Ghi chú',
-        filled: true,
-        fillColor: Colors.grey.shade50,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        isDense: true,
+  // ================= WALLET SELECTOR (COMPACT) =================
+
+  Widget _buildWalletSelectorCompact() {
+    final hasSelection = _selectedWalletId != null &&
+      _wallets.any((w) => w.id == _selectedWalletId);
+
+    final selected = hasSelection
+      ? _wallets.firstWhere((w) => w.id == _selectedWalletId)
+      : null;
+
+    final icon = selected == null
+      ? Icons.wallet_outlined
+      : selected.type == WalletType.cash
+        ? Icons.wallet_outlined
+        : selected.type == WalletType.bank
+          ? Icons.account_balance_outlined
+          : Icons.credit_card_outlined;
+
+    return GestureDetector(
+      onTap: () async {
+        FocusScope.of(context).unfocus();
+        final chosen = await showModalBottomSheet<Wallet>(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.white,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          builder: (sheetContext) {
+            return SafeArea(
+              child: FractionallySizedBox(
+                heightFactor: 0.6,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      const Text(
+                        'Chọn ví',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 12),
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: _wallets.length,
+                          itemBuilder: (context, index) {
+                            final w = _wallets[index];
+                            return ListTile(
+                              title: Text(w.name),
+                              subtitle: Text('${w.balance} VND'),
+                              trailing: w.id == _selectedWalletId
+                                  ? const Icon(Icons.check, color: Colors.green)
+                                  : null,
+                              onTap: () {
+                                Navigator.pop(sheetContext, w);
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+
+        if (chosen != null) setState(() => _selectedWalletId = chosen.id);
+      },
+      child: Row(
+        children: [
+          Icon(icon, color: AppTheme.primaryTeal, size: 20),
+          const SizedBox(width: 10),
+          Text(
+            selected?.name ?? 'Chọn ví',
+            style: TextStyle(
+              fontSize: 14,
+              color: selected == null ? Colors.grey : AppTheme.textPrimary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildDatePicker() {
-    return OutlinedButton.icon(
-      onPressed: () async {
+  // ================= NOTE DISPLAY (COMPACT) =================
+
+  Widget _buildNoteDisplay() {
+    final displayNote = _noteController.text.isNotEmpty
+        ? _noteController.text
+        : 'Ghi chú';
+    final isPlaceholder = _noteController.text.isEmpty;
+
+    return GestureDetector(
+      onTap: () {
+        _showNoteEditDialog();
+      },
+      child: Row(
+        children: [
+          Icon(Icons.note_outlined, color: Colors.grey, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              displayNote,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                color: isPlaceholder ? Colors.grey : AppTheme.textPrimary,
+              ),
+            ),
+          ),
+          Icon(Icons.chevron_right, color: Colors.grey.shade300, size: 18),
+        ],
+      ),
+    );
+  }
+
+  void _showNoteEditDialog() {
+    final controller = TextEditingController(text: _noteController.text);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Ghi chú'),
+        content: TextField(
+          controller: controller,
+          maxLines: 4,
+          decoration: InputDecoration(
+            hintText: 'Nhập ghi chú...',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(foregroundColor: Colors.grey),
+            child: const Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _noteController.text = controller.text;
+              });
+              Navigator.pop(context);
+            },
+            style: TextButton.styleFrom(foregroundColor: AppTheme.primaryTeal),
+            child: const Text('Lưu'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ================= DATE PICKER (COMPACT) =================
+
+  Widget _buildDatePickerCompact() {
+    // Format date in Vietnamese
+    final dateStr =
+        '${_getDayOfWeek(_selectedDate)} ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}';
+
+    return GestureDetector(
+      onTap: () async {
         final picked = await showDatePicker(
           context: context,
           initialDate: _selectedDate,
           firstDate: DateTime(2000),
-          lastDate: DateTime.now().add(Duration(days: 365)),
+          lastDate: DateTime.now().add(const Duration(days: 365)),
         );
         if (picked != null) {
           setState(() => _selectedDate = picked);
         }
       },
-      icon: Icon(Icons.calendar_today, color: AppTheme.primaryTeal),
-      label: Text(
-        '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-        style: TextStyle(color: AppTheme.primaryTeal),
-      ),
-      style: OutlinedButton.styleFrom(
-        side: BorderSide(color: Colors.grey.shade300),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Row(
+        children: [
+          Icon(
+            Icons.calendar_today_outlined,
+            color: AppTheme.primaryTeal,
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            dateStr,
+            style: TextStyle(
+              fontSize: 13,
+              color: AppTheme.primaryTeal,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const Spacer(),
+          Icon(Icons.chevron_right, color: Colors.grey.shade300, size: 18),
+        ],
       ),
     );
+  }
+
+  String _getDayOfWeek(DateTime date) {
+    final days = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
+    return days[date.weekday - 1];
   }
 
   // ================= SAVE =================
@@ -583,13 +740,17 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           backgroundColor: AppTheme.primaryTeal,
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(26),
           ),
         ),
         onPressed: _saveTransaction,
         child: const Text(
           'Lưu',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
         ),
       ),
     );
@@ -623,214 +784,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     await notifier.addTransactionAndNotify(tx);
 
     if (mounted) Navigator.pop(context, true);
-  }
-
-  Widget _buildQuickAmountButtons() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isSmallScreen = screenWidth < 360;
-
-    return Wrap(
-      spacing: isSmallScreen ? 6 : 8,
-      runSpacing: isSmallScreen ? 6 : 8,
-      alignment: WrapAlignment.center,
-      children: _quickAmounts.map((amount) {
-        return ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.grey.shade100,
-            foregroundColor: AppTheme.textPrimary,
-            padding: EdgeInsets.symmetric(
-              horizontal: isSmallScreen ? 12 : 16,
-              vertical: isSmallScreen ? 8 : 10,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: 0,
-          ),
-          onPressed: () {
-            setState(() {
-              _amount = _formatNumber(amount.replaceAll(',', ''));
-            });
-          },
-          child: Text(
-            amount,
-            style: TextStyle(fontSize: isSmallScreen ? 12 : 14),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildCustomNumpad() {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final isSmallScreen = screenHeight < 700;
-
-    // Responsive button height
-    final buttonHeight = isSmallScreen ? 48.0 : 56.0;
-    final spacing = isSmallScreen ? 6.0 : 8.0;
-
-    return Column(
-      children: [
-        _buildNumpadRow(
-          ['C', '/', '*', '⌫'],
-          buttonHeight: buttonHeight,
-          spacing: spacing,
-        ),
-        SizedBox(height: spacing),
-        _buildNumpadRow(
-          ['7', '8', '9', '-'],
-          buttonHeight: buttonHeight,
-          spacing: spacing,
-        ),
-        SizedBox(height: spacing),
-        _buildNumpadRow(
-          ['4', '5', '6', '+'],
-          buttonHeight: buttonHeight,
-          spacing: spacing,
-        ),
-        SizedBox(height: spacing),
-        _buildNumpadRow(
-          ['1', '2', '3', '→'],
-          isLastRow: true,
-          buttonHeight: buttonHeight,
-          spacing: spacing,
-        ),
-        SizedBox(height: spacing),
-        Row(
-          children: [
-            Expanded(
-              child: _buildNumpadButton('0', buttonHeight: buttonHeight),
-            ),
-            SizedBox(width: spacing),
-            Expanded(
-              child: _buildNumpadButton('000', buttonHeight: buttonHeight),
-            ),
-            SizedBox(width: spacing),
-            Expanded(
-              child: _buildNumpadButton('.', buttonHeight: buttonHeight),
-            ),
-            SizedBox(width: spacing),
-            Expanded(
-              child: Container(
-                height: buttonHeight,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryTeal,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(Icons.arrow_forward, color: Colors.white),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNumpadRow(
-    List<String> buttons, {
-    bool isLastRow = false,
-    double? buttonHeight,
-    double? spacing,
-  }) {
-    final height = buttonHeight ?? 56.0;
-    final gap = spacing ?? 8.0;
-
-    return Row(
-      children: buttons.map((button) {
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(right: button == buttons.last ? 0 : gap),
-            child: _buildNumpadButton(
-              button,
-              isSpecial: isLastRow && button == '→',
-              buttonHeight: height,
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildNumpadButton(
-    String text, {
-    bool isSpecial = false,
-    double? buttonHeight,
-  }) {
-    final height = buttonHeight ?? 56.0;
-    Color bgColor;
-    Color textColor;
-
-    if (isSpecial) {
-      bgColor = AppTheme.primaryTeal;
-      textColor = Colors.white;
-    } else if (text == 'C' || text == '⌫') {
-      bgColor = Colors.grey[200]!;
-      textColor = Colors.grey[600]!;
-    } else if (text == '/' || text == '*' || text == '-' || text == '+') {
-      bgColor = Colors.grey[200]!;
-      textColor = Colors.grey[600]!;
-    } else {
-      bgColor = Colors.grey[100]!;
-      textColor = AppTheme.textPrimary;
-    }
-
-    return InkWell(
-      onTap: () {
-        _handleNumpadInput(text);
-      },
-      child: Container(
-        height: height,
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Center(
-          child: text == '⌫'
-              ? Icon(Icons.backspace_outlined, color: textColor, size: 20)
-              : text == '→'
-              ? Icon(Icons.arrow_forward, color: textColor, size: 20)
-              : Text(
-                  text,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w500,
-                    color: textColor,
-                  ),
-                ),
-        ),
-      ),
-    );
-  }
-
-  void _handleNumpadInput(String input) {
-    setState(() {
-      if (input == 'C') {
-        _amount = '0';
-      } else if (input == '⌫') {
-        if (_amount.length > 1) {
-          // Remove last character and reformat
-          String temp = _amount.replaceAll(',', '');
-          temp = temp.substring(0, temp.length - 1);
-          _amount = _formatNumber(temp);
-        } else {
-          _amount = '0';
-        }
-      } else if (input == '→') {
-        // Just close keyboard/focus, don't save
-        FocusScope.of(context).unfocus();
-      } else if (input == '+' || input == '-' || input == '*' || input == '/') {
-        // Calculator functions (optional - can implement later)
-      } else {
-        // Number input
-        String temp = _amount.replaceAll(',', '');
-        if (temp == '0') {
-          temp = input;
-        } else {
-          temp += input;
-        }
-        _amount = _formatNumber(temp);
-      }
-    });
   }
 
   String _formatNumber(String number) {
@@ -975,7 +928,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       // Update amount
       if (data.amount > 0) {
         // Round and format with separators
-        _amount = _formatNumber(data.amount.round().toString());
+        _setAmount(_formatNumber(data.amount.round().toString()));
       }
 
       // Update date
@@ -1070,10 +1023,19 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.primaryTeal),
             child: Text('Đóng'),
           ),
         ],
       ),
+    );
+  }
+
+  void _setAmount(String value) {
+    _amount = value.isEmpty ? '0' : value;
+    _amountController.value = TextEditingValue(
+      text: value,
+      selection: TextSelection.collapsed(offset: value.length),
     );
   }
 }
