@@ -341,6 +341,97 @@ class SyncService {
     print('✅ [Sync] Full sync completed');
   }
 
+  // ================= UPLOAD ALL LOCAL DATA TO FIREBASE =================
+  /// Upload ALL local data (transactions, budgets, wallets, categories) to Firebase
+  /// Use this once to migrate existing data to cloud
+  Future<Map<String, dynamic>> uploadAllLocalDataToFirebase(
+    String userId,
+  ) async {
+    if (!await hasInternet()) {
+      return {'success': false, 'message': 'Không có kết nối Internet'};
+    }
+
+    print('📤 [Sync] Uploading all local data for user $userId to Firebase...');
+
+    try {
+      int transactionCount = 0;
+      int budgetCount = 0;
+      int walletCount = 0;
+      int categoryCount = 0;
+
+      // Upload Transactions
+      final transactionBox = await Hive.openBox<Transaction>('transactions');
+      final userTransactions = transactionBox.values
+          .where((t) => t.userId == userId)
+          .toList();
+      if (userTransactions.isNotEmpty) {
+        await _transactionRepo.saveTransactions(userTransactions);
+        transactionCount = userTransactions.length;
+        print('✅ [Sync] Uploaded $transactionCount transactions');
+      }
+
+      // Upload Budgets
+      final budgetBox = await Hive.openBox<Map>('budgets');
+      final budgets = budgetBox.values
+          .map(
+            (map) => Budget(
+              id: map['id'] as String,
+              category: map['category'] as String,
+              limit: (map['limit'] as num).toDouble(),
+              startDate: DateTime.parse(map['startDate'] as String),
+              endDate: DateTime.parse(map['endDate'] as String),
+              periodType: _parseBudgetPeriodType(map['periodType'] as String),
+              note: map['note'] as String?,
+              walletId: map['walletId'] as String?,
+              userId: map['userId'] as String?,
+            ),
+          )
+          .where((b) => (b.userId ?? '') == userId)
+          .toList();
+      if (budgets.isNotEmpty) {
+        await _budgetRepo.saveBudgets(userId, budgets);
+        budgetCount = budgets.length;
+        print('✅ [Sync] Uploaded $budgetCount budgets');
+      }
+
+      // Upload Wallets
+      final walletBox = await Hive.openBox<Wallet>('wallets');
+      final wallets = walletBox.values
+          .where((w) => w.userId == userId)
+          .toList();
+      if (wallets.isNotEmpty) {
+        await _walletRepo.saveWallets(userId, wallets);
+        walletCount = wallets.length;
+        print('✅ [Sync] Uploaded $walletCount wallets');
+      }
+
+      // Upload Categories (all categories - shared across users)
+      final categoryBox = await Hive.openBox<CategoryGroup>('category_groups');
+      final categories = categoryBox.values.toList();
+      if (categories.isNotEmpty) {
+        await _categoryRepo.saveCategories(userId, categories);
+        categoryCount = categories.length;
+        print('✅ [Sync] Uploaded $categoryCount categories');
+      }
+
+      final message =
+          'Đã upload: $transactionCount giao dịch, $budgetCount ngân sách, $walletCount ví, $categoryCount danh mục';
+      print('✅ [Sync] $message');
+
+      return {
+        'success': true,
+        'message': message,
+        'transactions': transactionCount,
+        'budgets': budgetCount,
+        'wallets': walletCount,
+        'categories': categoryCount,
+      };
+    } catch (e) {
+      print('❌ [Sync] Error uploading to Firebase: $e');
+      return {'success': false, 'message': 'Lỗi: ${e.toString()}'};
+    }
+  }
+
   // ================= DELETE FROM CLOUD =================
   /// Delete transaction from Firebase
   Future<void> deleteFromCloud(Transaction transaction) async {

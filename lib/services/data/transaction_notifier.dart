@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import '../../models/transaction.dart';
 import 'transaction_service.dart';
 import 'notification_service.dart';
+import '../firebase/sync_service.dart';
 
 /// Global notifier to trigger automatic updates across all screens
 /// when transactions are added, edited, or deleted
 class TransactionNotifier with ChangeNotifier {
   final TransactionService _transactionService = TransactionService();
   final NotificationService _notificationService = NotificationService();
+  final SyncService _syncService = SyncService();
 
   /// Notify all listeners to refresh transaction data
   void notifyTransactionChanged() {
@@ -23,6 +25,12 @@ class TransactionNotifier with ChangeNotifier {
       tx: transaction,
       userId: transaction.userId,
     );
+
+    // 🌐 Auto sync to Firebase (non-blocking)
+    _syncService.syncAllPendingTransactions().catchError((e) {
+      debugPrint('⚠️ Auto sync failed: $e');
+    });
+
     notifyTransactionChanged();
   }
 
@@ -35,6 +43,12 @@ class TransactionNotifier with ChangeNotifier {
       tx: transaction,
       userId: transaction.userId,
     );
+
+    // 🌐 Auto sync to Firebase (non-blocking)
+    _syncService.syncAllPendingTransactions().catchError((e) {
+      debugPrint('⚠️ Auto sync failed: $e');
+    });
+
     notifyTransactionChanged();
   }
 
@@ -43,6 +57,12 @@ class TransactionNotifier with ChangeNotifier {
     await _transactionService.deleteTransaction(transactionId);
     await _notificationService.init();
     await _notificationService.emitTransactionDeleted(transactionId);
+
+    // 🌐 Auto sync to Firebase (non-blocking)
+    _syncService.syncAllPendingTransactions().catchError((e) {
+      debugPrint('⚠️ Auto sync failed: $e');
+    });
+
     notifyTransactionChanged();
   }
 }

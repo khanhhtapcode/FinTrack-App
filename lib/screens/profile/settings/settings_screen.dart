@@ -5,6 +5,7 @@ import '../../../config/theme.dart';
 import '../../../services/core/app_localization.dart';
 import '../../../services/core/app_settings_provider.dart';
 import '../../../services/auth/auth_service.dart';
+import '../../../services/firebase/sync_service.dart';
 import '../../../utils/notification_helper.dart';
 import 'category_group/category_group_screen.dart';
 
@@ -173,9 +174,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           _buildSettingItem(
             title: 'Đồng bộ Users lên Firebase',
-            subtitle: 'Chạy 1 lần để đăng nhập trên máy khác',
-            icon: Icons.cloud_upload_outlined,
+            subtitle: 'Upload thông tin tài khoản lên cloud',
+            icon: Icons.person_add_outlined,
             onTap: _syncUsersToFirebase,
+          ),
+          _buildDivider(),
+
+          _buildSettingItem(
+            title: 'Upload TẤT CẢ Data lên Firebase',
+            subtitle: 'Giao dịch, ví, ngân sách, danh mục',
+            icon: Icons.cloud_upload_outlined,
+            onTap: _uploadAllDataToFirebase,
           ),
 
           const SizedBox(height: 32),
@@ -341,6 +350,83 @@ class _SettingsScreenState extends State<SettingsScreen> {
           context,
           result['message'],
           duration: const Duration(seconds: 4),
+        );
+      } else {
+        AppNotification.showError(context, result['message']);
+      }
+    }
+  }
+
+  // ===================== UPLOAD ALL DATA TO FIREBASE =====================
+  Future<void> _uploadAllDataToFirebase() async {
+    final authService = context.read<AuthService>();
+    final currentUser = authService.currentUser;
+
+    if (currentUser == null) {
+      AppNotification.showError(context, 'Vui lòng đăng nhập trước');
+      return;
+    }
+
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Upload Data lên Firebase?'),
+        content: const Text(
+          'Sẽ upload TẤT CẢ giao dịch, ví, ngân sách, danh mục của bạn lên Firebase. '
+          'Sau đó bạn có thể đăng nhập trên máy khác và tải data về.\n\n'
+          'Quá trình có thể mất vài phút nếu có nhiều dữ liệu.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('HỦY'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.primaryTeal),
+            child: const Text('UPLOAD'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    // Show loading dialog
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(color: AppTheme.primaryTeal),
+              const SizedBox(width: 20),
+              const Expanded(
+                child: Text(
+                  'Đang upload data lên Firebase...\nVui lòng chờ...',
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final syncService = SyncService();
+    final result = await syncService.uploadAllLocalDataToFirebase(
+      currentUser.id,
+    );
+
+    if (mounted) {
+      Navigator.pop(context); // Close loading dialog
+
+      if (result['success']) {
+        AppNotification.showSuccess(
+          context,
+          result['message'],
+          duration: const Duration(seconds: 5),
         );
       } else {
         AppNotification.showError(context, result['message']);
