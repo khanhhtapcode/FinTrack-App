@@ -196,10 +196,26 @@ class AuthService extends ChangeNotifier {
 
       // Normal user login
       final box = await Hive.openBox<User>(_userBoxName);
-      final user = box.get(email);
+      User? user = box.get(email);
 
+      // 🌐 If user not found locally, try to load from Firebase
       if (user == null) {
-        return {'success': false, 'message': 'Email không tồn tại'};
+        debugPrint('🔍 User not found locally, checking Firebase...');
+        try {
+          final firebaseUser = await _firebaseRepo.getUserByEmail(email);
+          if (firebaseUser != null) {
+            debugPrint('✅ User found in Firebase, downloading to local...');
+            // Save to local Hive
+            await box.put(email, firebaseUser);
+            user = firebaseUser;
+            debugPrint('✅ User saved to local Hive');
+          } else {
+            return {'success': false, 'message': 'Email không tồn tại'};
+          }
+        } catch (e) {
+          debugPrint('⚠️ Failed to check Firebase: $e');
+          return {'success': false, 'message': 'Email không tồn tại'};
+        }
       }
 
       if (!user.isVerified) {
