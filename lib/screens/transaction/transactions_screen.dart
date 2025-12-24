@@ -19,7 +19,6 @@ import 'transaction_month_detail_screen.dart';
 import 'transaction_detail_screen.dart';
 import '../../services/data/wallet_service.dart';
 import '../../models/wallet.dart';
-import '../profile/account/account_management_screen.dart';
 
 class TransactionsScreen extends StatefulWidget {
   const TransactionsScreen({super.key});
