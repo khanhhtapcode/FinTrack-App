@@ -9,6 +9,7 @@ import '../../config/theme.dart';
 import '../../services/auth/auth_service.dart';
 import '../../services/data/budget_service.dart';
 import '../../services/data/transaction_service.dart';
+import '../../services/data/transaction_notifier.dart';
 import '../../services/data/category_group_service.dart';
 import '../../services/core/budget_progress.dart';
 import '../../utils/category_icon_mapper.dart';
@@ -58,6 +59,22 @@ class _BudgetScreenState extends State<BudgetScreen> {
     final now = DateTime.now();
     _periodStart = DateTime(now.year, now.month, 1);
     _periodEnd = DateTime(now.year, now.month + 1, 0);
+    _refreshVisiblePeriods();
+
+    // Listen to transaction changes to auto-update budgets
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TransactionNotifier>().addListener(_onTransactionChanged);
+    });
+  }
+
+  @override
+  void dispose() {
+    context.read<TransactionNotifier>().removeListener(_onTransactionChanged);
+    super.dispose();
+  }
+
+  void _onTransactionChanged() {
+    // Refresh budgets when transactions change
     _refreshVisiblePeriods();
   }
 

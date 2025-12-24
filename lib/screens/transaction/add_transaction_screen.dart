@@ -5,6 +5,7 @@ import 'package:hive/hive.dart';
 import '../../config/theme.dart';
 import '../../models/transaction.dart' as model;
 import '../../services/data/transaction_service.dart';
+import '../../services/data/transaction_notifier.dart';
 import '../../services/ocr/ocr_service.dart';
 import '../../models/receipt_data.dart';
 import '../../services/auth/auth_service.dart';
@@ -86,9 +87,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     // Khử trùng lặp theo (type, name) để tránh lặp danh mục hiển thị
     final seen = <String>{};
     var items = box.values
-      .where((c) => type == null || c.type == type)
-      .where((c) => seen.add('${c.type.index}-${c.name.trim().toLowerCase()}'))
-      .toList();
+        .where((c) => type == null || c.type == type)
+        .where(
+          (c) => seen.add('${c.type.index}-${c.name.trim().toLowerCase()}'),
+        )
+        .toList();
 
     // Sắp xếp alphabetical, "Khác" ở cuối
     items.sort((a, b) {
@@ -96,7 +99,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       final bIsOther = b.name.contains('Khác');
       if (aIsOther && !bIsOther) return 1; // a (Khác) xuống cuối
       if (!aIsOther && bIsOther) return -1; // b (Khác) xuống cuối
-      return a.name.compareTo(b.name); // Cả hai Khác hoặc không Khác: sort alphabetical
+      return a.name.compareTo(
+        b.name,
+      ); // Cả hai Khác hoặc không Khác: sort alphabetical
     });
 
     setState(() {
@@ -614,7 +619,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       walletId: _selectedWalletId,
     );
 
-    await _transactionService.addTransaction(tx);
+    final notifier = context.read<TransactionNotifier>();
+    await notifier.addTransactionAndNotify(tx);
 
     if (mounted) Navigator.pop(context, true);
   }
@@ -1023,11 +1029,19 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     final message = data.confidence >= 0.7
         ? '$confidenceEmoji Đã quét hóa đơn thành công'
         : '$confidenceEmoji Đã quét hóa đơn (Độ tin cậy: ${(data.confidence * 100).toStringAsFixed(0)}%)';
-    
+
     if (data.confidence >= 0.7) {
-      AppNotification.showSuccess(context, message, duration: const Duration(seconds: 3));
+      AppNotification.showSuccess(
+        context,
+        message,
+        duration: const Duration(seconds: 3),
+      );
     } else {
-      AppNotification.showWarning(context, message, duration: const Duration(seconds: 3));
+      AppNotification.showWarning(
+        context,
+        message,
+        duration: const Duration(seconds: 3),
+      );
     }
   }
 

@@ -6,6 +6,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../models/budget.dart';
 import '../../config/constants.dart';
 import '../../services/data/category_group_service.dart';
+import '../../services/data/transaction_notifier.dart';
 import '../../utils/category_icon_mapper.dart';
 import '../../config/theme.dart';
 import '../../services/auth/auth_service.dart';
@@ -37,6 +38,21 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
   void initState() {
     super.initState();
     _currentBudget = widget.budget;
+    _loadData();
+
+    // Listen to transaction changes to auto-update budget details
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TransactionNotifier>().addListener(_onTransactionChanged);
+    });
+  }
+
+  @override
+  void dispose() {
+    context.read<TransactionNotifier>().removeListener(_onTransactionChanged);
+    super.dispose();
+  }
+
+  void _onTransactionChanged() {
     _loadData();
   }
 
@@ -186,11 +202,12 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
     );
 
     final totalDays = end.difference(start).inDays + 1;
-    
-    // Điều chỉnh trục tung: nếu vượt hạn mức thì lấy chi tiêu làm điểm cao nhất, 
+
+    // Điều chỉnh trục tung: nếu vượt hạn mức thì lấy chi tiêu làm điểm cao nhất,
     // nếu chưa vượt thì lấy hạn mức làm điểm cao nhất
     final maxY = _totalSpent >= _currentBudget.limit
-        ? _totalSpent * 1.1 // Vượt mức: chi tiêu + 10% để có khoảng trống
+        ? _totalSpent *
+              1.1 // Vượt mức: chi tiêu + 10% để có khoảng trống
         : _currentBudget.limit * 1.2; // Chưa vượt: hạn mức + 20%
 
     // Check if budget is completed

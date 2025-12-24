@@ -5,6 +5,7 @@ import 'package:hive/hive.dart';
 import '../../config/theme.dart';
 import '../../models/transaction.dart' as model;
 import '../../services/data/transaction_service.dart';
+import '../../services/data/transaction_notifier.dart';
 import '../../services/auth/auth_service.dart';
 import '../../models/category_group.dart';
 import '../../utils/category_icon_mapper.dart';
@@ -15,10 +16,7 @@ import '../../utils/notification_helper.dart';
 class EditTransactionScreen extends StatefulWidget {
   final model.Transaction transaction;
 
-  const EditTransactionScreen({
-    super.key,
-    required this.transaction,
-  });
+  const EditTransactionScreen({super.key, required this.transaction});
 
   @override
   State<EditTransactionScreen> createState() => _EditTransactionScreenState();
@@ -51,26 +49,26 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
 
   void _initializeFromTransaction() {
     final tx = widget.transaction;
-    
+
     // Set tab based on transaction type
     _selectedTab = tx.type == model.TransactionType.income ? 1 : 0;
-    
+
     // Set category
     _selectedCategory = tx.category;
-    
+
     // Set amount (as positive number for display)
     final amountValue = tx.amount.abs().round();
     _amountController.text = _formatNumber(amountValue.toString());
-    
+
     // Set date
     _selectedDate = tx.date;
-    
+
     // Set note
     _noteController.text = tx.note ?? '';
-    
+
     // Set wallet
     _selectedWalletId = tx.walletId;
-    
+
     // Load categories for current type
     _loadCategoriesFromHive();
   }
@@ -83,7 +81,8 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
       setState(() {
         _wallets = ws;
         // Keep selected wallet if valid, otherwise use first
-        if (_selectedWalletId == null || !ws.any((w) => w.id == _selectedWalletId)) {
+        if (_selectedWalletId == null ||
+            !ws.any((w) => w.id == _selectedWalletId)) {
           _selectedWalletId = _wallets.first.id;
         }
       });
@@ -93,15 +92,15 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
   void _loadCategoriesFromHive() {
     final box = Hive.box<CategoryGroup>('category_groups');
 
-    final type = _selectedTab == 0
-        ? CategoryType.expense
-        : CategoryType.income;
+    final type = _selectedTab == 0 ? CategoryType.expense : CategoryType.income;
 
     // Khử trùng lặp theo (type, name)
     final seen = <String>{};
     var items = box.values
         .where((c) => c.type == type)
-        .where((c) => seen.add('${c.type.index}-${c.name.trim().toLowerCase()}'))
+        .where(
+          (c) => seen.add('${c.type.index}-${c.name.trim().toLowerCase()}'),
+        )
         .toList();
 
     // Sắp xếp alphabetical, "Khác" ở cuối
@@ -183,7 +182,7 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
-        color: isIncome 
+        color: isIncome
             ? AppTheme.accentGreen.withAlpha((0.1 * 255).round())
             : Colors.red.withAlpha((0.1 * 255).round()),
         borderRadius: BorderRadius.circular(12),
@@ -272,7 +271,11 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 18),
+            const Icon(
+              Icons.keyboard_arrow_down,
+              color: Colors.white,
+              size: 18,
+            ),
           ],
         ),
       ),
@@ -312,7 +315,10 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
             ),
-            contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 8,
+              horizontal: 10,
+            ),
           ),
           onChanged: (value) {
             // Auto-format with commas
@@ -323,7 +329,9 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
                 if (formatted != value) {
                   _amountController.value = TextEditingValue(
                     text: formatted,
-                    selection: TextSelection.collapsed(offset: formatted.length),
+                    selection: TextSelection.collapsed(
+                      offset: formatted.length,
+                    ),
                   );
                 }
               }
@@ -336,12 +344,12 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
 
   String _formatNumber(String number) {
     if (number.isEmpty) return '0';
-    
+
     // Remove all non-digits
     number = number.replaceAll(RegExp(r'[^0-9]'), '');
-    
+
     if (number.isEmpty) return '0';
-    
+
     // Parse to int and format with commas
     try {
       final value = int.parse(number);
@@ -369,10 +377,7 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Ví',
-          style: TextStyle(fontSize: 12, color: Colors.grey),
-        ),
+        const Text('Ví', style: TextStyle(fontSize: 12, color: Colors.grey)),
         const SizedBox(height: 6),
         GestureDetector(
           onTap: _showWalletPicker,
@@ -582,7 +587,7 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
 
     final amountText = _amountController.text.replaceAll(',', '').trim();
     final amount = int.tryParse(amountText) ?? 0;
-    
+
     if (amount <= 0) {
       AppNotification.showError(context, 'Vui lòng nhập số tiền hợp lệ');
       return;
@@ -604,7 +609,7 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
       final authService = Provider.of<AuthService>(context, listen: false);
       final userId = authService.currentUser?.id ?? '';
 
-        final txType = _selectedTab == 0
+      final txType = _selectedTab == 0
           ? model.TransactionType.expense
           : model.TransactionType.income;
 
@@ -617,12 +622,17 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
         // Store amount as positive; wallet balance logic uses type to apply sign
         amount: amount.toDouble(),
         date: _selectedDate,
-        note: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
+        note: _noteController.text.trim().isEmpty
+            ? null
+            : _noteController.text.trim(),
         walletId: _selectedWalletId,
         createdAt: widget.transaction.createdAt, // Keep original creation date
       );
 
       await _transactionService.updateTransaction(updatedTransaction);
+
+      final notifier = context.read<TransactionNotifier>();
+      notifier.notifyTransactionChanged();
 
       if (mounted) {
         AppNotification.showSuccess(context, 'Đã cập nhật giao dịch');

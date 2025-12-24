@@ -10,6 +10,7 @@ import 'config/theme.dart';
 import 'screens/splash/splash_screen.dart';
 import 'services/auth/auth_service.dart';
 import 'services/core/app_settings_provider.dart';
+import 'services/data/transaction_notifier.dart';
 
 import 'models/user.dart';
 import 'models/transaction.dart';
@@ -47,19 +48,21 @@ Future<void> main() async {
     try {
       await CategorySeed.seedIfNeeded();
       debugPrint('✅ Category seeding complete');
-      
+
       // Remove duplicate categories (if any from old data)
       await CategorySeed.deduplicateCategories();
       debugPrint('✅ Category deduplication complete');
-      
+
       // Clean up invalid income categories
-      final cleanedIncomeCount = await CategorySeed.cleanupInvalidIncomeCategories();
+      final cleanedIncomeCount =
+          await CategorySeed.cleanupInvalidIncomeCategories();
       if (cleanedIncomeCount > 0) {
         debugPrint('✅ Removed $cleanedIncomeCount invalid income categories');
       }
-      
+
       // Clean up invalid expense categories
-      final cleanedExpenseCount = await CategorySeed.cleanupInvalidExpenseCategories();
+      final cleanedExpenseCount =
+          await CategorySeed.cleanupInvalidExpenseCategories();
       if (cleanedExpenseCount > 0) {
         debugPrint('✅ Removed $cleanedExpenseCount invalid expense categories');
       }
@@ -114,6 +117,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthService()),
         ChangeNotifierProvider(create: (_) => AppSettingsProvider()),
+        ChangeNotifierProvider(create: (_) => TransactionNotifier()),
       ],
       child: Consumer<AppSettingsProvider>(
         builder: (context, settings, _) {
