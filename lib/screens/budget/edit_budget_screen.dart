@@ -8,6 +8,7 @@ import '../../services/data/category_group_service.dart';
 import '../../models/category_group.dart';
 import '../../widgets/category/category_picker_bottom_sheet.dart';
 import '../../utils/category_icon_mapper.dart';
+import '../../utils/notification_helper.dart';
 import 'package:uuid/uuid.dart';
 
 class EditBudgetScreen extends StatefulWidget {
@@ -543,21 +544,11 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                 child: ElevatedButton(
                   onPressed: () async {
                     if (_amount <= 0) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Vui lòng nhập số tiền hợp lệ'),
-                        ),
-                      );
+                      AppNotification.showError(context, 'Vui lòng nhập số tiền hợp lệ');
                       return;
                     }
                     if (_periodStart.isAfter(_periodEnd)) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc',
-                          ),
-                        ),
-                      );
+                      AppNotification.showError(context, 'Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc');
                       return;
                     }
 
@@ -606,9 +597,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                       ); // Return true to signal refresh
                     } catch (e) {
                       if (!context.mounted) return;
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text(e.toString())));
+                      AppNotification.showError(context, e.toString());
                     }
                   },
                   style: ElevatedButton.styleFrom(

@@ -8,6 +8,7 @@ import '../../../config/theme.dart';
 import '../../../models/user.dart';
 import '../../../services/core/app_localization.dart';
 import '../../../services/core/app_settings_provider.dart';
+import '../../../utils/notification_helper.dart';
 import '../../auth/login_screen.dart';
 
 // ============================================================================
@@ -334,16 +335,12 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
               onPressed: () async {
                 if (newPasswordController.text !=
                     confirmPasswordController.text) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(t('password_mismatch'))),
-                  );
+                  AppNotification.showError(context, t('password_mismatch'));
                   return;
                 }
 
                 if (newPasswordController.text.length < 6) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(t('password_too_short'))),
-                  );
+                  AppNotification.showError(context, t('password_too_short'));
                   return;
                 }
 
@@ -355,12 +352,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
 
                 if (success && context.mounted) {
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(t('password_changed_success')),
-                      backgroundColor: AppTheme.primaryTeal,
-                    ),
-                  );
+                  AppNotification.showSuccess(context, t('password_changed_success'));
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -386,9 +378,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
       final oldPasswordHash = _hashPassword(oldPassword);
       if (currentUser!.passwordHash != oldPasswordHash) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(t('current_password_incorrect'))),
-          );
+          AppNotification.showError(context, t('current_password_incorrect'));
         }
         return false;
       }
@@ -402,9 +392,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
       return true;
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('${t('error')}: $e')));
+        AppNotification.showError(context, '${t('error')}: $e');
       }
       return false;
     }
@@ -474,18 +462,11 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(t('account_deleted_success')),
-            backgroundColor: Colors.green,
-          ),
-        );
+        AppNotification.showSuccess(context, t('account_deleted_success'));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${t('delete_account_error')}: $e')),
-        );
+        AppNotification.showError(context, '${t('delete_account_error')}: $e');
       }
     }
   }
