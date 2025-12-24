@@ -52,6 +52,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
     }
   }
 
+  // Cached notifier for safe listener handling
+  TransactionNotifier? _transactionNotifier;
+
   @override
   void initState() {
     super.initState();
@@ -60,16 +63,22 @@ class _BudgetScreenState extends State<BudgetScreen> {
     _periodStart = DateTime(now.year, now.month, 1);
     _periodEnd = DateTime(now.year, now.month + 1, 0);
     _refreshVisiblePeriods();
+  }
 
-    // Listen to transaction changes to auto-update budgets
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<TransactionNotifier>().addListener(_onTransactionChanged);
-    });
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final notifier = context.read<TransactionNotifier>();
+    if (_transactionNotifier != notifier) {
+      _transactionNotifier?.removeListener(_onTransactionChanged);
+      _transactionNotifier = notifier;
+      _transactionNotifier!.addListener(_onTransactionChanged);
+    }
   }
 
   @override
   void dispose() {
-    context.read<TransactionNotifier>().removeListener(_onTransactionChanged);
+    _transactionNotifier?.removeListener(_onTransactionChanged);
     super.dispose();
   }
 
@@ -594,7 +603,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
     final yearStart = DateTime(now.year, 1, 1);
     final yearEnd = DateTime(now.year, 12, 31);
 
-    final budgets = _budgetService.getAllBudgets();
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final userId = authService.currentUser?.id;
+    final budgets = _budgetService.getAllBudgets(userId: userId);
     final visible = <BudgetPeriodType>{};
     if (budgets.any((b) => b.overlaps(monthStart, monthEnd))) {
       visible.add(BudgetPeriodType.month);

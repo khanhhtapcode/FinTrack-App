@@ -25,11 +25,9 @@ class TransactionService {
     await init();
     final walletService = WalletService();
 
-    // Ensure transaction has walletId (assign default if missing)
+    // Ensure transaction has walletId — do not auto-assign. UI must require selection.
     if (transaction.walletId == null || transaction.walletId!.isEmpty) {
-      await walletService.init();
-      final def = await walletService.getDefaultWallet();
-      if (def != null) transaction.walletId = def.id;
+      throw ArgumentError('Transaction.walletId must be set before saving');
     }
 
     // 🔥 HYBRID: Save locally first (offline-first approach)
@@ -112,11 +110,9 @@ class TransactionService {
       await walletService.revertTransaction(old);
     }
 
-    // Ensure walletId exists
+    // Ensure walletId exists — caller must provide wallet selection explicitly.
     if (transaction.walletId == null || transaction.walletId!.isEmpty) {
-      await walletService.init();
-      final def = await walletService.getDefaultWallet();
-      if (def != null) transaction.walletId = def.id;
+      throw ArgumentError('Transaction.walletId must be set before updating');
     }
 
     // 🔥 HYBRID: Update locally with sync flag

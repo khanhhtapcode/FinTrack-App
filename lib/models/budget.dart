@@ -9,6 +9,7 @@ class Budget {
   final BudgetPeriodType periodType;
   final String? note;
   final String? walletId;
+  final String? userId; // User that owns this budget (null => system-level)
 
   const Budget({
     required this.id,
@@ -19,6 +20,7 @@ class Budget {
     required this.periodType,
     this.note,
     this.walletId,
+    this.userId,
   });
 
   bool overlaps(DateTime rangeStart, DateTime rangeEnd) {

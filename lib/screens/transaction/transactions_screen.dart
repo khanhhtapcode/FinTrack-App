@@ -51,21 +51,28 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   late List<DateTime> _availableTimePeriods;
   DateTime _selectedTimePeriod = DateTime.now();
 
+  TransactionNotifier? _transactionNotifier;
+
   @override
   void initState() {
     super.initState();
     _generateTimePeriodsList();
     _loadWallets().then((_) => _loadSummary());
+  }
 
-    // Listen to transaction changes
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<TransactionNotifier>().addListener(_onTransactionChanged);
-    });
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Save reference to notifier to safely remove listener in dispose
+    if (_transactionNotifier == null) {
+      _transactionNotifier = context.read<TransactionNotifier>();
+      _transactionNotifier!.addListener(_onTransactionChanged);
+    }
   }
 
   @override
   void dispose() {
-    context.read<TransactionNotifier>().removeListener(_onTransactionChanged);
+    _transactionNotifier?.removeListener(_onTransactionChanged);
     super.dispose();
   }
 

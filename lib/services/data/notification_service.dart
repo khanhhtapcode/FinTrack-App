@@ -74,64 +74,79 @@ class NotificationService extends ChangeNotifier {
   }
 
   // ================= Prefs =================
-  bool get enableBudgetAlerts => (_prefsBox.get('enableBudgetAlerts') as bool?) ?? true;
+  bool get enableBudgetAlerts =>
+      (_prefsBox.get('enableBudgetAlerts') as bool?) ?? true;
   set enableBudgetAlerts(bool v) => _prefsBox.put('enableBudgetAlerts', v);
 
-  bool get enableTransactionAlerts => (_prefsBox.get('enableTransactionAlerts') as bool?) ?? true;
-  set enableTransactionAlerts(bool v) => _prefsBox.put('enableTransactionAlerts', v);
+  bool get enableTransactionAlerts =>
+      (_prefsBox.get('enableTransactionAlerts') as bool?) ?? true;
+  set enableTransactionAlerts(bool v) =>
+      _prefsBox.put('enableTransactionAlerts', v);
 
-  int get budgetThresholdPercent => (_prefsBox.get('budgetThresholdPercent') as int?) ?? 80;
-  set budgetThresholdPercent(int v) => _prefsBox.put('budgetThresholdPercent', v);
+  int get budgetThresholdPercent =>
+      (_prefsBox.get('budgetThresholdPercent') as int?) ?? 80;
+  set budgetThresholdPercent(int v) =>
+      _prefsBox.put('budgetThresholdPercent', v);
 
-  int get budgetEndSoonDays => (_prefsBox.get('budgetEndSoonDays') as int?) ?? 3;
+  int get budgetEndSoonDays =>
+      (_prefsBox.get('budgetEndSoonDays') as int?) ?? 3;
   set budgetEndSoonDays(int v) => _prefsBox.put('budgetEndSoonDays', v);
 
   // ================= Emitters =================
   Future<void> emitTransactionAdded(model.Transaction tx) async {
     if (!_initialized) await init();
     if (!enableTransactionAlerts) return;
-    await add(AppNotification(
-      id: const Uuid().v4(),
-      type: NotificationType.transaction,
-      level: NotificationLevel.success,
-      title: 'Thêm giao dịch thành công',
-      message: _txSummary(tx),
-      createdAt: DateTime.now(),
-      route: 'transaction_detail',
-      params: {'transactionId': tx.id},
-    ));
+    await add(
+      AppNotification(
+        id: const Uuid().v4(),
+        type: NotificationType.transaction,
+        level: NotificationLevel.success,
+        title: 'Thêm giao dịch thành công',
+        message: _txSummary(tx),
+        createdAt: DateTime.now(),
+        route: 'transaction_detail',
+        params: {'transactionId': tx.id},
+      ),
+    );
   }
 
   Future<void> emitTransactionUpdated(model.Transaction tx) async {
     if (!_initialized) await init();
     if (!enableTransactionAlerts) return;
-    await add(AppNotification(
-      id: const Uuid().v4(),
-      type: NotificationType.transaction,
-      level: NotificationLevel.info,
-      title: 'Sửa giao dịch thành công',
-      message: _txSummary(tx),
-      createdAt: DateTime.now(),
-      route: 'transaction_detail',
-      params: {'transactionId': tx.id},
-    ));
+    await add(
+      AppNotification(
+        id: const Uuid().v4(),
+        type: NotificationType.transaction,
+        level: NotificationLevel.info,
+        title: 'Sửa giao dịch thành công',
+        message: _txSummary(tx),
+        createdAt: DateTime.now(),
+        route: 'transaction_detail',
+        params: {'transactionId': tx.id},
+      ),
+    );
   }
 
   Future<void> emitTransactionDeleted(String txId) async {
     if (!_initialized) await init();
     if (!enableTransactionAlerts) return;
-    await add(AppNotification(
-      id: const Uuid().v4(),
-      type: NotificationType.transaction,
-      level: NotificationLevel.info,
-      title: 'Xóa giao dịch thành công',
-      message: 'Giao dịch đã được xóa',
-      createdAt: DateTime.now(),
-    ));
+    await add(
+      AppNotification(
+        id: const Uuid().v4(),
+        type: NotificationType.transaction,
+        level: NotificationLevel.info,
+        title: 'Xóa giao dịch thành công',
+        message: 'Giao dịch đã được xóa',
+        createdAt: DateTime.now(),
+      ),
+    );
   }
 
   // ================= Budget evaluation =================
-  Future<void> evaluateBudgetsAfterTransaction({required model.Transaction tx, required String? userId}) async {
+  Future<void> evaluateBudgetsAfterTransaction({
+    required model.Transaction tx,
+    required String? userId,
+  }) async {
     if (!_initialized) await init();
     if (!enableBudgetAlerts) return;
 
@@ -140,10 +155,10 @@ class NotificationService extends ChangeNotifier {
     final txService = TransactionService();
     await txService.init();
 
-    // Evaluate budgets overlapping transaction date
+    // Evaluate budgets overlapping transaction date (user-scoped)
     final budgets = budgetService
-        .getBudgetsOverlapping(tx.date, tx.date)
-        .where((b) => b.category == tx.category)
+        .getAllBudgets(userId: userId)
+        .where((b) => b.overlaps(tx.date, tx.date) && b.category == tx.category)
         .toList();
 
     for (final b in budgets) {
@@ -158,55 +173,62 @@ class NotificationService extends ChangeNotifier {
       final threshold = budgetThresholdPercent;
       if (percent >= threshold && percent < 100) {
         final key = 'budget-$threshold-${b.id}-${b.endDate.toIso8601String()}';
-        await add(AppNotification(
-          id: const Uuid().v4(),
-          type: NotificationType.budget,
-          level: NotificationLevel.warning,
-          title: 'Đã dùng $percent% ngân sách',
-          message: 'Danh mục ${b.category} (${_periodText(b)})',
-          createdAt: DateTime.now(),
-          uniqueKey: key,
-          route: 'budget_detail',
-          params: {'budgetId': b.id},
-        ));
+        await add(
+          AppNotification(
+            id: const Uuid().v4(),
+            type: NotificationType.budget,
+            level: NotificationLevel.warning,
+            title: 'Đã dùng $percent% ngân sách',
+            message: 'Danh mục ${b.category} (${_periodText(b)})',
+            createdAt: DateTime.now(),
+            uniqueKey: key,
+            route: 'budget_detail',
+            params: {'budgetId': b.id},
+          ),
+        );
       }
 
       // 100% or exceeded
       if (percent >= 100) {
         final key = 'budget-100-${b.id}-${b.endDate.toIso8601String()}';
-        await add(AppNotification(
-          id: const Uuid().v4(),
-          type: NotificationType.budget,
-          level: NotificationLevel.error,
-          title: 'Vượt 100% ngân sách',
-          message: 'Danh mục ${b.category} (${_periodText(b)})',
-          createdAt: DateTime.now(),
-          uniqueKey: key,
-          route: 'budget_detail',
-          params: {'budgetId': b.id},
-        ));
+        await add(
+          AppNotification(
+            id: const Uuid().v4(),
+            type: NotificationType.budget,
+            level: NotificationLevel.error,
+            title: 'Vượt 100% ngân sách',
+            message: 'Danh mục ${b.category} (${_periodText(b)})',
+            createdAt: DateTime.now(),
+            uniqueKey: key,
+            route: 'budget_detail',
+            params: {'budgetId': b.id},
+          ),
+        );
       }
     }
 
     // End soon alerts for all active budgets
     final now = DateTime.now();
-    final all = budgetService.getAllBudgets();
+    final all = budgetService.getAllBudgets(userId: userId);
     for (final b in all) {
       if (b.endDate.isBefore(now)) continue; // already ended
       final daysLeft = b.endDate.difference(now).inDays;
       if (daysLeft <= budgetEndSoonDays) {
         final key = 'budget-end-${b.id}-${b.endDate.toIso8601String()}';
-        await add(AppNotification(
-          id: const Uuid().v4(),
-          type: NotificationType.budget,
-          level: NotificationLevel.info,
-          title: 'Ngân sách sắp kết thúc',
-          message: 'Danh mục ${b.category} còn $daysLeft ngày (${_periodText(b)})',
-          createdAt: DateTime.now(),
-          uniqueKey: key,
-          route: 'budget_detail',
-          params: {'budgetId': b.id},
-        ));
+        await add(
+          AppNotification(
+            id: const Uuid().v4(),
+            type: NotificationType.budget,
+            level: NotificationLevel.info,
+            title: 'Ngân sách sắp kết thúc',
+            message:
+                'Danh mục ${b.category} còn $daysLeft ngày (${_periodText(b)})',
+            createdAt: DateTime.now(),
+            uniqueKey: key,
+            route: 'budget_detail',
+            params: {'budgetId': b.id},
+          ),
+        );
       }
     }
   }
@@ -215,8 +237,8 @@ class NotificationService extends ChangeNotifier {
     final type = tx.type == model.TransactionType.expense
         ? 'Khoản chi'
         : tx.type == model.TransactionType.income
-            ? 'Khoản thu'
-            : 'Vay/Nợ';
+        ? 'Khoản thu'
+        : 'Vay/Nợ';
     return '$type • ${tx.category} • ${tx.amount.toStringAsFixed(0)} VND';
   }
 

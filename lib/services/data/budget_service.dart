@@ -17,14 +17,30 @@ class BudgetService {
   Future<void> init() async {
     if (_initialized) return;
     _budgetsBox = await Hive.openBox<Map>('budgets');
+
+    // Migration: ensure every budget map contains a userId. Budgets without userId
+    // are considered 'system' (global) and will not be surfaced in per-user listings.
+    final keys = _budgetsBox.keys.toList();
+    for (final key in keys) {
+      final raw = _budgetsBox.get(key) as Map?;
+      if (raw == null) continue;
+      if (!raw.containsKey('userId')) {
+        raw['userId'] = 'system';
+        await _budgetsBox.put(key, raw);
+      }
+    }
+
     _initialized = true;
   }
 
-  List<Budget> getAllBudgets() {
+  /// Return budgets. If [userId] is provided, return only that user's budgets.
+  List<Budget> getAllBudgets({String? userId}) {
     if (!_initialized) return [];
-    return _budgetsBox.values
+    final all = _budgetsBox.values
         .map((map) => _budgetFromMap(map.cast<String, dynamic>()))
         .toList();
+    if (userId == null || userId.isEmpty) return all;
+    return all.where((b) => (b.userId ?? '') == userId).toList();
   }
 
   Budget? getById(String id) {
@@ -59,8 +75,10 @@ class BudgetService {
     required String category,
     required DateTime start,
     required DateTime end,
+    String? userId,
   }) {
-    return getAllBudgets().any(
+    final budgets = getAllBudgets(userId: userId);
+    return budgets.any(
       (b) =>
           b.category == category &&
           !b.endDate.isBefore(start) &&
@@ -68,7 +86,7 @@ class BudgetService {
     );
   }
 
-  Future<void> addBudget(Budget budget, {String? userId}) async {
+  Future<void> addBudget(Budget budget, {required String userId}) async {
     // Reject budgets that end in the past (date-only comparison)
     final today = DateTime.now();
     final todayDate = DateTime(today.year, today.month, today.day);
@@ -81,11 +99,12 @@ class BudgetService {
       throw ArgumentError('Ngày kết thúc ngân sách không được trong quá khứ');
     }
 
-    // Basic uniqueness: no duplicate category+overlap
+    // Basic uniqueness: no duplicate category+overlap (scoped to user)
     if (existsOverlappingBudget(
       category: budget.category,
       start: budget.startDate,
       end: budget.endDate,
+      userId: userId,
     )) {
       throw ArgumentError(
         'Đã có ngân sách cho danh mục này trong khoảng thời gian trùng lặp',
@@ -93,30 +112,28 @@ class BudgetService {
     }
     if (!_initialized) await init();
 
-    // 🔥 HYBRID: Save locally first
-    await _budgetsBox.put(budget.id, _budgetToMap(budget));
+    // Save locally with userId included
+    final mapped = _budgetToMap(budget).cast<String, dynamic>();
+    mapped['userId'] = userId;
+    await _budgetsBox.put(budget.id, mapped);
 
     // 🌐 CLOUD SYNC: Upload to Firebase asynchronously
-    if (userId != null) {
-      _firebaseRepo.saveBudget(userId, budget).catchError((e) {
-        print('⚠️ [Budget] Cloud sync failed, will retry later: $e');
-      });
-    }
+    _firebaseRepo.saveBudget(userId, budget).catchError((e) {
+      print('⚠️ [Budget] Cloud sync failed, will retry later: $e');
+    });
   }
 
-  Future<void> deleteBudget(String budgetId, {String? userId}) async {
+  Future<void> deleteBudget(String budgetId, {required String userId}) async {
     if (!_initialized) await init();
     await _budgetsBox.delete(budgetId);
 
     // 🌐 CLOUD SYNC: Delete from Firebase
-    if (userId != null) {
-      _firebaseRepo.deleteBudget(userId, budgetId).catchError((e) {
-        print('⚠️ [Budget] Cloud delete failed: $e');
-      });
-    }
+    _firebaseRepo.deleteBudget(userId, budgetId).catchError((e) {
+      print('⚠️ [Budget] Cloud delete failed: $e');
+    });
   }
 
-  Future<void> updateBudget(Budget budget, {String? userId}) async {
+  Future<void> updateBudget(Budget budget, {required String userId}) async {
     // Reject budgets that end in the past (date-only comparison)
     final today = DateTime.now();
     final todayDate = DateTime(today.year, today.month, today.day);
@@ -129,8 +146,8 @@ class BudgetService {
       throw ArgumentError('Ngày kết thúc ngân sách không được trong quá khứ');
     }
 
-    // Check for overlapping budgets (excluding the current budget being updated)
-    final overlapping = getAllBudgets().where(
+    // Check for overlapping budgets (excluding the current budget being updated) -- user scoped
+    final overlapping = getAllBudgets(userId: userId).where(
       (b) =>
           b.id != budget.id && // Exclude current budget
           b.category == budget.category &&
@@ -146,15 +163,15 @@ class BudgetService {
 
     if (!_initialized) await init();
 
-    // 🔥 HYBRID: Save locally first
-    await _budgetsBox.put(budget.id, _budgetToMap(budget));
+    // Save locally with userId
+    final mapped = _budgetToMap(budget).cast<String, dynamic>();
+    mapped['userId'] = userId;
+    await _budgetsBox.put(budget.id, mapped);
 
     // 🌐 CLOUD SYNC: Upload to Firebase asynchronously
-    if (userId != null) {
-      _firebaseRepo.saveBudget(userId, budget).catchError((e) {
-        print('⚠️ [Budget] Cloud sync failed: $e');
-      });
-    }
+    _firebaseRepo.saveBudget(userId, budget).catchError((e) {
+      print('⚠️ [Budget] Cloud sync failed: $e');
+    });
   }
 
   Map<String, dynamic> _budgetToMap(Budget b) {
@@ -167,6 +184,7 @@ class BudgetService {
       'periodType': b.periodType.toString(),
       'note': b.note,
       'walletId': b.walletId,
+      'userId': b.userId, // may be null for system budgets
     };
   }
 
@@ -180,6 +198,7 @@ class BudgetService {
       periodType: _parsePeriodType(map['periodType'] as String),
       note: map['note'] as String?,
       walletId: map['walletId'] as String?,
+      userId: map['userId'] as String?,
     );
   }
 

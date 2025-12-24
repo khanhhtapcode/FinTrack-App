@@ -282,6 +282,13 @@ class WalletService {
   /// Seed default wallets for a specific user if that user has no wallets yet.
   Future<void> seedDefaultWallets(String userId) async {
     await init();
+
+    // Guard against empty userId - do not seed global/system defaults without a user
+    if (userId.trim().isEmpty) {
+      print('⚠️ seedDefaultWallets called with empty userId, aborting');
+      return;
+    }
+
     final existing = await getByUser(userId);
     final now = DateTime.now();
 
@@ -395,20 +402,15 @@ class WalletService {
     // transaction is model.Transaction from models/transaction.dart
     await init();
     final String? wid = transaction.walletId;
-    Wallet? wallet;
-
-    if (wid != null && wid.isNotEmpty) {
-      wallet = _box.get(wid);
+    if (wid == null || wid.isEmpty) {
+      throw ArgumentError('Cannot apply transaction without a walletId');
     }
 
+    final wallet = _box.get(wid);
     if (wallet == null) {
-      wallet = await getDefaultWallet(userId: transaction.userId);
-      if (wallet == null) return;
-      // attach wallet id to transaction if missing
-      if (transaction.walletId == null || transaction.walletId!.isEmpty) {
-        transaction.walletId = wallet.id;
-        // If the transaction is a Hive object we can save it later by caller
-      }
+      throw StateError(
+        'Wallet with id "$wid" not found when applying transaction',
+      );
     }
 
     final delta = transaction.type == TransactionType.income

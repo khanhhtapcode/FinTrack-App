@@ -76,15 +76,39 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   Future<void> _loadWallets() async {
     final service = WalletService();
     await service.init();
-    final ws = await service.getAll();
+
+    // Load wallets scoped to the current user to avoid showing wallets from other accounts.
+    final auth = context.read<AuthService>();
+    final userId = auth.currentUser?.id ?? '';
+
+    // Ensure default wallets exist for this user (seed only if user present).
+    if (userId.isNotEmpty) {
+      await service.seedDefaultWallets(userId);
+    }
+
+    final ws = await service.getAll(userId: userId.isNotEmpty ? userId : null);
+
     if (ws.isNotEmpty) {
+      // Prefer selecting an existing default wallet for convenience
+      Wallet? preferred;
+      try {
+        preferred = ws.firstWhere((w) => w.isDefault);
+      } catch (_) {
+        preferred = ws.first;
+      }
+
       setState(() {
         _wallets = ws;
-        // Keep current selection if still valid; otherwise require user to pick.
-        if (_selectedWalletId != null &&
+        // If previous selection is invalid or missing, pick preferred wallet or require user to choose.
+        if (_selectedWalletId == null ||
             !_wallets.any((w) => w.id == _selectedWalletId)) {
-          _selectedWalletId = null;
+          _selectedWalletId = preferred?.id;
         }
+      });
+    } else {
+      setState(() {
+        _wallets = [];
+        _selectedWalletId = null;
       });
     }
   }
@@ -518,20 +542,21 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   // ================= WALLET SELECTOR (COMPACT) =================
 
   Widget _buildWalletSelectorCompact() {
-    final hasSelection = _selectedWalletId != null &&
-      _wallets.any((w) => w.id == _selectedWalletId);
+    final hasSelection =
+        _selectedWalletId != null &&
+        _wallets.any((w) => w.id == _selectedWalletId);
 
     final selected = hasSelection
-      ? _wallets.firstWhere((w) => w.id == _selectedWalletId)
-      : null;
+        ? _wallets.firstWhere((w) => w.id == _selectedWalletId)
+        : null;
 
     final icon = selected == null
-      ? Icons.wallet_outlined
-      : selected.type == WalletType.cash
+        ? Icons.wallet_outlined
+        : selected.type == WalletType.cash
         ? Icons.wallet_outlined
         : selected.type == WalletType.bank
-          ? Icons.account_balance_outlined
-          : Icons.credit_card_outlined;
+        ? Icons.account_balance_outlined
+        : Icons.credit_card_outlined;
 
     return GestureDetector(
       onTap: () async {
@@ -617,33 +642,39 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   // ================= NOTE DISPLAY (COMPACT) =================
 
   Widget _buildNoteDisplay() {
-    final displayNote = _noteController.text.isNotEmpty
-        ? _noteController.text
-        : 'Ghi chú';
-    final isPlaceholder = _noteController.text.isEmpty;
-
-    return GestureDetector(
-      onTap: () {
-        _showNoteEditDialog();
-      },
-      child: Row(
-        children: [
-          Icon(Icons.note_outlined, color: Colors.grey, size: 18),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              displayNote,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 13,
-                color: isPlaceholder ? Colors.grey : AppTheme.textPrimary,
-              ),
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Ghi chú',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w500,
           ),
-          Icon(Icons.chevron_right, color: Colors.grey.shade300, size: 18),
-        ],
-      ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _noteController,
+          maxLines: 4,
+          minLines: 3,
+          cursorColor: AppTheme.primaryTeal,
+          style: TextStyle(color: AppTheme.textPrimary),
+          decoration: InputDecoration(
+            hintText: '', // no placeholder text
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: AppTheme.primaryTeal),
+            ),
+            isDense: true,
+            contentPadding: const EdgeInsets.all(12),
+          ),
+        ),
+      ],
     );
   }
 
@@ -768,6 +799,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     final auth = context.read<AuthService>();
     final userId = auth.currentUser?.id ?? '';
 
+    // Require explicit wallet selection — do not auto-assign
+    if (_selectedWalletId == null || _selectedWalletId!.isEmpty) {
+      AppNotification.showError(context, 'Vui lòng chọn ví');
+      return;
+    }
+
     final tx = model.Transaction(
       id: const Uuid().v4(),
       amount: amountValue,
@@ -781,9 +818,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
 
     final notifier = context.read<TransactionNotifier>();
-    await notifier.addTransactionAndNotify(tx);
-
-    if (mounted) Navigator.pop(context, true);
+    try {
+      await notifier.addTransactionAndNotify(tx);
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      AppNotification.showError(context, e.toString());
+    }
   }
 
   String _formatNumber(String number) {

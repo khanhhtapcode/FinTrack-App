@@ -4,8 +4,10 @@ import 'package:crypto/crypto.dart';
 import 'dart:convert';
 import 'dart:math';
 import '../../models/user.dart';
+import '../../models/wallet.dart';
 import 'email_service.dart';
 import '../data/wallet_service.dart';
+import '../data/transaction_service.dart';
 import '../firebase/sync_service.dart';
 import '../firebase/firebase_user_repository.dart';
 
@@ -231,6 +233,35 @@ class AuthService extends ChangeNotifier {
         await _syncService.fullSync(user.id);
         _syncService.startAutoSync(user.id);
         debugPrint('✅ Cloud sync completed for user ${user.id}');
+
+        // After sync, recompute wallet balances from authoritative transactions
+        try {
+          final txService = TransactionService();
+          final walletService = WalletService();
+          final txs = await txService.getTransactionsByUserId(user.id);
+          await walletService.recomputeAllBalances(txs);
+          debugPrint('✅ Recomputed wallet balances after login for ${user.id}');
+
+          // Repair orphan transactions (no walletId) by assigning per-user defaults
+          final orphanCount = txs
+              .where((t) => t.walletId == null || t.walletId!.isEmpty)
+              .length;
+          if (orphanCount > 0) {
+            debugPrint(
+              '🔧 Found $orphanCount orphan transactions after login, assigning defaults...',
+            );
+            try {
+              await walletService.assignDefaultWalletToTransactions(txService);
+              debugPrint(
+                '✅ Assigned default wallets to orphan transactions after login',
+              );
+            } catch (e) {
+              debugPrint('⚠️ Failed to assign default wallets after login: $e');
+            }
+          }
+        } catch (e) {
+          debugPrint('⚠️ Failed to recompute balances after login: $e');
+        }
       } catch (e) {
         debugPrint('⚠️ Cloud sync failed (offline mode): $e');
       }
@@ -274,6 +305,39 @@ class AuthService extends ChangeNotifier {
             debugPrint(
               'Wallet seeding on session restore complete for ${_currentUser!.id}',
             );
+            // Recompute balances in background to ensure UI shows canonical values
+            try {
+              final txService = TransactionService();
+              final txs = await txService.getTransactionsByUserId(
+                _currentUser!.id,
+              );
+              await ws.recomputeAllBalances(txs);
+              debugPrint('✅ Recomputed wallet balances on session restore');
+
+              // Repair orphan transactions (no walletId) by assigning per-user default wallets
+              final orphanCount = txs
+                  .where((t) => t.walletId == null || t.walletId!.isEmpty)
+                  .length;
+              if (orphanCount > 0) {
+                debugPrint(
+                  '🔧 Found $orphanCount orphan transactions, assigning defaults...',
+                );
+                try {
+                  await ws.assignDefaultWalletToTransactions(txService);
+                  debugPrint(
+                    '✅ Assigned default wallets to orphan transactions',
+                  );
+                } catch (e) {
+                  debugPrint(
+                    '⚠️ Failed to assign default wallets to transactions: $e',
+                  );
+                }
+              }
+            } catch (e) {
+              debugPrint(
+                '⚠️ Failed to recompute balances on session restore: $e',
+              );
+            }
           } catch (e) {
             debugPrint('Wallet seeding on session restore failed: $e');
           }
@@ -294,6 +358,12 @@ class AuthService extends ChangeNotifier {
     } catch (e) {
       debugPrint('⚠️ Error during logout sync: $e');
     }
+
+    // Do NOT clear user wallets on logout — keep data persisted locally so wallets are
+    // preserved across sessions. Clearing wallets here caused users to lose custom wallets
+    // and appear to have 'reset' wallets on next login. If an explicit account deletion
+    // feature is added later, it should be handled separately.
+    // (No-op)
 
     final sessionBox = await Hive.openBox(_sessionBoxName);
     await sessionBox.clear();

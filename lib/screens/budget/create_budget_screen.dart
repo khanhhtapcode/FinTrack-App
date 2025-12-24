@@ -59,7 +59,9 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
     // Khử trùng lặp theo (type, name)
     final seen = <String>{};
     var cats = catsRaw
-        .where((c) => seen.add('${c.type.index}-${c.name.trim().toLowerCase()}'))
+        .where(
+          (c) => seen.add('${c.type.index}-${c.name.trim().toLowerCase()}'),
+        )
         .toList();
 
     // Sắp xếp alphabetical, "Khác" ở cuối
@@ -95,8 +97,10 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
     if (!mounted) return;
     setState(() {
       _wallets = wallets;
-      if (_wallets.isNotEmpty && _selectedWalletId == null) {
-        _selectedWalletId = wallets.first.id;
+      // Do not auto-select a wallet — require explicit user selection.
+      if (_selectedWalletId != null &&
+          !_wallets.any((w) => w.id == _selectedWalletId)) {
+        _selectedWalletId = null;
       }
     });
   }
@@ -285,6 +289,10 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                                   ? FontWeight.w600
                                   : FontWeight.normal,
                             ),
+                          ),
+                          subtitle: Text(
+                            '${NumberFormat('#,##0', 'vi_VN').format(wallet.balance)} ₫',
+                            style: TextStyle(color: AppTheme.textSecondary),
                           ),
                           trailing: isSelected
                               ? const Icon(Icons.check, color: Colors.green)
@@ -639,24 +647,23 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                           color: AppTheme.primaryTeal,
                         ),
                       ),
-                      title: const Text('Tổng cộng'),
+                      title: const Text('Chọn ví'),
                       subtitle: Text(
-                        // show wallet name if present
-                        _wallets
-                            .firstWhere(
-                              (w) => w.id == _selectedWalletId,
-                              orElse: () => Wallet(
-                                id: 'unknown',
-                                userId: '',
-                                name: 'Ví chính',
-                                type: WalletType.cash,
-                                balance: 0,
-                                isDefault: false,
-                                createdAt: DateTime.now(),
-                              ),
-                            )
-                            .name,
-                        style: TextStyle(color: AppTheme.primaryTeal),
+                        // show wallet name + balance if present; otherwise show explicit placeholder
+                        _selectedWalletId == null
+                            ? 'Chưa chọn ví'
+                            : '${_wallets.firstWhere(
+                                (w) => w.id == _selectedWalletId,
+                                orElse: () => Wallet(id: 'unknown', userId: '', name: 'Ví không xác định', type: WalletType.cash, balance: 0, isDefault: false, createdAt: DateTime.now()),
+                              ).name} • ${NumberFormat('#,##0', 'vi_VN').format(_wallets.firstWhere(
+                                (w) => w.id == _selectedWalletId,
+                                orElse: () => Wallet(id: 'unknown', userId: '', name: 'Ví không xác định', type: WalletType.cash, balance: 0, isDefault: false, createdAt: DateTime.now()),
+                              ).balance)} ₫',
+                        style: TextStyle(
+                          color: _selectedWalletId == null
+                              ? AppTheme.primaryTeal
+                              : AppTheme.textSecondary,
+                        ),
                       ),
                       trailing: Icon(
                         Icons.chevron_right,
@@ -762,11 +769,17 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                 child: ElevatedButton(
                   onPressed: () async {
                     if (_amount <= 0) {
-                      AppNotification.showError(context, 'Vui lòng nhập số tiền hợp lệ');
+                      AppNotification.showError(
+                        context,
+                        'Vui lòng nhập số tiền hợp lệ',
+                      );
                       return;
                     }
                     if (_periodStart.isAfter(_periodEnd)) {
-                      AppNotification.showError(context, 'Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc');
+                      AppNotification.showError(
+                        context,
+                        'Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc',
+                      );
                       return;
                     }
                     // Reject budgets with end date in the past (date-only comparison)
@@ -782,7 +795,10 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                       _periodEnd.day,
                     );
                     if (endDateOnly.isBefore(todayDate)) {
-                      AppNotification.showError(context, 'Ngày kết thúc ngân sách không được trong quá khứ');
+                      AppNotification.showError(
+                        context,
+                        'Ngày kết thúc ngân sách không được trong quá khứ',
+                      );
                       return;
                     }
                     // Ensure category exists in admin categories (create non-system group if needed)
@@ -811,14 +827,31 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                     final service = BudgetService();
                     await service.init(); // Ensure Hive is initialized
                     if (!context.mounted) return;
+                    final auth = Provider.of<AuthService>(
+                      context,
+                      listen: false,
+                    );
+                    final userId = auth.currentUser?.id ?? '';
+
                     final exists = service.existsOverlappingBudget(
                       category: _selectedCategory,
                       start: _periodStart,
                       end: _periodEnd,
+                      userId: userId,
                     );
                     if (exists) {
                       if (!context.mounted) return;
-                      AppNotification.showError(context, 'Đã có ngân sách cho danh mục này trong khoảng thời gian trùng lặp');
+                      AppNotification.showError(
+                        context,
+                        'Đã có ngân sách cho danh mục này trong khoảng thời gian trùng lặp',
+                      );
+                      return;
+                    }
+
+                    // Ensure wallet was selected explicitly
+                    if (_selectedWalletId == null ||
+                        _selectedWalletId!.isEmpty) {
+                      AppNotification.showError(context, 'Vui lòng chọn ví');
                       return;
                     }
 
@@ -831,11 +864,15 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                       periodType: _periodType,
                       note: _note.isEmpty ? null : _note,
                       walletId: _selectedWalletId,
+                      userId: userId,
                     );
                     try {
-                      await service.addBudget(newBudget);
+                      await service.addBudget(newBudget, userId: userId);
                       if (!context.mounted) return;
-                      AppNotification.showSuccess(context, '\u0110ã lưu ngân sách');
+                      AppNotification.showSuccess(
+                        context,
+                        '\u0110ã lưu ngân sách',
+                      );
                       Navigator.pop(context, true);
                     } catch (e) {
                       if (!context.mounted) return;

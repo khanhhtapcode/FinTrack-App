@@ -76,15 +76,24 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
   Future<void> _loadWallets() async {
     final service = WalletService();
     await service.init();
-    final ws = await service.getAll();
+
+    // Load wallets for the transaction's user only
+    final userId = widget.transaction.userId;
+    final ws = await service.getAll(userId: userId.isNotEmpty ? userId : null);
+
     if (ws.isNotEmpty) {
       setState(() {
         _wallets = ws;
-        // Keep selected wallet if valid, otherwise use first
-        if (_selectedWalletId == null ||
-            !ws.any((w) => w.id == _selectedWalletId)) {
-          _selectedWalletId = _wallets.first.id;
+        // Keep selected wallet if valid; otherwise require explicit selection
+        if (_selectedWalletId != null &&
+            !_wallets.any((w) => w.id == _selectedWalletId)) {
+          _selectedWalletId = null;
         }
+      });
+    } else {
+      setState(() {
+        _wallets = [];
+        _selectedWalletId = null;
       });
     }
   }

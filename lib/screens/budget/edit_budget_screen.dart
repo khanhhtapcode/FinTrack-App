@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../../config/constants.dart';
 import '../../config/theme.dart';
 import '../../models/budget.dart';
 import '../../services/data/budget_service.dart';
+import '../../models/wallet.dart';
+import '../../services/data/wallet_service.dart';
+import '../../services/auth/auth_service.dart';
 import '../../services/data/category_group_service.dart';
 import '../../models/category_group.dart';
 import '../../widgets/category/category_picker_bottom_sheet.dart';
@@ -30,13 +34,11 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
 
   List<CategoryGroup> _categories = [];
 
-  String _selectedWallet = 'Ví chính';
+  List<Wallet> _wallets = [];
+  String? _selectedWalletId;
 
-  final List<Map<String, dynamic>> _wallets = const [
-    {'name': 'Ví chính', 'icon': Icons.account_balance_wallet},
-    {'name': 'Ví tiết kiệm', 'icon': Icons.savings},
-    {'name': 'Ví hàng ngày', 'icon': Icons.shopping_bag},
-  ];
+  // UI: persistent controller for the note field to preserve cursor and text across rebuilds
+  late TextEditingController _noteController;
 
   @override
   void initState() {
@@ -49,7 +51,11 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
     _periodEnd = widget.budget.endDate;
     _periodType = widget.budget.periodType;
 
+    // Initialize the note controller once to avoid recreating it on each build
+    _noteController = TextEditingController(text: _note);
+
     _loadCategories();
+    _loadWallets();
   }
 
   Future<void> _loadCategories() async {
@@ -60,6 +66,132 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
       _categories = cats;
       // Keep existing budget category even if not present in seed; user can switch to seeded groups
     });
+  }
+
+  Future<void> _loadWallets() async {
+    final service = WalletService();
+    await service.init();
+
+    final auth = Provider.of<AuthService>(context, listen: false);
+    final userId = auth.currentUser?.id ?? '';
+
+    if (userId.isNotEmpty) {
+      await service.seedDefaultWallets(userId);
+    }
+
+    final wallets = await service.getAll(
+      userId: userId.isNotEmpty ? userId : null,
+    );
+    if (!mounted) return;
+
+    setState(() {
+      _wallets = wallets;
+      // Keep selection if it still exists; otherwise require the user to select explicitly
+      if (_wallets.any((w) => w.id == widget.budget.walletId)) {
+        _selectedWalletId = widget.budget.walletId;
+      } else {
+        _selectedWalletId = null;
+      }
+    });
+  }
+
+  void _showWalletPicker() {
+    FocusScope.of(context).unfocus();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        return SafeArea(
+          child: FractionallySizedBox(
+            heightFactor: 0.6,
+            child: Padding(
+              padding: const EdgeInsets.all(AppConstants.paddingMedium),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Text(
+                    'Chọn ví',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: AppConstants.paddingMedium),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: _wallets.length,
+                      itemBuilder: (context, index) {
+                        final wallet = _wallets[index];
+                        final isSelected = wallet.id == _selectedWalletId;
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: AppTheme.primaryTeal.withOpacity(
+                              0.12,
+                            ),
+                            child: Icon(
+                              (() {
+                                switch (wallet.type) {
+                                  case WalletType.bank:
+                                    return Icons.account_balance;
+                                  case WalletType.ewallet:
+                                    return Icons.account_balance_wallet;
+                                  case WalletType.saving:
+                                    return Icons.savings;
+                                  case WalletType.investment:
+                                    return Icons.trending_up;
+                                  case WalletType.cash:
+                                    return Icons.money;
+                                }
+                              })(),
+                              color: isSelected
+                                  ? AppTheme.primaryTeal
+                                  : Colors.green,
+                            ),
+                          ),
+                          title: Text(
+                            wallet.name,
+                            style: TextStyle(
+                              color: isSelected
+                                  ? AppTheme.primaryTeal
+                                  : AppTheme.textPrimary,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                          trailing: isSelected
+                              ? const Icon(Icons.check, color: Colors.green)
+                              : null,
+                          onTap: () {
+                            setState(() => _selectedWalletId = wallet.id);
+                            Navigator.pop(context);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   IconData _getSelectedCategoryIcon() {
@@ -82,14 +214,35 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
   }
 
   IconData _getSelectedWalletIcon() {
-    final match = _wallets.firstWhere(
-      (w) => w['name'] == _selectedWallet,
-      orElse: () => {
-        'name': _selectedWallet,
-        'icon': Icons.account_balance_wallet,
-      },
+    if (_selectedWalletId == null || _wallets.isEmpty)
+      return Icons.account_balance_wallet;
+
+    final w = _wallets.firstWhere(
+      (x) => x.id == _selectedWalletId,
+      orElse: () => Wallet(
+        id: 'unknown',
+        userId: '',
+        name: 'Ví',
+        type: WalletType.cash,
+        balance: 0,
+        isDefault: false,
+        createdAt: DateTime.now(),
+      ),
     );
-    return match['icon'] as IconData;
+
+    switch (w.type) {
+      case WalletType.bank:
+        return Icons.account_balance;
+      case WalletType.ewallet:
+        return Icons.account_balance_wallet;
+      case WalletType.saving:
+        return Icons.savings;
+      case WalletType.investment:
+        return Icons.trending_up;
+      case WalletType.cash:
+      default:
+        return Icons.account_balance_wallet;
+    }
   }
 
   void _showCategoryPicker() {
@@ -344,6 +497,16 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Resolve selected wallet safely for display purposes
+    final Wallet? selectedWallet = (() {
+      if (_selectedWalletId == null) return null;
+      try {
+        return _wallets.firstWhere((w) => w.id == _selectedWalletId);
+      } catch (_) {
+        return null;
+      }
+    })();
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
@@ -480,18 +643,22 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                           color: AppTheme.primaryTeal,
                         ),
                       ),
-                      title: const Text('Tổng cộng'),
+                      title: const Text('Chọn ví'),
                       subtitle: Text(
-                        _selectedWallet,
-                        style: TextStyle(color: AppTheme.primaryTeal),
+                        selectedWallet == null
+                            ? 'Chưa chọn ví'
+                            : '${selectedWallet.name} • ${NumberFormat('#,##0', 'vi_VN').format(selectedWallet.balance)} ₫',
+                        style: TextStyle(
+                          color: selectedWallet == null
+                              ? AppTheme.primaryTeal
+                              : AppTheme.textSecondary,
+                        ),
                       ),
                       trailing: Icon(
                         Icons.chevron_right,
                         color: AppTheme.textSecondary,
                       ),
-                      onTap: () {
-                        // Wallet picker disabled for edit
-                      },
+                      onTap: _showWalletPicker,
                     ),
                   ],
                 ),
@@ -516,11 +683,13 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                   ],
                 ),
                 child: TextField(
-                  controller: TextEditingController(text: _note),
-                  maxLines: 3,
+                  controller: _noteController,
+                  minLines: 3,
+                  maxLines: 5,
                   cursorColor: AppTheme.primaryTeal,
                   decoration: InputDecoration(
                     labelText: 'Ghi chú (tùy chọn)',
+                    hintText: 'Nhập ghi chú...',
                     border: const OutlineInputBorder(),
                     focusedBorder: OutlineInputBorder(
                       borderSide: BorderSide(
@@ -528,6 +697,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                         width: 2,
                       ),
                     ),
+                    hintStyle: TextStyle(color: AppTheme.textSecondary),
                     labelStyle: TextStyle(
                       color: AppTheme.primaryTeal.withOpacity(0.9),
                     ),
@@ -544,11 +714,24 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                 child: ElevatedButton(
                   onPressed: () async {
                     if (_amount <= 0) {
-                      AppNotification.showError(context, 'Vui lòng nhập số tiền hợp lệ');
+                      AppNotification.showError(
+                        context,
+                        'Vui lòng nhập số tiền hợp lệ',
+                      );
                       return;
                     }
                     if (_periodStart.isAfter(_periodEnd)) {
-                      AppNotification.showError(context, 'Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc');
+                      AppNotification.showError(
+                        context,
+                        'Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc',
+                      );
+                      return;
+                    }
+
+                    // Require explicit wallet selection
+                    if (_selectedWalletId == null ||
+                        _selectedWalletId!.isEmpty) {
+                      AppNotification.showError(context, 'Vui lòng chọn ví');
                       return;
                     }
 
@@ -560,6 +743,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                       endDate: _periodEnd,
                       periodType: _periodType,
                       note: _note.isEmpty ? null : _note,
+                      walletId: _selectedWalletId,
                     );
 
                     try {
@@ -586,7 +770,13 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
 
                       final service = BudgetService();
                       await service.init();
-                      await service.updateBudget(updatedBudget);
+                      final auth = Provider.of<AuthService>(
+                        context,
+                        listen: false,
+                      );
+                      final userId = auth.currentUser?.id ?? '';
+
+                      await service.updateBudget(updatedBudget, userId: userId);
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Đã cập nhật ngân sách')),
