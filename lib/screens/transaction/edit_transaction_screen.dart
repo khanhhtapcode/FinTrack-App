@@ -23,7 +23,7 @@ class EditTransactionScreen extends StatefulWidget {
 }
 
 class _EditTransactionScreenState extends State<EditTransactionScreen> {
-  int _selectedTab = 0; // 0: Khoản chi, 1: Khoản thu
+  int _selectedTab = 0; // 0: Khoản chi, 1: Khoản thu, 2: Vay/Nợ
   String _selectedCategory = '';
   DateTime _selectedDate = DateTime.now();
 
@@ -50,8 +50,14 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
   void _initializeFromTransaction() {
     final tx = widget.transaction;
 
-    // Set tab based on transaction type
-    _selectedTab = tx.type == model.TransactionType.income ? 1 : 0;
+    // Set tab based on transaction type (handle loan as separate tab)
+    if (tx.type == model.TransactionType.loan) {
+      _selectedTab = 2;
+    } else if (tx.type == model.TransactionType.income) {
+      _selectedTab = 1;
+    } else {
+      _selectedTab = 0;
+    }
 
     // Set category
     _selectedCategory = tx.category;
@@ -76,15 +82,24 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
   Future<void> _loadWallets() async {
     final service = WalletService();
     await service.init();
-    final ws = await service.getAll();
+
+    // Load wallets for the transaction's user only
+    final userId = widget.transaction.userId;
+    final ws = await service.getAll(userId: userId.isNotEmpty ? userId : null);
+
     if (ws.isNotEmpty) {
       setState(() {
         _wallets = ws;
-        // Keep selected wallet if valid, otherwise use first
-        if (_selectedWalletId == null ||
-            !ws.any((w) => w.id == _selectedWalletId)) {
-          _selectedWalletId = _wallets.first.id;
+        // Keep selected wallet if valid; otherwise require explicit selection
+        if (_selectedWalletId != null &&
+            !_wallets.any((w) => w.id == _selectedWalletId)) {
+          _selectedWalletId = null;
         }
+      });
+    } else {
+      setState(() {
+        _wallets = [];
+        _selectedWalletId = null;
       });
     }
   }
@@ -92,7 +107,11 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
   void _loadCategoriesFromHive() {
     final box = Hive.box<CategoryGroup>('category_groups');
 
-    final type = _selectedTab == 0 ? CategoryType.expense : CategoryType.income;
+    final type = _selectedTab == 0
+        ? CategoryType.expense
+        : _selectedTab == 1
+        ? CategoryType.income
+        : CategoryType.loan;
 
     // Khử trùng lặp theo (type, name)
     final seen = <String>{};
@@ -179,31 +198,50 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
 
   Widget _buildTransactionTypeIndicator() {
     final isIncome = _selectedTab == 1;
+    final isLoan = _selectedTab == 2;
+
+    final bgColor = isIncome
+        ? AppTheme.accentGreen.withAlpha((0.1 * 255).round())
+        : isLoan
+        ? AppTheme.primaryTeal.withAlpha((0.08 * 255).round())
+        : Colors.red.withAlpha((0.1 * 255).round());
+
+    final borderColor = isIncome
+        ? AppTheme.accentGreen
+        : isLoan
+        ? AppTheme.primaryTeal
+        : Colors.red;
+
+    final iconData = isIncome
+        ? Icons.add_circle_outline
+        : isLoan
+        ? Icons.swap_horiz
+        : Icons.remove_circle_outline;
+
+    final label = isIncome
+        ? 'Khoản thu'
+        : isLoan
+        ? 'Vay/Nợ'
+        : 'Khoản chi';
+
+    final labelColor = borderColor;
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
-        color: isIncome
-            ? AppTheme.accentGreen.withAlpha((0.1 * 255).round())
-            : Colors.red.withAlpha((0.1 * 255).round()),
+        color: bgColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isIncome ? AppTheme.accentGreen : Colors.red,
-          width: 1.5,
-        ),
+        border: Border.all(color: borderColor, width: 1.5),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            isIncome ? Icons.add_circle_outline : Icons.remove_circle_outline,
-            color: isIncome ? AppTheme.accentGreen : Colors.red,
-            size: 20,
-          ),
+          Icon(iconData, color: labelColor, size: 20),
           const SizedBox(width: 8),
           Text(
-            isIncome ? 'Khoản thu' : 'Khoản chi',
+            label,
             style: TextStyle(
-              color: isIncome ? AppTheme.accentGreen : Colors.red,
+              color: labelColor,
               fontWeight: FontWeight.w700,
               fontSize: 15,
             ),
@@ -525,7 +563,9 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
                       backgroundColor: Color(c.colorValue),
                       child: Builder(
                         builder: (_) {
-                          final asset = CategoryIconMapper.assetForKey(c.iconKey);
+                          final asset = CategoryIconMapper.assetForKey(
+                            c.iconKey,
+                          );
                           if (asset != null) {
                             return ClipOval(
                               child: Image.asset(
@@ -627,7 +667,9 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
 
       final txType = _selectedTab == 0
           ? model.TransactionType.expense
-          : model.TransactionType.income;
+          : _selectedTab == 1
+          ? model.TransactionType.income
+          : model.TransactionType.loan;
 
       // Create updated transaction (keep original ID and createdAt)
       final updatedTransaction = model.Transaction(

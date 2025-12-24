@@ -25,11 +25,9 @@ class TransactionService {
     await init();
     final walletService = WalletService();
 
-    // Ensure transaction has walletId (assign default if missing)
+    // Ensure transaction has walletId — do not auto-assign. UI must require selection.
     if (transaction.walletId == null || transaction.walletId!.isEmpty) {
-      await walletService.init();
-      final def = await walletService.getDefaultWallet();
-      if (def != null) transaction.walletId = def.id;
+      throw ArgumentError('Transaction.walletId must be set before saving');
     }
 
     // 🔥 HYBRID: Save locally first (offline-first approach)
@@ -112,11 +110,9 @@ class TransactionService {
       await walletService.revertTransaction(old);
     }
 
-    // Ensure walletId exists
+    // Ensure walletId exists — caller must provide wallet selection explicitly.
     if (transaction.walletId == null || transaction.walletId!.isEmpty) {
-      await walletService.init();
-      final def = await walletService.getDefaultWallet();
-      if (def != null) transaction.walletId = def.id;
+      throw ArgumentError('Transaction.walletId must be set before updating');
     }
 
     // 🔥 HYBRID: Update locally with sync flag
@@ -182,6 +178,31 @@ class TransactionService {
     final List<Transaction> all = List<Transaction>.from(_box!.values);
 
     return all.where((t) => t.userId == userId).toList();
+  }
+
+  /// Bulk rename category labels across all transactions.
+  /// Returns the number of transactions updated.
+  Future<int> bulkRenameCategory(String fromName, String toName) async {
+    await init();
+    final normalizedFrom = fromName.trim().toLowerCase();
+    var updated = 0;
+    final now = DateTime.now();
+
+    for (final tx in List<Transaction>.from(_box!.values)) {
+      if ((tx.category?.trim().toLowerCase() ?? '') == normalizedFrom) {
+        tx.category = toName;
+        tx.isSynced = false;
+        tx.updatedAt = now;
+        await _box!.put(tx.id, tx);
+        updated++;
+      }
+    }
+
+    if (updated > 0) {
+      _syncService.syncAllPendingTransactions();
+    }
+
+    return updated;
   }
 
   // ================= CLEAR =================

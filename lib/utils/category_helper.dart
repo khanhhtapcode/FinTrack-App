@@ -105,8 +105,6 @@ class CategoryHelper {
       'Lương',
       'Thưởng',
       'Đầu tư',
-      'Vay',
-      'Nợ',
     ];
   }
 }

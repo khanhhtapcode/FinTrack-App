@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../config/constants.dart';
+import '../../services/data/wallet_service.dart';
 import '../../config/theme.dart';
 import 'package:hive/hive.dart';
 import '../../services/auth/auth_service.dart';
@@ -47,20 +48,33 @@ class _HomeScreenState extends State<HomeScreen> {
 
   bool _isLoading = true;
 
+  // Cached notifier for safe listener handling
+  TransactionNotifier? _transactionNotifier;
+
   @override
   void initState() {
     super.initState();
 
+    // Defer loading to after first frame but avoid using context in dispose later
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
-      // Listen to transaction changes
-      context.read<TransactionNotifier>().addListener(_onTransactionChanged);
     });
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final notifier = context.read<TransactionNotifier>();
+    if (_transactionNotifier != notifier) {
+      _transactionNotifier?.removeListener(_onTransactionChanged);
+      _transactionNotifier = notifier;
+      _transactionNotifier!.addListener(_onTransactionChanged);
+    }
+  }
+
+  @override
   void dispose() {
-    context.read<TransactionNotifier>().removeListener(_onTransactionChanged);
+    _transactionNotifier?.removeListener(_onTransactionChanged);
     super.dispose();
   }
 
@@ -98,6 +112,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // Calculate balance (income - expense)
       _totalBalance = _totalIncome - _totalExpense;
+
+      // Prefer canonical wallet-based balance for display (sum of user's wallet balances)
+      try {
+        final walletService = WalletService();
+        final wallets = await walletService.getByUser(userId);
+        if (wallets.isNotEmpty) {
+          final walletSum = wallets.fold<double>(0.0, (s, w) => s + w.balance);
+          _totalBalance = walletSum; // canonical display value
+        }
+      } catch (e) {
+        // If wallet fetch fails for any reason, keep transaction-derived balance
+        debugPrint('⚠️ Error computing wallet balances: $e');
+      }
 
       // Get recent transactions (last 5)
       final recentList = _allTransactions.toList()
@@ -345,14 +372,21 @@ class _HomeScreenState extends State<HomeScreen> {
                     right: 6,
                     top: 6,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.red,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
                         unread > 99 ? '99+' : '$unread',
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),

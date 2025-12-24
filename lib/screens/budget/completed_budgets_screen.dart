@@ -29,6 +29,9 @@ class _CompletedBudgetsScreenState extends State<CompletedBudgetsScreen> {
   // cached categories
   List<CategoryGroup> _categories = [];
 
+  // Cached notifier for safe listener management
+  TransactionNotifier? _transactionNotifier;
+
   @override
   void initState() {
     super.initState();
@@ -38,16 +41,22 @@ class _CompletedBudgetsScreenState extends State<CompletedBudgetsScreen> {
       _categories = cats;
       if (mounted) setState(() {});
     });
+  }
 
-    // Listen to transaction changes to auto-update completed budgets
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<TransactionNotifier>().addListener(_onTransactionChanged);
-    });
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final notifier = context.read<TransactionNotifier>();
+    if (_transactionNotifier != notifier) {
+      _transactionNotifier?.removeListener(_onTransactionChanged);
+      _transactionNotifier = notifier;
+      _transactionNotifier!.addListener(_onTransactionChanged);
+    }
   }
 
   @override
   void dispose() {
-    context.read<TransactionNotifier>().removeListener(_onTransactionChanged);
+    _transactionNotifier?.removeListener(_onTransactionChanged);
     super.dispose();
   }
 
@@ -76,7 +85,10 @@ class _CompletedBudgetsScreenState extends State<CompletedBudgetsScreen> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
-    return _budgetService.getAllBudgets().where((b) {
+    final auth = Provider.of<AuthService>(context, listen: false);
+    final userId = auth.currentUser?.id ?? '';
+
+    return _budgetService.getAllBudgets(userId: userId).where((b) {
       final endDate = DateTime(b.endDate.year, b.endDate.month, b.endDate.day);
       return endDate.isBefore(today);
     }).toList()..sort(

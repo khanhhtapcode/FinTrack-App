@@ -282,11 +282,23 @@ class WalletService {
   /// Seed default wallets for a specific user if that user has no wallets yet.
   Future<void> seedDefaultWallets(String userId) async {
     await init();
+
+    // Guard against empty userId - do not seed global/system defaults without a user
+    if (userId.trim().isEmpty) {
+      print('⚠️ seedDefaultWallets called with empty userId, aborting');
+      return;
+    }
+
     final existing = await getByUser(userId);
+
+    // If the user already has any wallets, do NOT seed defaults (business rule)
+    if (existing.isNotEmpty) {
+      return;
+    }
+
     final now = DateTime.now();
 
-    final hasDefault = existing.any((w) => w.isDefault);
-
+    // When seeding for a user with no wallets, make the cash wallet the default
     final defaults = <Wallet>[
       Wallet(
         id: 'wallet_cash_$userId',
@@ -294,7 +306,7 @@ class WalletService {
         name: 'Tiền mặt',
         type: WalletType.cash,
         balance: 0,
-        isDefault: !hasDefault, // only set default if none exists
+        isDefault: true,
         createdAt: now,
       ),
       Wallet(
@@ -368,8 +380,8 @@ class WalletService {
       } catch (_) {}
 
       // 2) prefer canonical cash id for user
-      final cashId = _box.get('wallet_cash_$userId');
-      if (cashId != null) return cashId;
+      final cashWallet = _box.get('wallet_cash_$userId');
+      if (cashWallet != null) return cashWallet;
 
       // 3) fallback to any user's wallet
       if (userWallets.isNotEmpty) return userWallets.first;
@@ -395,25 +407,53 @@ class WalletService {
     // transaction is model.Transaction from models/transaction.dart
     await init();
     final String? wid = transaction.walletId;
-    Wallet? wallet;
-
-    if (wid != null && wid.isNotEmpty) {
-      wallet = _box.get(wid);
+    if (wid == null || wid.isEmpty) {
+      throw ArgumentError('Cannot apply transaction without a walletId');
     }
 
+    final wallet = _box.get(wid);
     if (wallet == null) {
-      wallet = await getDefaultWallet(userId: transaction.userId);
-      if (wallet == null) return;
-      // attach wallet id to transaction if missing
-      if (transaction.walletId == null || transaction.walletId!.isEmpty) {
-        transaction.walletId = wallet.id;
-        // If the transaction is a Hive object we can save it later by caller
-      }
+      throw StateError(
+        'Wallet with id "$wid" not found when applying transaction',
+      );
     }
 
-    final delta = transaction.type == TransactionType.income
-        ? transaction.amount
-        : -transaction.amount;
+    double delta = 0.0;
+
+    if (transaction.type == TransactionType.income) {
+      delta = transaction.amount;
+    } else if (transaction.type == TransactionType.expense) {
+      delta = -transaction.amount;
+    } else {
+      // Loan type: determine sign by category semantics.
+      final cat = (transaction.category ?? '').trim().toLowerCase();
+
+      // Categories treated as incoming (you receive money): "vay", "thu hồi"/"thu hồi nợ"
+      final incoming = ['vay', 'thu hồi', 'thu'];
+      // Categories treated as outgoing (you give money / lend / repay): "cho vay", "nợ"
+      final outgoing = ['cho vay', 'cho vay ', 'nợ', 'no'];
+
+      bool matched = false;
+      for (final k in incoming) {
+        if (cat.contains(k)) {
+          delta = transaction.amount;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) {
+        for (final k in outgoing) {
+          if (cat.contains(k)) {
+            delta = -transaction.amount;
+            matched = true;
+            break;
+          }
+        }
+      }
+
+      // Default: treat loan as neutral (no wallet change) if unsure
+      if (!matched) delta = 0.0;
+    }
 
     await updateBalance(wallet.id, delta);
   }
@@ -425,9 +465,38 @@ class WalletService {
     final wallet = _box.get(wid);
     if (wallet == null) return;
 
-    final delta = transaction.type == TransactionType.income
-        ? -transaction.amount
-        : transaction.amount;
+    double delta = 0.0;
+
+    if (transaction.type == TransactionType.income) {
+      delta = -transaction.amount;
+    } else if (transaction.type == TransactionType.expense) {
+      delta = transaction.amount;
+    } else {
+      // Reverse loan semantics same as applyTransaction but inverted
+      final cat = (transaction.category ?? '').trim().toLowerCase();
+      final incoming = ['vay', 'thu hồi', 'thu'];
+      final outgoing = ['cho vay', 'cho vay ', 'nợ', 'no'];
+
+      bool matched = false;
+      for (final k in incoming) {
+        if (cat.contains(k)) {
+          delta = -transaction.amount;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) {
+        for (final k in outgoing) {
+          if (cat.contains(k)) {
+            delta = transaction.amount;
+            matched = true;
+            break;
+          }
+        }
+      }
+
+      if (!matched) delta = 0.0;
+    }
 
     await updateBalance(wallet.id, delta);
   }
@@ -451,6 +520,29 @@ class WalletService {
         balances[tx.walletId!] = balances[tx.walletId!]! + tx.amount;
       } else if (tx.type == TransactionType.expense) {
         balances[tx.walletId!] = balances[tx.walletId!]! - tx.amount;
+      } else if (tx.type == TransactionType.loan) {
+        final cat = (tx.category ?? '').trim().toLowerCase();
+        final incoming = ['vay', 'thu hồi', 'thu'];
+        final outgoing = ['cho vay', 'cho vay ', 'nợ', 'no'];
+
+        bool matched = false;
+        for (final k in incoming) {
+          if (cat.contains(k)) {
+            balances[tx.walletId!] = balances[tx.walletId!]! + tx.amount;
+            matched = true;
+            break;
+          }
+        }
+        if (!matched) {
+          for (final k in outgoing) {
+            if (cat.contains(k)) {
+              balances[tx.walletId!] = balances[tx.walletId!]! - tx.amount;
+              matched = true;
+              break;
+            }
+          }
+        }
+        // If not matched, treat as neutral (no change)
       }
 
       // Yield periodically to keep UI responsive when processing many transactions

@@ -77,15 +77,39 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   Future<void> _loadWallets() async {
     final service = WalletService();
     await service.init();
-    final ws = await service.getAll();
+
+    // Load wallets scoped to the current user to avoid showing wallets from other accounts.
+    final auth = context.read<AuthService>();
+    final userId = auth.currentUser?.id ?? '';
+
+    // Ensure default wallets exist for this user (seed only if user present).
+    if (userId.isNotEmpty) {
+      await service.seedDefaultWallets(userId);
+    }
+
+    final ws = await service.getAll(userId: userId.isNotEmpty ? userId : null);
+
     if (ws.isNotEmpty) {
+      // Prefer selecting an existing default wallet for convenience
+      Wallet? preferred;
+      try {
+        preferred = ws.firstWhere((w) => w.isDefault);
+      } catch (_) {
+        preferred = ws.first;
+      }
+
       setState(() {
         _wallets = ws;
-        // Keep current selection if still valid; otherwise require user to pick.
-        if (_selectedWalletId != null &&
+        // If previous selection is invalid or missing, pick preferred wallet or require user to choose.
+        if (_selectedWalletId == null ||
             !_wallets.any((w) => w.id == _selectedWalletId)) {
-          _selectedWalletId = null;
+          _selectedWalletId = preferred?.id;
         }
+      });
+    } else {
+      setState(() {
+        _wallets = [];
+        _selectedWalletId = null;
       });
     }
   }
@@ -97,7 +121,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         ? CategoryType.expense
         : _selectedTab == 1
         ? CategoryType.income
-        : null;
+        : CategoryType.loan;
 
     // Khử trùng lặp theo (type, name) để tránh lặp danh mục hiển thị
     final seen = <String>{};
@@ -369,67 +393,67 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
-          children: [
-            Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 8),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Expanded(
-              child: GridView.builder(
-                padding: const EdgeInsets.all(16),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                itemCount: _categories.length,
-                itemBuilder: (_, index) {
-                  final c = _categories[index];
-                  return InkWell(
-                    onTap: () {
-                      setState(() => _selectedCategory = c.name);
-                      Navigator.pop(sheetContext);
-                    },
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: Color(c.colorValue),
-                          child: Builder(
-                            builder: (_) {
-                              final asset = CategoryIconMapper.assetForKey(
-                                c.iconKey,
-                              );
-                              if (asset != null) {
-                                return ClipOval(
-                                  child: Image.asset(
-                                    asset,
-                                    width: 28,
-                                    height: 28,
-                                    fit: BoxFit.cover,
-                                  ),
-                                );
-                              }
-                              return Icon(
-                                CategoryIconMapper.fromKey(c.iconKey),
-                                color: Colors.white,
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(c.name, textAlign: TextAlign.center),
-                      ],
-                    ),
-                  );
-                },
               ),
-            ),
-          ],
-        ),
+              Expanded(
+                child: GridView.builder(
+                  padding: const EdgeInsets.all(16),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                  ),
+                  itemCount: _categories.length,
+                  itemBuilder: (_, index) {
+                    final c = _categories[index];
+                    return InkWell(
+                      onTap: () {
+                        setState(() => _selectedCategory = c.name);
+                        Navigator.pop(sheetContext);
+                      },
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: Color(c.colorValue),
+                            child: Builder(
+                              builder: (_) {
+                                final asset = CategoryIconMapper.assetForKey(
+                                  c.iconKey,
+                                );
+                                if (asset != null) {
+                                  return ClipOval(
+                                    child: Image.asset(
+                                      asset,
+                                      width: 28,
+                                      height: 28,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  );
+                                }
+                                return Icon(
+                                  CategoryIconMapper.fromKey(c.iconKey),
+                                  color: Colors.white,
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(c.name, textAlign: TextAlign.center),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -517,20 +541,21 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   // ================= WALLET SELECTOR (COMPACT) =================
 
   Widget _buildWalletSelectorCompact() {
-    final hasSelection = _selectedWalletId != null &&
-      _wallets.any((w) => w.id == _selectedWalletId);
+    final hasSelection =
+        _selectedWalletId != null &&
+        _wallets.any((w) => w.id == _selectedWalletId);
 
     final selected = hasSelection
-      ? _wallets.firstWhere((w) => w.id == _selectedWalletId)
-      : null;
+        ? _wallets.firstWhere((w) => w.id == _selectedWalletId)
+        : null;
 
     final icon = selected == null
-      ? Icons.wallet_outlined
-      : selected.type == WalletType.cash
+        ? Icons.wallet_outlined
+        : selected.type == WalletType.cash
         ? Icons.wallet_outlined
         : selected.type == WalletType.bank
-          ? Icons.account_balance_outlined
-          : Icons.credit_card_outlined;
+        ? Icons.account_balance_outlined
+        : Icons.credit_card_outlined;
 
     return GestureDetector(
       onTap: () async {
@@ -616,33 +641,39 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   // ================= NOTE DISPLAY (COMPACT) =================
 
   Widget _buildNoteDisplay() {
-    final displayNote = _noteController.text.isNotEmpty
-        ? _noteController.text
-        : 'Ghi chú';
-    final isPlaceholder = _noteController.text.isEmpty;
-
-    return GestureDetector(
-      onTap: () {
-        _showNoteEditDialog();
-      },
-      child: Row(
-        children: [
-          Icon(Icons.note_outlined, color: Colors.grey, size: 18),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              displayNote,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 13,
-                color: isPlaceholder ? Colors.grey : AppTheme.textPrimary,
-              ),
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Ghi chú',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w500,
           ),
-          Icon(Icons.chevron_right, color: Colors.grey.shade300, size: 18),
-        ],
-      ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _noteController,
+          maxLines: 4,
+          minLines: 3,
+          cursorColor: AppTheme.primaryTeal,
+          style: TextStyle(color: AppTheme.textPrimary),
+          decoration: InputDecoration(
+            hintText: '', // no placeholder text
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: AppTheme.primaryTeal),
+            ),
+            isDense: true,
+            contentPadding: const EdgeInsets.all(12),
+          ),
+        ),
+      ],
     );
   }
 
@@ -767,6 +798,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     final auth = context.read<AuthService>();
     final userId = auth.currentUser?.id ?? '';
 
+    // Require explicit wallet selection — do not auto-assign
+    if (_selectedWalletId == null || _selectedWalletId!.isEmpty) {
+      AppNotification.showError(context, 'Vui lòng chọn ví');
+      return;
+    }
+
     final tx = model.Transaction(
       id: const Uuid().v4(),
       amount: amountValue,
@@ -780,9 +817,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
 
     final notifier = context.read<TransactionNotifier>();
-    await notifier.addTransactionAndNotify(tx);
-
-    if (mounted) Navigator.pop(context, true);
+    try {
+      await notifier.addTransactionAndNotify(tx);
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      AppNotification.showError(context, e.toString());
+    }
   }
 
   String _formatNumber(String number) {
@@ -817,51 +858,51 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-            Text(
-              'Quét hóa đơn',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-            SizedBox(height: 20),
-            ListTile(
-              leading: Container(
-                padding: EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryTeal.withAlpha((0.1 * 255).round()),
-                  shape: BoxShape.circle,
+              Text(
+                'Quét hóa đơn',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textPrimary,
                 ),
-                child: Icon(Icons.camera_alt, color: AppTheme.primaryTeal),
               ),
-              title: Text('Chụp ảnh'),
-              subtitle: Text(
-                'Quét hóa đơn với camera',
-                style: TextStyle(fontSize: 11),
-              ),
-              onTap: _scanFromCamera,
-            ),
-            SizedBox(height: 10),
-            ListTile(
-              leading: Container(
-                padding: EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryTeal.withAlpha((0.1 * 255).round()),
-                  shape: BoxShape.circle,
+              SizedBox(height: 20),
+              ListTile(
+                leading: Container(
+                  padding: EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryTeal.withAlpha((0.1 * 255).round()),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.camera_alt, color: AppTheme.primaryTeal),
                 ),
-                child: Icon(Icons.photo_library, color: AppTheme.primaryTeal),
+                title: Text('Chụp ảnh'),
+                subtitle: Text(
+                  'Quét hóa đơn với camera',
+                  style: TextStyle(fontSize: 11),
+                ),
+                onTap: _scanFromCamera,
               ),
-              title: Text('Chọn từ thư viện'),
-              subtitle: Text(
-                'Chọn ảnh hóa đơn từ thư viện',
-                style: TextStyle(fontSize: 11),
+              SizedBox(height: 10),
+              ListTile(
+                leading: Container(
+                  padding: EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryTeal.withAlpha((0.1 * 255).round()),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.photo_library, color: AppTheme.primaryTeal),
+                ),
+                title: Text('Chọn từ thư viện'),
+                subtitle: Text(
+                  'Chọn ảnh hóa đơn từ thư viện',
+                  style: TextStyle(fontSize: 11),
+                ),
+                onTap: _pickFromGallery,
               ),
-              onTap: _pickFromGallery,
-            ),
-            SizedBox(height: 10),
-          ],
-        ),
+              SizedBox(height: 10),
+            ],
+          ),
         ),
       ),
     );

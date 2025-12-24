@@ -39,16 +39,11 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
     super.initState();
     _currentBudget = widget.budget;
     _loadData();
-
-    // Listen to transaction changes to auto-update budget details
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<TransactionNotifier>().addListener(_onTransactionChanged);
-    });
   }
 
   @override
   void dispose() {
-    context.read<TransactionNotifier>().removeListener(_onTransactionChanged);
+    _transactionNotifier?.removeListener(_onTransactionChanged);
     super.dispose();
   }
 
@@ -59,17 +54,34 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
   // Cached groups for rendering
   List<CategoryGroup> _categories = [];
 
+  // Cached reference to the TransactionNotifier to manage listeners safely
+  TransactionNotifier? _transactionNotifier;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final notifier = context.read<TransactionNotifier>();
+    if (_transactionNotifier != notifier) {
+      _transactionNotifier?.removeListener(_onTransactionChanged);
+      _transactionNotifier = notifier;
+      _transactionNotifier!.addListener(_onTransactionChanged);
+    }
+  }
+
   Future<void> _loadData() async {
     // Reload budget object from service
     await _budgetService.init();
-    final budgets = await _budgetService.getAllBudgets();
+    final auth = Provider.of<AuthService>(context, listen: false);
+    final userId = auth.currentUser?.id;
+
+    final budgets = _budgetService.getAllBudgets(userId: userId);
     final updatedBudget = budgets.firstWhere(
       (b) => b.id == widget.budget.id,
       orElse: () => widget.budget,
     );
 
-    final authService = Provider.of<AuthService>(context, listen: false);
-    final userId = authService.currentUser?.id;
+    // Abort if widget was disposed while awaiting data
+    if (!mounted) return;
 
     final txs = await _transactionService.getTransactionsByDateRange(
       updatedBudget.startDate,
@@ -144,7 +156,12 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
           ),
           TextButton(
             onPressed: () async {
-              await _budgetService.deleteBudget(_currentBudget.id);
+              final auth = Provider.of<AuthService>(context, listen: false);
+              final userId = auth.currentUser?.id ?? '';
+              await _budgetService.deleteBudget(
+                _currentBudget.id,
+                userId: userId,
+              );
               if (!mounted) return;
               Navigator.pop(context); // Close dialog
               Navigator.pop(
@@ -152,6 +169,7 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                 true,
               ); // Return to list with refresh signal
             },
+
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text(
               'XÓA',

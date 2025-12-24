@@ -142,8 +142,10 @@ class SyncService {
               periodType: _parseBudgetPeriodType(map['periodType'] as String),
               note: map['note'] as String?,
               walletId: map['walletId'] as String?,
+              userId: map['userId'] as String?,
             ),
           )
+          .where((b) => (b.userId ?? '') == userId)
           .toList();
       if (budgets.isNotEmpty) {
         await _budgetRepo.saveBudgets(userId, budgets);
@@ -256,6 +258,8 @@ class SyncService {
           'periodType': budget.periodType.toString(),
           'note': budget.note,
           'walletId': budget.walletId,
+          'userId':
+              userId, // ensure budgets downloaded from cloud are attributed to the user
         });
       }
       print('📥 [Sync] Downloaded ${cloudBudgets.length} budgets');
