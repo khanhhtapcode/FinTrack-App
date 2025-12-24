@@ -1,6 +1,7 @@
 import 'package:provider/provider.dart';
 import '../../services/data/notification_service.dart';
 import '../notification/notification_center_screen.dart';
+import '../../widgets/user_avatar.dart';
 import 'package:expense_tracker_app/widgets/home/balance_card_widget.dart';
 import 'package:expense_tracker_app/widgets/home/chart_widget.dart';
 import 'package:expense_tracker_app/widgets/home/recent_transactions_widget.dart';
@@ -21,6 +22,7 @@ import '../auth/login_screen.dart';
 import '../transaction/transactions_screen.dart';
 import '../budget/budget_screen.dart';
 import '../profile/profile_screen.dart';
+import '../profile/account/account_management_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -292,18 +294,7 @@ class _HomeScreenState extends State<HomeScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         // Avatar
-        CircleAvatar(
-          radius: 24,
-          backgroundColor: AppTheme.primaryTeal.withAlpha((0.2 * 255).round()),
-          child: Text(
-            userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
-            style: TextStyle(
-              color: AppTheme.primaryTeal,
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-            ),
-          ),
-        ),
+        const UserAvatar(radius: 24),
 
         // Name
         Expanded(

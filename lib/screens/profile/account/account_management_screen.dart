@@ -3,11 +3,15 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'dart:convert';
+import 'dart:io';
 import '../../../config/theme.dart';
 import '../../../models/user.dart';
 import '../../../services/core/app_localization.dart';
 import '../../../services/core/app_settings_provider.dart';
+import '../../../services/auth/user_provider.dart';
 import '../../../utils/notification_helper.dart';
 import '../../auth/login_screen.dart';
 
@@ -66,9 +70,21 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
         return Scaffold(
           backgroundColor: AppTheme.backgroundColor,
           appBar: AppBar(
-            title: Text(t('account_management')),
-            backgroundColor: AppTheme.cardColor,
+            backgroundColor: AppTheme.primaryTeal,
             elevation: 0,
+            centerTitle: true,
+            leading: IconButton(
+              icon: const Icon(Icons.close, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: Text(
+              t('account_management'),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 18,
+              ),
+            ),
           ),
           body: SingleChildScrollView(
             child: Column(
@@ -135,28 +151,75 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
   Widget _buildUserHeader(Function(String) t) {
     final userName = currentUser?.fullName ?? 'User';
     final userEmail = currentUser?.email ?? 'email@example.com';
+    final avatarPath = currentUser?.avatarPath;
+
+    // Check avatar file safely
+    bool hasValidAvatar = false;
+    if (avatarPath != null && avatarPath.isNotEmpty) {
+      try {
+        hasValidAvatar = File(avatarPath).existsSync();
+      } catch (e) {
+        hasValidAvatar = false;
+      }
+    }
 
     return Column(
       children: [
-        // Avatar
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            color: AppTheme.primaryTeal,
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(
-              currentUser?.firstName.isNotEmpty == true
-                  ? currentUser!.firstName[0].toUpperCase()
-                  : 'U',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
+        // Avatar with click to upload
+        GestureDetector(
+          onTap: _showAvatarOptions,
+          child: Stack(
+            key: ValueKey(avatarPath ?? 'default_${currentUser?.id}'),
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.blueAccent,
+                  shape: BoxShape.circle,
+                ),
+                child: hasValidAvatar
+                    ? ClipOval(
+                        child: Image.file(
+                          File(avatarPath!),
+                          key: ValueKey(avatarPath),
+                          fit: BoxFit.cover,
+                          width: 80,
+                          height: 80,
+                        ),
+                      )
+                    : Center(
+                        child: Text(
+                          currentUser?.firstName.isNotEmpty == true
+                              ? currentUser!.firstName[0].toUpperCase()
+                              : 'U',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
               ),
-            ),
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryTeal,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  child: const Icon(
+                    Icons.camera_alt,
+                    color: Colors.white,
+                    size: 14,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
 
@@ -395,6 +458,188 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
         AppNotification.showError(context, '${t('error')}: $e');
       }
       return false;
+    }
+  }
+
+  // ========================================================================
+  // DELETE ACCOUNT
+  // ========================================================================
+  // AVATAR UPLOAD
+  // ========================================================================
+
+  void _showAvatarOptions() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+            Text(
+              'Thay đổi ảnh đại diện',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryTeal.withAlpha((0.1 * 255).round()),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.camera_alt, color: AppTheme.primaryTeal),
+              ),
+              title: const Text('Chụp ảnh'),
+              subtitle: const Text('Dùng camera của điện thoại'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickAvatarFromCamera();
+              },
+            ),
+            const SizedBox(height: 10),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryTeal.withAlpha((0.1 * 255).round()),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.photo_library, color: AppTheme.primaryTeal),
+              ),
+              title: const Text('Chọn từ thư viện'),
+              subtitle: const Text('Chọn ảnh từ thư viện điện thoại'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickAvatarFromGallery();
+              },
+            ),
+            const SizedBox(height: 10),
+            if (currentUser?.avatarPath != null)
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withAlpha((0.1 * 255).round()),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.delete, color: Colors.red),
+                ),
+                title: const Text('Xóa ảnh đại diện'),
+                subtitle: const Text('Quay lại ảnh chữ cái'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _deleteAvatar();
+                },
+              ),
+          ],
+        ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickAvatarFromCamera() async {
+    try {
+      // Request camera permission
+      final cameraStatus = await Permission.camera.request();
+      if (!cameraStatus.isGranted) {
+        if (mounted) {
+          AppNotification.showError(context, 'Ứng dụng cần quyền truy cập camera');
+        }
+        return;
+      }
+
+      final imagePicker = ImagePicker();
+      final pickedFile = await imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 80,
+      );
+
+      if (pickedFile != null) {
+        await _saveAvatarPath(pickedFile.path);
+      }
+    } catch (e) {
+      if (mounted) {
+        AppNotification.showError(context, 'Lỗi chụp ảnh: $e');
+      }
+    }
+  }
+
+  Future<void> _pickAvatarFromGallery() async {
+    try {
+      // Request photos permission
+      final photosStatus = await Permission.photos.request();
+      if (!photosStatus.isGranted) {
+        if (mounted) {
+          AppNotification.showError(context, 'Ứng dụng cần quyền truy cập thư viện ảnh');
+        }
+        return;
+      }
+
+      final imagePicker = ImagePicker();
+      final pickedFile = await imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
+
+      if (pickedFile != null) {
+        await _saveAvatarPath(pickedFile.path);
+      }
+    } catch (e) {
+      if (mounted) {
+        AppNotification.showError(context, 'Lỗi chọn ảnh: $e');
+      }
+    }
+  }
+
+  Future<void> _saveAvatarPath(String imagePath) async {
+    try {
+      // Get provider reference before async operation
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      
+      await userProvider.updateAvatar(imagePath);
+      
+      if (mounted) {
+        // Force rebuild immediately
+        setState(() {
+          currentUser = userProvider.currentUser;
+        });
+        
+        AppNotification.showSuccess(context, 'Cập nhật ảnh đại diện thành công');
+      }
+    } catch (e) {
+      if (mounted) {
+        AppNotification.showError(context, 'Lỗi lưu ảnh: $e');
+      }
+    }
+  }
+
+  Future<void> _deleteAvatar() async {
+    try {
+      // Get provider reference before async operation
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      
+      await userProvider.deleteAvatar();
+      
+      if (mounted) {
+        // Force rebuild immediately
+        setState(() {
+          currentUser = userProvider.currentUser;
+        });
+        
+        AppNotification.showSuccess(context, 'Đã xóa ảnh đại diện');
+      }
+    } catch (e) {
+      if (mounted) {
+        AppNotification.showError(context, 'Lỗi xóa ảnh: $e');
+      }
     }
   }
 

@@ -31,6 +31,9 @@ class User extends HiveObject {
   @HiveField(8)
   late bool isVerified; // Email verification status
 
+  @HiveField(9)
+  String? avatarPath; // Path to avatar image file
+
   User({
     required this.id,
     required this.email,
@@ -41,6 +44,7 @@ class User extends HiveObject {
     this.lastLoginAt,
     this.preferences = const [],
     this.isVerified = false,
+    this.avatarPath,
   });
 
   // Get full name
@@ -57,6 +61,7 @@ class User extends HiveObject {
       'lastLoginAt': lastLoginAt?.toIso8601String(),
       'preferences': preferences,
       'isVerified': isVerified,
+      'avatarPath': avatarPath,
     };
   }
 
