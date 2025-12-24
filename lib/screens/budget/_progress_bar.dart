@@ -15,7 +15,9 @@ class BudgetProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final clampedSpend = spendingPercent.isNaN ? 0.0 : spendingPercent.clamp(0.0, 1.0);
+    final clampedSpend = spendingPercent.isNaN
+        ? 0.0
+        : spendingPercent.clamp(0.0, 1.0);
     final clampedTime = timePercent.isNaN ? 0.0 : timePercent.clamp(0.0, 1.0);
 
     return Column(
@@ -77,14 +79,18 @@ class BudgetProgressBar extends StatelessWidget {
                   color: Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(4),
                   boxShadow: const [
-                    BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(0, 1)),
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 2,
+                      offset: Offset(0, 1),
+                    ),
                   ],
                 ),
                 child: Text(
                   'Hôm nay',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppTheme.textSecondary,
-                      ),
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
               ),
             );

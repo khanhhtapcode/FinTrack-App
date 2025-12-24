@@ -9,11 +9,7 @@ class UserAvatar extends StatelessWidget {
   final double radius;
   final bool navigateOnTap;
 
-  const UserAvatar({
-    super.key,
-    this.radius = 24,
-    this.navigateOnTap = true,
-  });
+  const UserAvatar({super.key, this.radius = 24, this.navigateOnTap = true});
 
   @override
   Widget build(BuildContext context) {
@@ -38,9 +34,7 @@ class UserAvatar extends StatelessWidget {
           key: ValueKey(avatarPath ?? 'default_avatar'),
           radius: radius,
           backgroundColor: Colors.blueAccent,
-          backgroundImage: hasValidAvatar 
-              ? FileImage(File(avatarPath!)) 
-              : null,
+          backgroundImage: hasValidAvatar ? FileImage(File(avatarPath!)) : null,
           child: !hasValidAvatar
               ? Text(
                   userName.isNotEmpty ? userName[0].toUpperCase() : 'U',

@@ -12,6 +12,7 @@ import '../../services/data/budget_service.dart';
 import '../../services/data/transaction_service.dart';
 import '../../services/data/transaction_notifier.dart';
 import '../../services/data/category_group_service.dart';
+import '../../services/data/wallet_service.dart';
 import '../../services/core/budget_progress.dart';
 import '../../utils/category_icon_mapper.dart';
 import '_progress_bar.dart';
@@ -37,6 +38,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
   final Set<BudgetPeriodType> _visiblePeriods = {};
   final BudgetService _budgetService = BudgetService();
   final TransactionService _transactionService = TransactionService();
+  final WalletService _walletService = WalletService();
   BudgetSortOption _sort = BudgetSortOption.startDateAsc;
 
   // Cached category groups for display (expense groups)
@@ -300,7 +302,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
-    final budgets = _budgetService
+    var budgets = _budgetService
         .getBudgetsOverlapping(_periodStart, _periodEnd)
         .where((b) {
           final endDate = DateTime(
@@ -335,40 +337,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.all(AppConstants.paddingMedium),
-          children: [
-            Container(
-              padding: EdgeInsets.all(AppConstants.paddingLarge),
-              decoration: BoxDecoration(
-                color: AppTheme.cardColor,
-                borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.refresh,
-                    size: 48,
-                    color: AppTheme.textSecondary.withOpacity(0.5),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Kéo xuống để tải lại ngân sách',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.textSecondary,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          ],
+          children: const [SizedBox.shrink()],
         ),
       );
     }
@@ -387,7 +356,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => BudgetDetailScreen(budget: b),
+                  builder: (context) =>
+                      BudgetDetailScreen(budget: b, walletId: b.walletId),
                 ),
               ).then((_) {
                 // Refresh list after returning from detail
@@ -462,17 +432,59 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
-                                  child: Text(
-                                    b.category,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(fontWeight: FontWeight.w600),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        b.category,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      FutureBuilder<String>(
+                                        future: _getWalletName(b.walletId),
+                                        builder: (context, snapshot) {
+                                          final walletName =
+                                              snapshot.data ?? 'Đang tải...';
+                                          return Row(
+                                            children: [
+                                              Icon(
+                                                Icons
+                                                    .account_balance_wallet_outlined,
+                                                size: 12,
+                                                color: AppTheme.textSecondary,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Flexible(
+                                                child: Text(
+                                                  walletName,
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .bodySmall
+                                                      ?.copyWith(
+                                                        color: AppTheme
+                                                            .textSecondary,
+                                                      ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
                           ),
+                          const SizedBox(width: 8),
                           Text(
                             '${NumberFormat('#,##0').format(b.limit)} VND',
                             style: Theme.of(context).textTheme.bodyMedium
@@ -483,7 +495,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
                       // Date range
                       Row(
                         children: [
@@ -581,6 +593,14 @@ class _BudgetScreenState extends State<BudgetScreen> {
         ..clear()
         ..addAll(visible);
     });
+  }
+
+  Future<String> _getWalletName(String? walletId) async {
+    if (walletId == null || walletId.isEmpty) {
+      return 'Chưa chọn ví';
+    }
+    final wallet = await _walletService.getById(walletId);
+    return wallet?.name ?? 'Ví không tìm thấy';
   }
 }
 

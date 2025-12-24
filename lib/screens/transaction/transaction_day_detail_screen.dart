@@ -102,30 +102,32 @@ class TransactionDayDetailScreen extends StatelessWidget {
                   SizedBox(height: 12),
                   Column(
                     children: transactions
-                        .map((transaction) => Column(
-                              children: [
-                                TransactionItemWidget(
-                                  transaction: transaction,
-                                  currencyFormat: currencyFormat,
-                                  onTap: () async {
-                                    final deleted = await Navigator.push<bool>(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            TransactionDetailScreen(
-                                          transaction: transaction,
-                                          currencyFormat: currencyFormat,
-                                        ),
-                                      ),
-                                    );
-                                    if (deleted == true) {
-                                      Navigator.pop(context, true);
-                                    }
-                                  },
-                                ),
-                                SizedBox(height: 8),
-                              ],
-                            ))
+                        .map(
+                          (transaction) => Column(
+                            children: [
+                              TransactionItemWidget(
+                                transaction: transaction,
+                                currencyFormat: currencyFormat,
+                                onTap: () async {
+                                  final deleted = await Navigator.push<bool>(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          TransactionDetailScreen(
+                                            transaction: transaction,
+                                            currencyFormat: currencyFormat,
+                                          ),
+                                    ),
+                                  );
+                                  if (deleted == true) {
+                                    Navigator.pop(context, true);
+                                  }
+                                },
+                              ),
+                              SizedBox(height: 8),
+                            ],
+                          ),
+                        )
                         .toList(),
                   ),
                 ],
