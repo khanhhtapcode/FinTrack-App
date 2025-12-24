@@ -67,6 +67,9 @@ class BudgetService {
     final spent = txs
         .where((t) => t.type == model.TransactionType.expense)
         .where((t) => (t.category) == budget.category)
+        .where(
+          (t) => budget.walletId == null || t.walletId == budget.walletId,
+        ) // Filter by budget's wallet
         .fold<double>(0, (sum, t) => sum + t.amount);
     return spent;
   }
@@ -76,11 +79,14 @@ class BudgetService {
     required DateTime start,
     required DateTime end,
     String? userId,
+    String? walletId,
   }) {
     final budgets = getAllBudgets(userId: userId);
     return budgets.any(
       (b) =>
           b.category == category &&
+          (walletId == null ||
+              b.walletId == walletId) && // Same wallet (or null)
           !b.endDate.isBefore(start) &&
           !b.startDate.isAfter(end),
     );
@@ -99,12 +105,13 @@ class BudgetService {
       throw ArgumentError('Ngày kết thúc ngân sách không được trong quá khứ');
     }
 
-    // Basic uniqueness: no duplicate category+overlap (scoped to user)
+    // Basic uniqueness: no duplicate category+overlap for same wallet (scoped to user)
     if (existsOverlappingBudget(
       category: budget.category,
       start: budget.startDate,
       end: budget.endDate,
       userId: userId,
+      walletId: budget.walletId,
     )) {
       throw ArgumentError(
         'Đã có ngân sách cho danh mục này trong khoảng thời gian trùng lặp',
@@ -151,6 +158,8 @@ class BudgetService {
       (b) =>
           b.id != budget.id && // Exclude current budget
           b.category == budget.category &&
+          (budget.walletId == null ||
+              b.walletId == budget.walletId) && // Same wallet
           !b.endDate.isBefore(budget.startDate) &&
           !b.startDate.isAfter(budget.endDate),
     );

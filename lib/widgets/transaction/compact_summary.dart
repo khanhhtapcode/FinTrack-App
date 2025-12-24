@@ -29,10 +29,7 @@ class CompactSummaryWidget extends StatelessWidget {
           // Balance at top
           Text(
             'Số dư',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 13,
-            ),
+            style: TextStyle(color: Colors.grey[600], fontSize: 13),
           ),
           SizedBox(height: 4),
           Text(
@@ -44,7 +41,7 @@ class CompactSummaryWidget extends StatelessWidget {
             ),
           ),
           SizedBox(height: 16),
-          
+
           // Income and Expense side by side
           Row(
             children: [
@@ -81,13 +78,7 @@ class CompactSummaryWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.grey[600],
-            fontSize: 12,
-          ),
-        ),
+        Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
         SizedBox(height: 4),
         Row(
           children: [

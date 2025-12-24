@@ -356,9 +356,9 @@ class _DebugScreenState extends State<DebugScreen> {
       _loadData();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Đã xóa tất cả giao dịch')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Đã xóa tất cả giao dịch')));
       }
     }
   }

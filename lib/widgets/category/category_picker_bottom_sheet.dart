@@ -54,10 +54,14 @@ class CategoryPickerBottomSheet extends StatelessWidget {
                     return const Center(child: CircularProgressIndicator());
                   }
 
-                    // Khử trùng lặp theo (type, name) để tránh hiện lặp danh mục
-                    final seen = <String>{};
-                    final items = snapshot.data!
-                      .where((c) => seen.add('${c.type.index}-${c.name.trim().toLowerCase()}'))
+                  // Khử trùng lặp theo (type, name) để tránh hiện lặp danh mục
+                  final seen = <String>{};
+                  final items = snapshot.data!
+                      .where(
+                        (c) => seen.add(
+                          '${c.type.index}-${c.name.trim().toLowerCase()}',
+                        ),
+                      )
                       .toList();
 
                   if (items.isEmpty) {

@@ -39,7 +39,10 @@ class NotificationCenterScreen extends StatelessWidget {
           if (items.any((e) => !e.isRead))
             TextButton(
               onPressed: notif.markAllRead,
-              child: const Text('Đánh dấu đã đọc', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'Đánh dấu đã đọc',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
         ],
       ),
@@ -48,7 +51,8 @@ class NotificationCenterScreen extends StatelessWidget {
           ? _buildEmpty()
           : ListView.separated(
               padding: const EdgeInsets.all(16),
-              itemBuilder: (context, index) => _NotificationTile(item: items[index]),
+              itemBuilder: (context, index) =>
+                  _NotificationTile(item: items[index]),
               separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemCount: items.length,
             ),
@@ -62,7 +66,10 @@ class NotificationCenterScreen extends StatelessWidget {
         children: [
           Icon(Icons.notifications_none, size: 48, color: Colors.grey.shade400),
           const SizedBox(height: 8),
-          Text('Chưa có thông báo', style: TextStyle(color: Colors.grey.shade600)),
+          Text(
+            'Chưa có thông báo',
+            style: TextStyle(color: Colors.grey.shade600),
+          ),
         ],
       ),
     );
@@ -197,12 +204,18 @@ class _NotificationTile extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       item.message,
-                      style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade700,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       _timeAgo(item.createdAt),
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade500,
+                      ),
                     ),
                   ],
                 ),
@@ -224,7 +237,10 @@ class _NotificationTile extends StatelessWidget {
         children: const [
           Icon(Icons.delete, color: Colors.white),
           SizedBox(height: 4),
-          Text('Xóa', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+          Text(
+            'Xóa',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          ),
         ],
       ),
     );

@@ -121,7 +121,9 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AppSettingsProvider()),
         ChangeNotifierProvider(create: (_) => TransactionNotifier()),
         ChangeNotifierProvider(create: (_) => NotificationService()..init()),
-        ChangeNotifierProvider(create: (_) => UserProvider()..loadCurrentUser()),
+        ChangeNotifierProvider(
+          create: (_) => UserProvider()..loadCurrentUser(),
+        ),
       ],
       child: Consumer<AppSettingsProvider>(
         builder: (context, settings, _) {

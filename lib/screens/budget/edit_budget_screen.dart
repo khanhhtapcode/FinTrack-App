@@ -287,7 +287,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                       type: CategoryType.expense,
                       onSelected: (group) {
                         setState(() => _selectedCategory = group.name);
-                        Navigator.pop(context);
+                        // CategoryPickerBottomSheet handles pop itself
                       },
                     ),
                   ),
@@ -735,6 +735,34 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                       return;
                     }
 
+                    // Check for overlapping budgets (excluding current budget)
+                    final service = BudgetService();
+                    await service.init();
+                    final auth = Provider.of<AuthService>(
+                      context,
+                      listen: false,
+                    );
+                    final userId = auth.currentUser?.id ?? '';
+
+                    // Check if there's another budget with same category, wallet and overlapping time
+                    final allBudgets = service.getAllBudgets(userId: userId);
+                    final hasOverlap = allBudgets.any(
+                      (b) =>
+                          b.id != widget.budget.id && // Exclude current budget
+                          b.category == _selectedCategory &&
+                          b.walletId == _selectedWalletId &&
+                          b.overlaps(_periodStart, _periodEnd),
+                    );
+
+                    if (hasOverlap) {
+                      if (!context.mounted) return;
+                      AppNotification.showError(
+                        context,
+                        'Đã có ngân sách cho danh mục này trong ví và khoảng thời gian trùng lặp. Vui lòng chọn ví khác hoặc thời gian khác',
+                      );
+                      return;
+                    }
+
                     final updatedBudget = Budget(
                       id: widget.budget.id, // Giữ nguyên ID
                       category: _selectedCategory,
@@ -768,18 +796,11 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                         } catch (_) {}
                       }
 
-                      final service = BudgetService();
-                      await service.init();
-                      final auth = Provider.of<AuthService>(
-                        context,
-                        listen: false,
-                      );
-                      final userId = auth.currentUser?.id ?? '';
-
                       await service.updateBudget(updatedBudget, userId: userId);
                       if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Đã cập nhật ngân sách')),
+                      AppNotification.showSuccess(
+                        context,
+                        'Đã cập nhật ngân sách',
                       );
                       Navigator.pop(
                         context,

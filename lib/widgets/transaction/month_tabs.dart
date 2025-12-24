@@ -23,7 +23,8 @@ class MonthTabsWidget extends StatelessWidget {
 
     switch (timeRangeType) {
       case 'Ngày':
-        final isToday = period.year == now.year &&
+        final isToday =
+            period.year == now.year &&
             period.month == now.month &&
             period.day == now.day;
         if (isToday) {
@@ -45,9 +46,8 @@ class MonthTabsWidget extends StatelessWidget {
         return label;
       case 'Quý':
         final quarter = ((period.month - 1) ~/ 3) + 1;
-        final isCurrentQuarter = 
-            period.year == now.year && 
-            ((now.month - 1) ~/ 3) + 1 == quarter;
+        final isCurrentQuarter =
+            period.year == now.year && ((now.month - 1) ~/ 3) + 1 == quarter;
         String label = 'Q$quarter';
         if (period.year != now.year) {
           label += '/${period.year}';
@@ -76,23 +76,26 @@ class MonthTabsWidget extends StatelessWidget {
       child: Row(
         children: availableMonths.map((period) {
           bool isSelected;
-          
+
           switch (timeRangeType) {
             case 'Ngày':
-              isSelected = period.year == selectedMonth.year &&
+              isSelected =
+                  period.year == selectedMonth.year &&
                   period.month == selectedMonth.month &&
                   period.day == selectedMonth.day;
               break;
 
             case 'Quý':
-              isSelected = period.year == selectedMonth.year &&
+              isSelected =
+                  period.year == selectedMonth.year &&
                   ((period.month - 1) ~/ 3) == ((selectedMonth.month - 1) ~/ 3);
               break;
             case 'Năm':
               isSelected = period.year == selectedMonth.year;
               break;
             default: // Tháng
-              isSelected = period.year == selectedMonth.year &&
+              isSelected =
+                  period.year == selectedMonth.year &&
                   period.month == selectedMonth.month;
           }
 
@@ -107,8 +110,7 @@ class MonthTabsWidget extends StatelessWidget {
                 color: isSelected ? AppTheme.primaryTeal : Colors.transparent,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color:
-                      isSelected ? AppTheme.primaryTeal : Colors.grey[300]!,
+                  color: isSelected ? AppTheme.primaryTeal : Colors.grey[300]!,
                   width: 1,
                 ),
               ),
@@ -117,8 +119,7 @@ class MonthTabsWidget extends StatelessWidget {
                 style: TextStyle(
                   color: isSelected ? Colors.white : Colors.grey[600],
                   fontSize: 13,
-                  fontWeight:
-                      isSelected ? FontWeight.w600 : FontWeight.normal,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 ),
               ),
             ),
