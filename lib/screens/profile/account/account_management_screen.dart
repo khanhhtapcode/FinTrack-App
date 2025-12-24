@@ -415,7 +415,10 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
 
                 if (success && context.mounted) {
                   Navigator.pop(context);
-                  AppNotification.showSuccess(context, t('password_changed_success'));
+                  AppNotification.showSuccess(
+                    context,
+                    t('password_changed_success'),
+                  );
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -480,66 +483,66 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-            Text(
-              'Thay đổi ảnh đại diện',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+              Text(
+                'Thay đổi ảnh đại diện',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
-            ),
-            const SizedBox(height: 20),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryTeal.withAlpha((0.1 * 255).round()),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.camera_alt, color: AppTheme.primaryTeal),
-              ),
-              title: const Text('Chụp ảnh'),
-              subtitle: const Text('Dùng camera của điện thoại'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickAvatarFromCamera();
-              },
-            ),
-            const SizedBox(height: 10),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryTeal.withAlpha((0.1 * 255).round()),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.photo_library, color: AppTheme.primaryTeal),
-              ),
-              title: const Text('Chọn từ thư viện'),
-              subtitle: const Text('Chọn ảnh từ thư viện điện thoại'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickAvatarFromGallery();
-              },
-            ),
-            const SizedBox(height: 10),
-            if (currentUser?.avatarPath != null)
+              const SizedBox(height: 20),
               ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.red.withAlpha((0.1 * 255).round()),
+                    color: AppTheme.primaryTeal.withAlpha((0.1 * 255).round()),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.delete, color: Colors.red),
+                  child: Icon(Icons.camera_alt, color: AppTheme.primaryTeal),
                 ),
-                title: const Text('Xóa ảnh đại diện'),
-                subtitle: const Text('Quay lại ảnh chữ cái'),
+                title: const Text('Chụp ảnh'),
+                subtitle: const Text('Dùng camera của điện thoại'),
                 onTap: () {
                   Navigator.pop(context);
-                  _deleteAvatar();
+                  _pickAvatarFromCamera();
                 },
               ),
-          ],
-        ),
+              const SizedBox(height: 10),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryTeal.withAlpha((0.1 * 255).round()),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.photo_library, color: AppTheme.primaryTeal),
+                ),
+                title: const Text('Chọn từ thư viện'),
+                subtitle: const Text('Chọn ảnh từ thư viện điện thoại'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickAvatarFromGallery();
+                },
+              ),
+              const SizedBox(height: 10),
+              if (currentUser?.avatarPath != null)
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withAlpha((0.1 * 255).round()),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.delete, color: Colors.red),
+                  ),
+                  title: const Text('Xóa ảnh đại diện'),
+                  subtitle: const Text('Quay lại ảnh chữ cái'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _deleteAvatar();
+                  },
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -551,7 +554,10 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
       final cameraStatus = await Permission.camera.request();
       if (!cameraStatus.isGranted) {
         if (mounted) {
-          AppNotification.showError(context, 'Ứng dụng cần quyền truy cập camera');
+          AppNotification.showError(
+            context,
+            'Ứng dụng cần quyền truy cập camera',
+          );
         }
         return;
       }
@@ -578,7 +584,10 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
       final photosStatus = await Permission.photos.request();
       if (!photosStatus.isGranted) {
         if (mounted) {
-          AppNotification.showError(context, 'Ứng dụng cần quyền truy cập thư viện ảnh');
+          AppNotification.showError(
+            context,
+            'Ứng dụng cần quyền truy cập thư viện ảnh',
+          );
         }
         return;
       }
@@ -603,16 +612,19 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     try {
       // Get provider reference before async operation
       final userProvider = Provider.of<UserProvider>(context, listen: false);
-      
+
       await userProvider.updateAvatar(imagePath);
-      
+
       if (mounted) {
         // Force rebuild immediately
         setState(() {
           currentUser = userProvider.currentUser;
         });
-        
-        AppNotification.showSuccess(context, 'Cập nhật ảnh đại diện thành công');
+
+        AppNotification.showSuccess(
+          context,
+          'Cập nhật ảnh đại diện thành công',
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -625,15 +637,15 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     try {
       // Get provider reference before async operation
       final userProvider = Provider.of<UserProvider>(context, listen: false);
-      
+
       await userProvider.deleteAvatar();
-      
+
       if (mounted) {
         // Force rebuild immediately
         setState(() {
           currentUser = userProvider.currentUser;
         });
-        
+
         AppNotification.showSuccess(context, 'Đã xóa ảnh đại diện');
       }
     } catch (e) {

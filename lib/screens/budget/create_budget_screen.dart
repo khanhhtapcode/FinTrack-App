@@ -838,12 +838,13 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                       start: _periodStart,
                       end: _periodEnd,
                       userId: userId,
+                      walletId: _selectedWalletId,
                     );
                     if (exists) {
                       if (!context.mounted) return;
                       AppNotification.showError(
                         context,
-                        'Đã có ngân sách cho danh mục này trong khoảng thời gian trùng lặp',
+                        'Đã có ngân sách cho danh mục này trong ví và khoảng thời gian trùng lặp',
                       );
                       return;
                     }

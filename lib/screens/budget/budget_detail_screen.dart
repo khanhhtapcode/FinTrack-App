@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../models/budget.dart';
+import '../../models/wallet.dart';
 import '../../config/constants.dart';
 import '../../services/data/category_group_service.dart';
+import '../../services/data/wallet_service.dart';
 import '../../services/data/transaction_notifier.dart';
 import '../../utils/category_icon_mapper.dart';
 import '../../config/theme.dart';
@@ -19,8 +21,9 @@ import 'edit_budget_screen.dart';
 
 class BudgetDetailScreen extends StatefulWidget {
   final Budget budget;
+  final String? walletId; // Optional wallet filter
 
-  const BudgetDetailScreen({super.key, required this.budget});
+  const BudgetDetailScreen({super.key, required this.budget, this.walletId});
 
   @override
   State<BudgetDetailScreen> createState() => _BudgetDetailScreenState();
@@ -29,10 +32,12 @@ class BudgetDetailScreen extends StatefulWidget {
 class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
   final BudgetService _budgetService = BudgetService();
   final TransactionService _transactionService = TransactionService();
+  final WalletService _walletService = WalletService();
   bool _showTransactions = false;
   List<model.Transaction> _transactions = [];
   double _totalSpent = 0;
   late Budget _currentBudget;
+  Wallet? _wallet;
 
   @override
   void initState() {
@@ -92,6 +97,11 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
     final filtered = txs
         .where((t) => t.type == model.TransactionType.expense)
         .where((t) => t.category == updatedBudget.category)
+        .where(
+          (t) =>
+              updatedBudget.walletId == null ||
+              t.walletId == updatedBudget.walletId,
+        ) // Filter by wallet from updated budget
         .toList();
 
     final spent = filtered.fold<double>(0, (sum, t) => sum + t.amount);
@@ -100,11 +110,18 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
     final catService = CategoryGroupService();
     _categories = await catService.getAll();
 
+    // Load wallet from updated budget's walletId
+    Wallet? wallet;
+    if (updatedBudget.walletId != null) {
+      wallet = await _walletService.getById(updatedBudget.walletId!);
+    }
+
     if (mounted) {
       setState(() {
         _currentBudget = updatedBudget;
         _transactions = filtered;
         _totalSpent = spent;
+        _wallet = wallet;
       });
     }
   }
@@ -697,7 +714,7 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
 
               const SizedBox(height: AppConstants.paddingMedium),
 
-              // Wallet type (for now, hardcoded as "Tổng cộng")
+              // Wallet type
               Container(
                 margin: const EdgeInsets.symmetric(
                   horizontal: AppConstants.paddingMedium,
@@ -724,7 +741,7 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                       color: AppTheme.primaryTeal,
                     ),
                     const SizedBox(width: 12),
-                    const Text('Tổng cộng'),
+                    Text(_wallet?.name ?? 'Tất cả ví'),
                   ],
                 ),
               ),
@@ -878,6 +895,8 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                           },
                         ),
                 ),
+              // Extra padding at bottom for scrolling
+              const SizedBox(height: AppConstants.paddingLarge),
             ],
           ),
         ),

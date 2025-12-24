@@ -29,22 +29,23 @@ class UserProvider extends ChangeNotifier {
       if (_currentUser == null) return;
 
       final userBox = await Hive.openBox<User>('users');
-      
+
       // Find user by checking all keys (could be email or id)
       User? existingUser;
       for (var key in userBox.keys) {
         final user = userBox.get(key);
-        if (user?.id == _currentUser!.id || user?.email == _currentUser!.email) {
+        if (user?.id == _currentUser!.id ||
+            user?.email == _currentUser!.email) {
           existingUser = user;
           break;
         }
       }
-      
+
       if (existingUser != null) {
         // Update the avatar path
         existingUser.avatarPath = avatarPath;
         await existingUser.save(); // Use save() to update in-place
-        
+
         // Update local reference
         _currentUser = existingUser;
         notifyListeners();
