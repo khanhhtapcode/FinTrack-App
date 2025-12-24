@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../config/constants.dart';
 import '../../services/data/category_group_service.dart';
+import '../../services/data/transaction_notifier.dart';
 import '../../utils/category_icon_mapper.dart';
 import '../../config/theme.dart';
 import '../../models/budget.dart';
@@ -37,6 +38,22 @@ class _CompletedBudgetsScreenState extends State<CompletedBudgetsScreen> {
       _categories = cats;
       if (mounted) setState(() {});
     });
+
+    // Listen to transaction changes to auto-update completed budgets
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TransactionNotifier>().addListener(_onTransactionChanged);
+    });
+  }
+
+  @override
+  void dispose() {
+    context.read<TransactionNotifier>().removeListener(_onTransactionChanged);
+    super.dispose();
+  }
+
+  void _onTransactionChanged() {
+    // Refresh completed budgets when transactions change
+    if (mounted) setState(() {});
   }
 
   IconData _getCategoryIcon(String categoryName) {

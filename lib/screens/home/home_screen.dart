@@ -9,6 +9,7 @@ import '../../config/theme.dart';
 import 'package:hive/hive.dart';
 import '../../services/auth/auth_service.dart';
 import '../../services/data/transaction_service.dart';
+import '../../services/data/transaction_notifier.dart';
 import '../../models/transaction.dart' as model;
 import '../../models/category_group.dart';
 import '../../utils/category_icon_mapper.dart';
@@ -47,7 +48,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
+      // Listen to transaction changes
+      context.read<TransactionNotifier>().addListener(_onTransactionChanged);
     });
+  }
+
+  @override
+  void dispose() {
+    context.read<TransactionNotifier>().removeListener(_onTransactionChanged);
+    super.dispose();
+  }
+
+  void _onTransactionChanged() {
+    _loadData();
   }
 
   Future<void> _loadData() async {

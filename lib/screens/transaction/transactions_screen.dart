@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../config/theme.dart';
 import '../../services/data/transaction_service.dart';
+import '../../services/data/transaction_notifier.dart';
 import '../../services/data/transaction_grouping_service.dart';
 import '../../services/auth/auth_service.dart';
 import '../../models/transaction.dart' as model;
@@ -55,6 +56,21 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     super.initState();
     _generateTimePeriodsList();
     _loadWallets().then((_) => _loadSummary());
+
+    // Listen to transaction changes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TransactionNotifier>().addListener(_onTransactionChanged);
+    });
+  }
+
+  @override
+  void dispose() {
+    context.read<TransactionNotifier>().removeListener(_onTransactionChanged);
+    super.dispose();
+  }
+
+  void _onTransactionChanged() {
+    _loadSummary();
   }
 
   Future<void> _loadWallets() async {
