@@ -5,6 +5,7 @@ import '../../models/transaction.dart' as model;
 import '../../utils/category_helper.dart';
 import '../../services/data/transaction_service.dart';
 import '../../services/data/wallet_service.dart';
+import '../../utils/notification_helper.dart';
 import 'edit_transaction_screen.dart';
 
 class TransactionDetailScreen extends StatefulWidget {
@@ -90,16 +91,12 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     try {
       await _transactionService.deleteTransaction(widget.transaction.id);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Đã xóa giao dịch')));
+        AppNotification.showSuccess(context, 'Đã xóa giao dịch');
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+        AppNotification.showError(context, 'Lỗi: $e');
       }
     } finally {
       if (mounted) setState(() => _isDeleting = false);

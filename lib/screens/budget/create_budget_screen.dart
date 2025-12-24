@@ -8,6 +8,7 @@ import '../../services/data/category_group_service.dart';
 import '../../models/category_group.dart';
 import '../../widgets/category/category_picker_bottom_sheet.dart';
 import '../../utils/category_icon_mapper.dart';
+import '../../utils/notification_helper.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:provider/provider.dart';
@@ -761,21 +762,11 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                 child: ElevatedButton(
                   onPressed: () async {
                     if (_amount <= 0) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Vui lòng nhập số tiền hợp lệ'),
-                        ),
-                      );
+                      AppNotification.showError(context, 'Vui lòng nhập số tiền hợp lệ');
                       return;
                     }
                     if (_periodStart.isAfter(_periodEnd)) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc',
-                          ),
-                        ),
-                      );
+                      AppNotification.showError(context, 'Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc');
                       return;
                     }
                     // Reject budgets with end date in the past (date-only comparison)
@@ -791,13 +782,7 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                       _periodEnd.day,
                     );
                     if (endDateOnly.isBefore(todayDate)) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Ngày kết thúc ngân sách không được trong quá khứ',
-                          ),
-                        ),
-                      );
+                      AppNotification.showError(context, 'Ngày kết thúc ngân sách không được trong quá khứ');
                       return;
                     }
                     // Ensure category exists in admin categories (create non-system group if needed)
@@ -833,13 +818,7 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                     );
                     if (exists) {
                       if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Đã có ngân sách cho danh mục này trong khoảng thời gian trùng lặp',
-                          ),
-                        ),
-                      );
+                      AppNotification.showError(context, 'Đã có ngân sách cho danh mục này trong khoảng thời gian trùng lặp');
                       return;
                     }
 
@@ -856,15 +835,11 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                     try {
                       await service.addBudget(newBudget);
                       if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Đã lưu ngân sách')),
-                      );
+                      AppNotification.showSuccess(context, '\u0110ã lưu ngân sách');
                       Navigator.pop(context, true);
                     } catch (e) {
                       if (!context.mounted) return;
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text(e.toString())));
+                      AppNotification.showError(context, e.toString());
                     }
                   },
                   style: ElevatedButton.styleFrom(

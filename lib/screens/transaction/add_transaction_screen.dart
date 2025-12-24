@@ -10,6 +10,7 @@ import '../../models/receipt_data.dart';
 import '../../services/auth/auth_service.dart';
 import '../../models/category_group.dart';
 import '../../utils/category_icon_mapper.dart';
+import '../../utils/notification_helper.dart';
 
 import 'package:uuid/uuid.dart';
 import 'package:image_picker/image_picker.dart';
@@ -1019,23 +1020,15 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         ? 'Độ tin cậy: $confidencePercent%'
         : 'Độ tin cậy thấp: $confidencePercent% - Vui lòng kiểm tra lại';
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('$confidenceEmoji Đã quét hóa đơn thành công'),
-            SizedBox(height: 4),
-            Text(confidenceText, style: TextStyle(fontSize: 12)),
-          ],
-        ),
-        backgroundColor: data.confidence >= 0.7
-            ? AppTheme.accentGreen
-            : Colors.orange,
-        duration: Duration(seconds: 3),
-      ),
-    );
+    final message = data.confidence >= 0.7
+        ? '$confidenceEmoji Đã quét hóa đơn thành công'
+        : '$confidenceEmoji Đã quét hóa đơn (Độ tin cậy: ${(data.confidence * 100).toStringAsFixed(0)}%)';
+    
+    if (data.confidence >= 0.7) {
+      AppNotification.showSuccess(context, message, duration: const Duration(seconds: 3));
+    } else {
+      AppNotification.showWarning(context, message, duration: const Duration(seconds: 3));
+    }
   }
 
   void _showLoadingDialog(String message) {

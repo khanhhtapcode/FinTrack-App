@@ -252,14 +252,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // Floating Action Button (Add button)
       // Keep FAB visible on Home, Transactions, Budget, and Accounts tabs
-      floatingActionButton: (_selectedIndex == 0 ||
+      floatingActionButton:
+          (_selectedIndex == 0 ||
               _selectedIndex == 1 ||
               _selectedIndex == 3 ||
               _selectedIndex == 4)
           ? FloatingActionButton(
               onPressed: _openAddTransaction,
               backgroundColor: AppTheme.primaryTeal,
-              child: const Icon(Icons.add, size: 32),
+              shape: const CircleBorder(),
+              child: const Icon(Icons.add, size: 32, color: Colors.white),
             )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,

@@ -6,6 +6,7 @@ import '../../config/theme.dart';
 import '../../models/wallet.dart';
 import '../../services/data/wallet_service.dart';
 import '../../services/auth/auth_service.dart';
+import '../../utils/notification_helper.dart';
 
 // ============================================================================
 // MY WALLET SCREEN - Manage user wallets and accounts
@@ -145,9 +146,7 @@ class _MyWalletScreenState extends State<MyWalletScreen> {
                           w2.id != wallet?.id,
                     );
                     if (dup) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Tên ví đã tồn tại')),
-                      );
+                      AppNotification.showError(context, 'Tên ví đã tồn tại');
                       return;
                     }
 
@@ -191,9 +190,7 @@ class _MyWalletScreenState extends State<MyWalletScreen> {
         final existing = await _walletService.getByName(name, userId: userId);
         if (existing != null && existing.id != id) {
           Navigator.pop(context);
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Tên ví đã tồn tại')));
+          AppNotification.showError(context, 'Tên ví đã tồn tại');
           return;
         }
 
@@ -218,26 +215,20 @@ class _MyWalletScreenState extends State<MyWalletScreen> {
         }
 
         Navigator.pop(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Lưu ví thành công')));
+        AppNotification.showSuccess(context, 'Lưu ví thành công');
 
         // Refresh wallets without blocking UI
         _loadWallets();
       } catch (e) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Lỗi khi lưu ví: $e')));
+        AppNotification.showError(context, 'Lỗi khi lưu ví: $e');
       }
     }
   }
 
   Future<void> _confirmDelete(Wallet w) async {
     if (w.isDefault) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Không thể xóa ví mặc định')),
-      );
+      AppNotification.showError(context, 'Không thể xóa ví mặc định');
       return;
     }
 
@@ -246,9 +237,7 @@ class _MyWalletScreenState extends State<MyWalletScreen> {
 
     final count = (await _walletService.getAll(userId: userId)).length;
     if (count <= 1) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Phải có ít nhất 1 ví')));
+      AppNotification.showError(context, 'Phải có ít nhất 1 ví');
       return;
     }
 
@@ -385,7 +374,8 @@ class _MyWalletScreenState extends State<MyWalletScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddEditDialog(),
         backgroundColor: AppTheme.primaryTeal,
-        child: const Icon(Icons.add),
+        shape: const CircleBorder(),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }

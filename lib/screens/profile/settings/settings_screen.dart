@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../config/theme.dart';
 import '../../../services/core/app_localization.dart';
 import '../../../services/core/app_settings_provider.dart';
+import '../../../utils/notification_helper.dart';
 import 'category_group/category_group_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -291,12 +292,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _showComingSoon(c, 'Tháng đầu năm');
 
   void _showComingSoon(BuildContext context, String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$feature sẽ sớm được cập nhật'),
-        backgroundColor: AppTheme.primaryTeal,
-      ),
-    );
+    AppNotification.showInfo(context, '$feature sẽ sớm được cập nhật');
   }
 
   String _getLanguageName(String code) {

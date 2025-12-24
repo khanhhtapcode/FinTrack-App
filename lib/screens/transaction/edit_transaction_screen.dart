@@ -10,6 +10,7 @@ import '../../models/category_group.dart';
 import '../../utils/category_icon_mapper.dart';
 import '../../models/wallet.dart';
 import '../../services/data/wallet_service.dart';
+import '../../utils/notification_helper.dart';
 
 class EditTransactionScreen extends StatefulWidget {
   final model.Transaction transaction;
@@ -583,23 +584,17 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
     final amount = int.tryParse(amountText) ?? 0;
     
     if (amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập số tiền hợp lệ')),
-      );
+      AppNotification.showError(context, 'Vui lòng nhập số tiền hợp lệ');
       return;
     }
 
     if (_selectedCategory.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng chọn danh mục')),
-      );
+      AppNotification.showError(context, 'Vui lòng chọn danh mục');
       return;
     }
 
     if (_selectedWalletId == null || _selectedWalletId!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng chọn ví')),
-      );
+      AppNotification.showError(context, 'Vui lòng chọn ví');
       return;
     }
 
@@ -630,16 +625,12 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
       await _transactionService.updateTransaction(updatedTransaction);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đã cập nhật giao dịch')),
-        );
+        AppNotification.showSuccess(context, 'Đã cập nhật giao dịch');
         Navigator.pop(context, true); // Return true to indicate success
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: $e')),
-        );
+        AppNotification.showError(context, 'Lỗi: $e');
       }
     } finally {
       if (mounted) {

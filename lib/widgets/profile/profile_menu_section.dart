@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../config/theme.dart';
 import '../../services/auth/auth_service.dart';
+import '../../utils/notification_helper.dart';
 
 import '../../screens/profile/settings/category_group/category_group_screen.dart';
 import '../../screens/profile/account/account_management_screen.dart';
@@ -165,13 +166,7 @@ class ProfileMenuSection extends StatelessWidget {
   }
 
   void _comingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(t('feature_under_development')),
-        backgroundColor: AppTheme.primaryTeal,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    AppNotification.showInfo(context, t('feature_under_development'));
   }
 
   void _logout(BuildContext context) async {

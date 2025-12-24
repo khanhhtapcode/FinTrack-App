@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../config/theme.dart';
+
 import '../../../../models/category_group.dart';
 import '../../../../services/data/category_group_service.dart';
 import '../../../../widgets/category/category_group_tile.dart';
@@ -51,7 +53,9 @@ class _CategoryGroupScreenState extends State<CategoryGroupScreen>
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _goToAdd,
-        child: const Icon(Icons.add),
+        backgroundColor: AppTheme.primaryTeal,
+        shape: const CircleBorder(),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
