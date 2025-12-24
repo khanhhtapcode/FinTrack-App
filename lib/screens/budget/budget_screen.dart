@@ -13,6 +13,7 @@ import '../../services/data/transaction_service.dart';
 import '../../services/data/transaction_notifier.dart';
 import '../../services/data/category_group_service.dart';
 import '../../services/data/wallet_service.dart';
+import '../auth/login_screen.dart';
 import '../../services/core/budget_progress.dart';
 import '../../utils/category_icon_mapper.dart';
 import '_progress_bar.dart';
@@ -132,8 +133,22 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authService = Provider.of<AuthService>(context, listen: false);
-    final userName = authService.currentUser?.fullName ?? 'User';
+    // Verify user is logged in
+    final authService = context.watch<AuthService>();
+    final currentUser = authService.currentUser;
+
+    if (currentUser == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+        );
+      });
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final userName = currentUser.fullName;
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,

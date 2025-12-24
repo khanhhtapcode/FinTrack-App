@@ -8,6 +8,7 @@ import '../../services/core/app_settings_provider.dart';
 
 import '../../widgets/profile/profile_header.dart';
 import '../../widgets/profile/profile_menu_section.dart';
+import '../auth/login_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -16,6 +17,17 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final authService = context.watch<AuthService>();
     final currentUser = authService.currentUser;
+
+    if (currentUser == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+        );
+      });
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     return Consumer<AppSettingsProvider>(
       builder: (context, settings, _) {

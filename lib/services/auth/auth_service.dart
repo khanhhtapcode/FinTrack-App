@@ -400,16 +400,17 @@ class AuthService extends ChangeNotifier {
       debugPrint('⚠️ Error during logout sync: $e');
     }
 
-    // Do NOT clear user wallets on logout — keep data persisted locally so wallets are
-    // preserved across sessions. Clearing wallets here caused users to lose custom wallets
-    // and appear to have 'reset' wallets on next login. If an explicit account deletion
-    // feature is added later, it should be handled separately.
-    // (No-op)
-
+    // 🧹 CRITICAL FIX: Clear session to prevent data leakage between users
     final sessionBox = await Hive.openBox(_sessionBoxName);
     await sessionBox.clear();
+
     _currentUser = null;
     notifyListeners();
+
+    debugPrint('✅ Logout completed - session cleared');
+    debugPrint(
+      '⚠️ Note: Local data kept for offline access. Will be filtered by userId on next login.',
+    );
   }
 
   // Resend OTP

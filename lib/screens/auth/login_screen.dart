@@ -51,14 +51,16 @@ class _LoginScreenState extends State<LoginScreen> {
         final isAdmin = result['isAdmin'] ?? false;
 
         if (isAdmin) {
-          // Navigate to Admin Home
-          Navigator.of(context).pushReplacement(
+          // Navigate to Admin Home - Clear all previous routes
+          Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => AdminHomeScreen()),
+            (route) => false, // Remove all previous routes
           );
         } else {
-          // Navigate to User Home
-          Navigator.of(context).pushReplacement(
+          // Navigate to User Home - Clear all previous routes to force fresh state
+          Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => HomeScreen()),
+            (route) => false, // Remove all previous routes
           );
         }
       } else {

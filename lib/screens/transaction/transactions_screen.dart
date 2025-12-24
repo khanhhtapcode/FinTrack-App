@@ -13,6 +13,7 @@ import '../../widgets/transaction/month_tabs.dart';
 import '../../widgets/transaction/compact_summary.dart';
 import '../../widgets/transaction/transaction_grid_view.dart';
 import '../../widgets/transaction/transaction_calendar_view.dart';
+import '../auth/login_screen.dart';
 import '../../widgets/transaction/transaction_category_view.dart';
 import 'transaction_day_detail_screen.dart';
 import 'transaction_month_detail_screen.dart';
@@ -216,6 +217,21 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Verify user is logged in
+    final authService = context.watch<AuthService>();
+    final currentUser = authService.currentUser;
+
+    if (currentUser == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+        );
+      });
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isSmallScreen = screenWidth < 360 || screenHeight < 700;

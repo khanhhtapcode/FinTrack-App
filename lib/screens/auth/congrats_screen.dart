@@ -11,7 +11,7 @@ class CongratsScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
-          padding: EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -19,7 +19,7 @@ class CongratsScreen extends StatelessWidget {
               // Logo
               _buildLogo(),
 
-              SizedBox(height: 60),
+              const SizedBox(height: 60),
 
               // Success Icon
               Container(
@@ -29,17 +29,17 @@ class CongratsScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: AppTheme.primaryTeal.withOpacity(0.1),
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.celebration_outlined,
                   size: 60,
                   color: AppTheme.primaryTeal,
                 ),
               ),
 
-              SizedBox(height: 40),
+              const SizedBox(height: 40),
 
               // Title
-              Text(
+              const Text(
                 'CHÚC MỪNG BẠN!',
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -49,10 +49,10 @@ class CongratsScreen extends StatelessWidget {
                 ),
               ),
 
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
               // Message
-              Text(
+              const Text(
                 'Bạn đã hoàn thành quá trình đăng ký, bây giờ chúng ta đã thể bắt đầu sử dụng ứng dụng để quản lý tài chính cá nhân của bạn.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -62,7 +62,7 @@ class CongratsScreen extends StatelessWidget {
                 ),
               ),
 
-              SizedBox(height: 60),
+              const SizedBox(height: 60),
 
               // Continue Button
               SizedBox(
@@ -72,7 +72,9 @@ class CongratsScreen extends StatelessWidget {
                     // Navigate to Home/Dashboard
                     Navigator.pushAndRemoveUntil(
                       context,
-                      MaterialPageRoute(builder: (context) => HomeScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => const HomeScreen(),
+                      ),
                       (route) => false, // Remove all previous routes
                     );
                   },
@@ -84,7 +86,7 @@ class CongratsScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: Text(
+                  child: const Text(
                     'HOÀN THÀNH',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                   ),
@@ -103,18 +105,18 @@ class CongratsScreen extends StatelessWidget {
         Container(
           width: 80,
           height: 80,
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             shape: BoxShape.circle,
             color: AppTheme.primaryTeal,
           ),
-          child: Icon(
+          child: const Icon(
             Icons.account_balance_wallet_rounded,
             size: 40,
             color: Colors.white,
           ),
         ),
-        SizedBox(height: 8),
-        Text(
+        const SizedBox(height: 8),
+        const Text(
           'FINTRACKER',
           style: TextStyle(
             fontSize: 16,

@@ -21,6 +21,7 @@ import '../transaction/add_transaction_screen.dart';
 import '../transaction/transactions_screen.dart';
 import '../budget/budget_screen.dart';
 import '../profile/profile_screen.dart';
+import '../auth/login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -241,6 +242,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 🔒 CRITICAL: Verify user is still logged in on every build
+    final authService = context.watch<AuthService>();
+    final currentUser = authService.currentUser;
+
+    // If no user logged in, redirect to login
+    if (currentUser == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+          );
+        }
+      });
+      return Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isSmallScreen = screenWidth < 360 || screenHeight < 700;

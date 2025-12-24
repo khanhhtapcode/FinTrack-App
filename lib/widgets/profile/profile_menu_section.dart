@@ -11,6 +11,7 @@ import '../../screens/profile/account/account_management_screen.dart';
 import '../../screens/profile/settings/settings_screen.dart';
 import '../../screens/about/about_screen.dart';
 import '../../screens/auth/login_screen.dart';
+import '../../screens/chatbot/financial_chatbot_screen.dart';
 
 class ProfileMenuSection extends StatelessWidget {
   final String Function(String) t;
@@ -87,9 +88,9 @@ class ProfileMenuSection extends StatelessWidget {
             _divider(),
 
             _menuItem(
-              icon: Icons.help_outline,
-              title: t('help'),
-              onTap: () => _comingSoon(context),
+              icon: Icons.smart_toy,
+              title: 'Chatbot Tài Chính',
+              onTap: () => _push(context, const FinancialChatbotScreen()),
             ),
           ],
         ),
