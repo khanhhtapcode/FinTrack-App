@@ -43,4 +43,7 @@ enum CategoryType {
 
   @HiveField(1)
   income,
+
+  @HiveField(2)
+  loan,
 }

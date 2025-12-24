@@ -121,7 +121,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         ? CategoryType.expense
         : _selectedTab == 1
         ? CategoryType.income
-        : null;
+        : CategoryType.loan;
 
     // Khử trùng lặp theo (type, name) để tránh lặp danh mục hiển thị
     final seen = <String>{};
@@ -393,67 +393,67 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
-          children: [
-            Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 8),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Expanded(
-              child: GridView.builder(
-                padding: const EdgeInsets.all(16),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                itemCount: _categories.length,
-                itemBuilder: (_, index) {
-                  final c = _categories[index];
-                  return InkWell(
-                    onTap: () {
-                      setState(() => _selectedCategory = c.name);
-                      Navigator.pop(sheetContext);
-                    },
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: Color(c.colorValue),
-                          child: Builder(
-                            builder: (_) {
-                              final asset = CategoryIconMapper.assetForKey(
-                                c.iconKey,
-                              );
-                              if (asset != null) {
-                                return ClipOval(
-                                  child: Image.asset(
-                                    asset,
-                                    width: 28,
-                                    height: 28,
-                                    fit: BoxFit.cover,
-                                  ),
-                                );
-                              }
-                              return Icon(
-                                CategoryIconMapper.fromKey(c.iconKey),
-                                color: Colors.white,
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(c.name, textAlign: TextAlign.center),
-                      ],
-                    ),
-                  );
-                },
               ),
-            ),
-          ],
-        ),
+              Expanded(
+                child: GridView.builder(
+                  padding: const EdgeInsets.all(16),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                  ),
+                  itemCount: _categories.length,
+                  itemBuilder: (_, index) {
+                    final c = _categories[index];
+                    return InkWell(
+                      onTap: () {
+                        setState(() => _selectedCategory = c.name);
+                        Navigator.pop(sheetContext);
+                      },
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: Color(c.colorValue),
+                            child: Builder(
+                              builder: (_) {
+                                final asset = CategoryIconMapper.assetForKey(
+                                  c.iconKey,
+                                );
+                                if (asset != null) {
+                                  return ClipOval(
+                                    child: Image.asset(
+                                      asset,
+                                      width: 28,
+                                      height: 28,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  );
+                                }
+                                return Icon(
+                                  CategoryIconMapper.fromKey(c.iconKey),
+                                  color: Colors.white,
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(c.name, textAlign: TextAlign.center),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -858,51 +858,51 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-            Text(
-              'Quét hóa đơn',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-            SizedBox(height: 20),
-            ListTile(
-              leading: Container(
-                padding: EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryTeal.withAlpha((0.1 * 255).round()),
-                  shape: BoxShape.circle,
+              Text(
+                'Quét hóa đơn',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textPrimary,
                 ),
-                child: Icon(Icons.camera_alt, color: AppTheme.primaryTeal),
               ),
-              title: Text('Chụp ảnh'),
-              subtitle: Text(
-                'Quét hóa đơn với camera',
-                style: TextStyle(fontSize: 11),
-              ),
-              onTap: _scanFromCamera,
-            ),
-            SizedBox(height: 10),
-            ListTile(
-              leading: Container(
-                padding: EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryTeal.withAlpha((0.1 * 255).round()),
-                  shape: BoxShape.circle,
+              SizedBox(height: 20),
+              ListTile(
+                leading: Container(
+                  padding: EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryTeal.withAlpha((0.1 * 255).round()),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.camera_alt, color: AppTheme.primaryTeal),
                 ),
-                child: Icon(Icons.photo_library, color: AppTheme.primaryTeal),
+                title: Text('Chụp ảnh'),
+                subtitle: Text(
+                  'Quét hóa đơn với camera',
+                  style: TextStyle(fontSize: 11),
+                ),
+                onTap: _scanFromCamera,
               ),
-              title: Text('Chọn từ thư viện'),
-              subtitle: Text(
-                'Chọn ảnh hóa đơn từ thư viện',
-                style: TextStyle(fontSize: 11),
+              SizedBox(height: 10),
+              ListTile(
+                leading: Container(
+                  padding: EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryTeal.withAlpha((0.1 * 255).round()),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.photo_library, color: AppTheme.primaryTeal),
+                ),
+                title: Text('Chọn từ thư viện'),
+                subtitle: Text(
+                  'Chọn ảnh hóa đơn từ thư viện',
+                  style: TextStyle(fontSize: 11),
+                ),
+                onTap: _pickFromGallery,
               ),
-              onTap: _pickFromGallery,
-            ),
-            SizedBox(height: 10),
-          ],
-        ),
+              SizedBox(height: 10),
+            ],
+          ),
         ),
       ),
     );

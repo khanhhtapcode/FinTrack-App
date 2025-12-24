@@ -180,6 +180,31 @@ class TransactionService {
     return all.where((t) => t.userId == userId).toList();
   }
 
+  /// Bulk rename category labels across all transactions.
+  /// Returns the number of transactions updated.
+  Future<int> bulkRenameCategory(String fromName, String toName) async {
+    await init();
+    final normalizedFrom = fromName.trim().toLowerCase();
+    var updated = 0;
+    final now = DateTime.now();
+
+    for (final tx in List<Transaction>.from(_box!.values)) {
+      if ((tx.category?.trim().toLowerCase() ?? '') == normalizedFrom) {
+        tx.category = toName;
+        tx.isSynced = false;
+        tx.updatedAt = now;
+        await _box!.put(tx.id, tx);
+        updated++;
+      }
+    }
+
+    if (updated > 0) {
+      _syncService.syncAllPendingTransactions();
+    }
+
+    return updated;
+  }
+
   // ================= CLEAR =================
   Future<void> clearAll() async {
     await init();
