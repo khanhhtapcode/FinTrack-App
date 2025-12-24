@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../config/theme.dart';
 import '../../screens/profile/account/account_management_screen.dart';
+import '../user_avatar.dart';
 
 class ProfileHeader extends StatelessWidget {
   final dynamic user;
@@ -25,18 +26,7 @@ class ProfileHeader extends StatelessWidget {
         color: AppTheme.cardColor,
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 30,
-              backgroundColor: AppTheme.primaryTeal,
-              child: Text(
-                userName[0].toUpperCase(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+            const UserAvatar(radius: 30, navigateOnTap: false),
             const SizedBox(width: 16),
             Expanded(
               child: Column(

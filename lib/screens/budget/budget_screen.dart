@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../models/budget.dart';
 import '../../config/constants.dart';
 import '../../config/theme.dart';
+import '../../widgets/user_avatar.dart';
 import '../../services/auth/auth_service.dart';
 import '../../services/data/budget_service.dart';
 import '../../services/data/transaction_service.dart';
@@ -17,6 +18,7 @@ import '_progress_bar.dart';
 import 'create_budget_screen.dart';
 import 'budget_detail_screen.dart';
 import 'completed_budgets_screen.dart';
+import '../profile/account/account_management_screen.dart';
 
 enum BudgetSortOption { startDateAsc, endDateAsc, limitDesc }
 
@@ -141,20 +143,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
         centerTitle: true,
         toolbarHeight: 60,
         leadingWidth: 64,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 12),
-          child: CircleAvatar(
-            radius: 20,
-            backgroundColor: Colors.white.withOpacity(0.3),
-            child: Text(
-              userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-            ),
-          ),
+        leading: const Padding(
+          padding: EdgeInsets.only(left: 12),
+          child: UserAvatar(radius: 20),
         ),
         title: const Text(
           'Ngân sách',

@@ -503,50 +503,63 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
   void _showCategoryPicker() {
     showModalBottomSheet(
       context: context,
-      builder: (sheetContext) => GridView.builder(
-        padding: const EdgeInsets.all(16),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-        ),
-        itemCount: _categories.length,
-        itemBuilder: (_, index) {
-          final c = _categories[index];
-          return InkWell(
-            onTap: () {
-              setState(() => _selectedCategory = c.name);
-              Navigator.pop(sheetContext);
-            },
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircleAvatar(
-                  backgroundColor: Color(c.colorValue),
-                  child: Builder(
-                    builder: (_) {
-                      final asset = CategoryIconMapper.assetForKey(c.iconKey);
-                      if (asset != null) {
-                        return ClipOval(
-                          child: Image.asset(
-                            asset,
-                            width: 28,
-                            height: 28,
-                            fit: BoxFit.cover,
-                          ),
-                        );
-                      }
-                      return Icon(
-                        CategoryIconMapper.fromKey(c.iconKey),
-                        color: Colors.white,
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(c.name, textAlign: TextAlign.center),
-              ],
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.6,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: GridView.builder(
+            padding: const EdgeInsets.all(16),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
             ),
-          );
-        },
+            itemCount: _categories.length,
+            itemBuilder: (_, index) {
+              final c = _categories[index];
+              return InkWell(
+                onTap: () {
+                  setState(() => _selectedCategory = c.name);
+                  Navigator.pop(sheetContext);
+                },
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: Color(c.colorValue),
+                      child: Builder(
+                        builder: (_) {
+                          final asset = CategoryIconMapper.assetForKey(c.iconKey);
+                          if (asset != null) {
+                            return ClipOval(
+                              child: Image.asset(
+                                asset,
+                                width: 28,
+                                height: 28,
+                                fit: BoxFit.cover,
+                              ),
+                            );
+                          }
+                          return Icon(
+                            CategoryIconMapper.fromKey(c.iconKey),
+                            color: Colors.white,
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(c.name, textAlign: TextAlign.center),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
       ),
     );
   }
@@ -554,38 +567,41 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
   void _showWalletPicker() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (sheetContext) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Chọn ví',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 12),
-            ..._wallets.map((w) {
-              final isSelected = w.id == _selectedWalletId;
-              return ListTile(
-                leading: Icon(
-                  Icons.account_balance_wallet,
-                  color: isSelected ? AppTheme.primaryTeal : Colors.grey,
-                ),
-                title: Text(w.name),
-                trailing: isSelected
-                    ? Icon(Icons.check, color: AppTheme.primaryTeal)
-                    : null,
-                onTap: () {
-                  setState(() => _selectedWalletId = w.id);
-                  Navigator.pop(sheetContext);
-                },
-              );
-            }).toList(),
-          ],
+      builder: (sheetContext) => SafeArea(
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Chọn ví',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 12),
+              ..._wallets.map((w) {
+                final isSelected = w.id == _selectedWalletId;
+                return ListTile(
+                  leading: Icon(
+                    Icons.account_balance_wallet,
+                    color: isSelected ? AppTheme.primaryTeal : Colors.grey,
+                  ),
+                  title: Text(w.name),
+                  trailing: isSelected
+                      ? Icon(Icons.check, color: AppTheme.primaryTeal)
+                      : null,
+                  onTap: () {
+                    setState(() => _selectedWalletId = w.id);
+                    Navigator.pop(sheetContext);
+                  },
+                );
+              }).toList(),
+            ],
+          ),
         ),
       ),
     );

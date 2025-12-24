@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:hive/hive.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../config/theme.dart';
 import '../../models/transaction.dart' as model;
@@ -384,17 +385,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      transitionAnimationController: AnimationController(
-        duration: const Duration(milliseconds: 400),
-        vsync: Navigator.of(context),
-      ),
-      builder: (sheetContext) => Container(
-        height: MediaQuery.of(context).size.height * 0.6,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
+      builder: (sheetContext) => SafeArea(
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.6,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
           children: [
             Container(
               margin: const EdgeInsets.only(top: 12, bottom: 8),
@@ -455,6 +453,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );
@@ -849,14 +848,16 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   void _showScanOptions() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
-        padding: EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+      builder: (context) => SafeArea(
+        child: Container(
+          padding: EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             Text(
               'Quét hóa đơn',
               style: TextStyle(
@@ -902,6 +903,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             SizedBox(height: 10),
           ],
         ),
+        ),
       ),
     );
   }
@@ -911,6 +913,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   Future<void> _scanFromCamera() async {
     try {
       Navigator.pop(context); // Close the scan options dialog
+
+      // Request camera permission
+      final cameraStatus = await Permission.camera.request();
+      if (!cameraStatus.isGranted) {
+        _showErrorDialog('Ứng dụng cần quyền truy cập camera');
+        return;
+      }
 
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.camera,
@@ -939,6 +948,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   Future<void> _pickFromGallery() async {
     try {
       Navigator.pop(context); // Close the scan options dialog
+
+      // Request photos permission
+      final photosStatus = await Permission.photos.request();
+      if (!photosStatus.isGranted) {
+        _showErrorDialog('Ứng dụng cần quyền truy cập thư viện ảnh');
+        return;
+      }
 
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
