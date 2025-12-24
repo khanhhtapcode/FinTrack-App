@@ -1,3 +1,6 @@
+import 'package:provider/provider.dart';
+import '../../services/data/notification_service.dart';
+import '../notification/notification_center_screen.dart';
 import 'package:expense_tracker_app/widgets/home/balance_card_widget.dart';
 import 'package:expense_tracker_app/widgets/home/chart_widget.dart';
 import 'package:expense_tracker_app/widgets/home/recent_transactions_widget.dart';
@@ -328,20 +331,43 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
 
-        // Notification Icon
-        IconButton(
-          icon: const Icon(Icons.notifications_outlined),
-          color: AppTheme.primaryTeal,
-          onPressed: () {
-            // Open notifications
+        // Notification Icon with unread badge
+        Consumer<NotificationService>(
+          builder: (context, notif, _) {
+            final unread = notif.unreadCount;
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_outlined),
+                  color: AppTheme.primaryTeal,
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationCenterScreen(),
+                      ),
+                    );
+                  },
+                ),
+                if (unread > 0)
+                  Positioned(
+                    right: 6,
+                    top: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        unread > 99 ? '99+' : '$unread',
+                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+              ],
+            );
           },
-        ),
-
-        // Logout Icon (Temporary)
-        IconButton(
-          icon: const Icon(Icons.logout),
-          color: Colors.red,
-          onPressed: () => _showLogoutDialog(context),
         ),
       ],
     );

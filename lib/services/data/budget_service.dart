@@ -27,6 +27,13 @@ class BudgetService {
         .toList();
   }
 
+  Budget? getById(String id) {
+    if (!_initialized) return null;
+    final raw = _budgetsBox.get(id) as Map?;
+    if (raw == null) return null;
+    return _budgetFromMap(raw.cast<String, dynamic>());
+  }
+
   List<Budget> getBudgetsOverlapping(DateTime start, DateTime end) {
     return getAllBudgets().where((b) => b.overlaps(start, end)).toList();
   }
