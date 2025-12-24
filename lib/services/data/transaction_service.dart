@@ -170,6 +170,12 @@ class TransactionService {
     return List<Transaction>.from(_box!.values);
   }
 
+  // ================= GET BY ID =================
+  Future<Transaction?> getById(String id) async {
+    await init();
+    return _box!.get(id);
+  }
+
   Future<List<Transaction>> getTransactionsByUserId(String userId) async {
     await init();
 

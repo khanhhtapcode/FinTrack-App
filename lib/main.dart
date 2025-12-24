@@ -18,6 +18,7 @@ import 'models/category_group.dart';
 import 'models/wallet.dart';
 import 'services/data/wallet_service.dart';
 import 'services/data/transaction_service.dart';
+import 'services/data/notification_service.dart';
 import 'utils/category_seed.dart';
 
 Future<void> main() async {
@@ -118,6 +119,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthService()),
         ChangeNotifierProvider(create: (_) => AppSettingsProvider()),
         ChangeNotifierProvider(create: (_) => TransactionNotifier()),
+        ChangeNotifierProvider(create: (_) => NotificationService()..init()),
       ],
       child: Consumer<AppSettingsProvider>(
         builder: (context, settings, _) {
