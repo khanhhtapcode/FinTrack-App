@@ -201,20 +201,36 @@ class AuthService extends ChangeNotifier {
       // 🌐 If user not found locally, try to load from Firebase
       if (user == null) {
         debugPrint('🔍 User not found locally, checking Firebase...');
+        debugPrint('🔍 Email to search: $email');
         try {
           final firebaseUser = await _firebaseRepo.getUserByEmail(email);
           if (firebaseUser != null) {
             debugPrint('✅ User found in Firebase, downloading to local...');
+            debugPrint('✅ Firebase user ID: ${firebaseUser.id}');
+            debugPrint('✅ Firebase user email: ${firebaseUser.email}');
             // Save to local Hive
             await box.put(email, firebaseUser);
             user = firebaseUser;
             debugPrint('✅ User saved to local Hive');
           } else {
-            return {'success': false, 'message': 'Email không tồn tại'};
+            debugPrint('❌ Firebase returned NULL for email: $email');
+            debugPrint('❌ Possible reasons:');
+            debugPrint('   1. Email not in Firebase');
+            debugPrint('   2. Firebase rules blocking access');
+            debugPrint('   3. Firebase not initialized');
+            return {
+              'success': false,
+              'message':
+                  'Email không tồn tại hoặc Firebase không kết nối được. Kiểm tra kết nối Internet.',
+            };
           }
         } catch (e) {
           debugPrint('⚠️ Failed to check Firebase: $e');
-          return {'success': false, 'message': 'Email không tồn tại'};
+          debugPrint('⚠️ Error type: ${e.runtimeType}');
+          return {
+            'success': false,
+            'message': 'Lỗi kết nối Firebase: ${e.toString()}',
+          };
         }
       }
 
@@ -232,6 +248,16 @@ class AuthService extends ChangeNotifier {
       await user.save();
       _currentUser = user;
       await _saveSession(user);
+
+      // 🌐 UPLOAD USER TO FIREBASE: Ensure user exists in Firebase for cross-device login
+      try {
+        debugPrint('📤 Uploading user to Firebase...');
+        await _firebaseRepo.saveUser(user);
+        debugPrint('✅ User uploaded to Firebase successfully');
+      } catch (e) {
+        debugPrint('⚠️ Failed to upload user to Firebase: $e');
+        // Continue anyway - not critical for login
+      }
 
       // Seed default wallets for this user (idempotent)
       try {
@@ -517,5 +543,42 @@ class AuthService extends ChangeNotifier {
     }
 
     return {'success': true, 'message': 'OTP mới đã được gửi'};
+  }
+
+  // 🌐 SYNC ALL LOCAL USERS TO FIREBASE
+  // Call this once on your device to upload all existing users to Firebase
+  Future<Map<String, dynamic>> syncAllUsersToFirebase() async {
+    try {
+      final box = await Hive.openBox<User>(_userBoxName);
+      final allUsers = box.values.toList();
+
+      if (allUsers.isEmpty) {
+        return {'success': false, 'message': 'Không có user nào để sync'};
+      }
+
+      int successCount = 0;
+      int failCount = 0;
+
+      for (var user in allUsers) {
+        try {
+          await _firebaseRepo.saveUser(user);
+          debugPrint('✅ Synced user: ${user.email}');
+          successCount++;
+        } catch (e) {
+          debugPrint('❌ Failed to sync user ${user.email}: $e');
+          failCount++;
+        }
+      }
+
+      return {
+        'success': true,
+        'message':
+            'Đã sync $successCount users thành công, $failCount thất bại',
+        'successCount': successCount,
+        'failCount': failCount,
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi: ${e.toString()}'};
+    }
   }
 }

@@ -38,14 +38,21 @@ class FirebaseUserRepository {
 
   Future<User?> getUserByEmail(String email) async {
     try {
+      print('🔍 [Firebase] Searching for user with email: $email');
       final snapshot = await _usersRef
           .where('email', isEqualTo: email)
           .limit(1)
           .get();
-      if (snapshot.docs.isEmpty) return null;
+      print('📊 [Firebase] Found ${snapshot.docs.length} documents');
+      if (snapshot.docs.isEmpty) {
+        print('⚠️ [Firebase] No user found with email: $email');
+        return null;
+      }
+      print('✅ [Firebase] User found: ${snapshot.docs.first.id}');
       return _userFromMap(snapshot.docs.first.data());
     } catch (e) {
       print('❌ [Firebase] Error getting user by email: $e');
+      print('❌ [Firebase] Error type: ${e.runtimeType}');
       return null;
     }
   }

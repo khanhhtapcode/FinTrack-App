@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../config/theme.dart';
 import '../../../services/core/app_localization.dart';
 import '../../../services/core/app_settings_provider.dart';
+import '../../../services/auth/auth_service.dart';
 import '../../../utils/notification_helper.dart';
 import 'category_group/category_group_screen.dart';
 
@@ -165,6 +166,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 : null,
           ),
 
+          const SizedBox(height: 24),
+
+          // ===================== FIREBASE SYNC =====================
+          _buildSectionHeader('Firebase / Cloud'),
+
+          _buildSettingItem(
+            title: 'Đồng bộ Users lên Firebase',
+            subtitle: 'Chạy 1 lần để đăng nhập trên máy khác',
+            icon: Icons.cloud_upload_outlined,
+            onTap: _syncUsersToFirebase,
+          ),
+
           const SizedBox(height: 32),
         ],
       ),
@@ -298,5 +311,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _getLanguageName(String code) {
     final index = _languageCodes.indexOf(code);
     return index >= 0 ? _languages[index] : _languages.first;
+  }
+
+  // ===================== FIREBASE SYNC =====================
+  Future<void> _syncUsersToFirebase() async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(color: AppTheme.primaryTeal),
+            const SizedBox(width: 20),
+            const Expanded(child: Text('Đang đồng bộ users lên Firebase...')),
+          ],
+        ),
+      ),
+    );
+
+    final authService = context.read<AuthService>();
+    final result = await authService.syncAllUsersToFirebase();
+
+    if (mounted) {
+      Navigator.pop(context); // Close loading dialog
+
+      if (result['success']) {
+        AppNotification.showSuccess(
+          context,
+          result['message'],
+          duration: const Duration(seconds: 4),
+        );
+      } else {
+        AppNotification.showError(context, result['message']);
+      }
+    }
   }
 }
